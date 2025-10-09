@@ -161,29 +161,33 @@ Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Use th
 
 ### Week 1
 • Google - PMax: $40 (40%)
-• Google - Search: $20 (20%)
-• Meta - Advantage+: $30 (30%)
+• Google - Search: $10 (10%)
+• Meta - Advantage+: $40 (40%)
 • Meta - Retargeting: $10 (10%)
+**Reasoning:** Initial discovery phase focusing on broad reach through PMax and Advantage+ to identify high-intent audiences. Small search budget for brand protection. Testing messaging with visual platforms ideal for this product category.
 
 ### Week 2
 • Google - PMax: $35 (35%)
 • Google - Search: $25 (25%)
 • Meta - Advantage+: $35 (35%)
 • Pinterest - Consideration: $5 (5%)
+**Reasoning:** Scaling search as brand awareness grows and search volume increases. Testing Pinterest for visual product discovery given the product's visual appeal and target demographic.
 
 ### Week 3
 • Google - PMax: $30 (30%)
 • Google - Search: $25 (25%)
 • Meta - Advantage+: $35 (35%)
 • Pinterest - Consideration: $10 (10%)
+**Reasoning:** Data-driven optimization phase. Scaling Pinterest based on early results from Week 2. Maintaining search presence for growing brand queries.
 
 ### Week 4
 • Google - PMax: $30 (30%)
 • Google - Search: $20 (20%)
 • Meta - Advantage+: $35 (35%)
 • Meta - Retargeting: $15 (15%)
+**Reasoning:** Increasing retargeting budget as pixel matures and cart abandonment data accumulates. For high-ticket items, retargeting becomes crucial in Week 4+ as consideration time is longer.
 
-Continue with Weeks 5-6 if needed. Include only relevant channels for THIS product. Adjust allocations based on learning phases and scaling strategy.
+For each week, you MUST include a "**Reasoning:**" line explaining WHY these specific channels and allocations make sense for THIS product based on the landing page content (target audience, price point, product category, visual appeal, etc.). Continue with Weeks 5-6 if needed.
 
 Landing page content:
 ${pageContent}
@@ -392,9 +396,17 @@ REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND 
 
     // Parse media plan from markdown
     const parseMediaPlan = (content: string) => {
-      const weeks: Array<{ weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> }> = [];
+      const weeks: Array<{ 
+        weekNumber: number; 
+        channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }>; 
+        reasoning?: string;
+      }> = [];
       const lines = content.split('\n');
-      let currentWeek: { weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> } | null = null;
+      let currentWeek: { 
+        weekNumber: number; 
+        channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }>; 
+        reasoning?: string;
+      } | null = null;
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -408,7 +420,8 @@ REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND 
           const weekNum = weekMatch ? parseInt(weekMatch[1]) : weeks.length + 1;
           currentWeek = {
             weekNumber: weekNum,
-            channels: []
+            channels: [],
+            reasoning: undefined
           };
         } else if (currentWeek && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
           // Parse budget line: "• Google - PMax: $40 (40%)"
@@ -424,6 +437,10 @@ REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND 
               percentage: parseInt(percentage)
             });
           }
+        } else if (currentWeek && trimmed.startsWith('**Reasoning:**')) {
+          // Extract reasoning text after "**Reasoning:**"
+          const reasoningText = trimmed.replace(/^\*\*Reasoning:\*\*\s*/, '').trim();
+          currentWeek.reasoning = reasoningText;
         }
       }
 

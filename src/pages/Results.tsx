@@ -30,6 +30,7 @@ interface MediaPlanWeek {
     budget: number;
     percentage: number;
   }>;
+  reasoning?: string;
 }
 
 interface AnalysisData {
@@ -387,6 +388,24 @@ const Results = () => {
                                 );
                               })}
                             </div>
+                            
+                            {week.reasoning && (
+                              <div className="mt-4 p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20">
+                                <div className="flex items-start gap-2">
+                                  <div className="mt-0.5">
+                                    <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center">
+                                      <span className="text-xs font-bold text-primary">?</span>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-semibold text-primary mb-1">Why this allocation?</p>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      {week.reasoning}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       );
