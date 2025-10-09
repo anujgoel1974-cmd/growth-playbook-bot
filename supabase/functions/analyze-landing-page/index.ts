@@ -72,47 +72,83 @@ Structure your response in TWO main sections:
 ## CUSTOMER INSIGHT
 
 ### Target Personas
-[3-5 bullet points about ideal customer profiles]
+• Persona 1: [Name/description]
+• Persona 2: [Name/description]
+• Persona 3: [Name/description]
 
 ### Demographics
-[3-5 bullet points: age, gender, income, location]
+• Age: [age range]
+• Gender: [gender split]
+• Income: [income range]
+• Location: [geographic focus]
 
 ### Psychographics
-[3-5 bullet points: values, interests, lifestyle]
+• Values: [core values]
+• Interests: [key interests]
+• Lifestyle: [lifestyle traits]
+• Aspirations: [goals/desires]
 
 ### Pain Points
-[3-5 bullet points: problems solved]
+• Pain 1: [specific problem]
+• Pain 2: [specific problem]
+• Pain 3: [specific problem]
 
 ### Decision Triggers
-[3-5 bullet points: what makes them buy]
+• Trigger 1: [what makes them buy]
+• Trigger 2: [what makes them buy]
+• Trigger 3: [what makes them buy]
 
 ### Communication Style
-[3-5 bullet points: messaging approach]
+• Tone: [messaging tone]
+• Language: [vocabulary style]
+• Approach: [communication strategy]
 
 ## CAMPAIGN TARGETING
 
 ### Google Ads
-[3-5 bullet points covering: keyword strategy, audience targeting, campaign types, budget recommendations]
+• Keywords: [top search terms]
+• Audience: [targeting parameters]
+• Campaign Type: [search/display/shopping]
+• Budget: [recommended allocation]
 
 ### Meta Ads
-[3-5 bullet points covering: Facebook & Instagram audience targeting, creative formats, campaign objectives, budget allocation]
+• Platforms: [Facebook/Instagram focus]
+• Audience: [detailed targeting]
+• Creative: [ad format recommendations]
+• Budget: [recommended allocation]
 
 ### Pinterest Ads
-[3-5 bullet points covering: visual strategy, audience targeting, campaign approach] (Only if relevant to the product)
+• Visual Strategy: [pin style recommendations]
+• Audience: [interest targeting]
+• Campaign Focus: [awareness/consideration]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
 
 ### TikTok Ads
-[3-5 bullet points covering: content strategy, audience targeting, campaign approach] (Only if relevant to the product)
+• Content Style: [video approach]
+• Audience: [demographic targeting]
+• Creative: [ad format]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
 
 ### YouTube Ads
-[3-5 bullet points covering: video strategy, audience targeting, campaign approach] (Only if relevant to the product)
+• Video Strategy: [content approach]
+• Audience: [targeting parameters]
+• Ad Format: [skippable/non-skippable]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
 
 ### LinkedIn Ads
-[3-5 bullet points covering: B2B targeting, content strategy, campaign approach] (Only if relevant to the product)
+• Targeting: [job titles/industries]
+• Content: [messaging approach]
+• Campaign: [sponsored content/InMail]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
 
 Landing page content:
 ${pageContent}
 
-Provide specific, actionable insights. Each subsection MUST have 3-5 concise bullet points.`;
+CRITICAL: Use the bullet format shown above with labels followed by colons (e.g., "• Age: 25-45"). Keep each point concise.`;
 
     console.log('Calling Lovable AI...');
     const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -209,9 +245,16 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
       return 'default';
     };
 
-    // Parse subsections from markdown
+    // Parse subsections from markdown with sub-items
     const parseSubsections = (content: string, isTargeting = false) => {
-      const subsections: Array<{ id: string; title: string; content: string; icon: string; channel?: string }> = [];
+      const subsections: Array<{ 
+        id: string; 
+        title: string; 
+        content: string; 
+        icon: string; 
+        channel?: string;
+        subItems?: Array<{ label: string; value: string }>;
+      }> = [];
       const lines = content.split('\n');
       let currentSubsection: { title: string; content: string[] } | null = null;
 
@@ -220,12 +263,36 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
           // Save previous subsection if exists
           if (currentSubsection) {
             const cleanTitle = currentSubsection.title.replace(/^###\s*/, '').trim();
+            const fullContent = currentSubsection.content.join('\n').trim();
+            
+            // Parse sub-items from bullet points
+            const subItems: Array<{ label: string; value: string }> = [];
+            const contentLines = fullContent.split('\n');
+            
+            for (const contentLine of contentLines) {
+              const trimmed = contentLine.trim();
+              if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
+                const colonIndex = withoutBullet.indexOf(':');
+                
+                if (colonIndex > 0) {
+                  const label = withoutBullet.substring(0, colonIndex).trim();
+                  const value = withoutBullet.substring(colonIndex + 1).trim();
+                  if (label && value) {
+                    subItems.push({ label, value });
+                  }
+                }
+              }
+            }
+            
             const card: any = {
               id: cleanTitle.toLowerCase().replace(/\s+/g, '-'),
               title: cleanTitle,
-              content: currentSubsection.content.join('\n').trim(),
-              icon: getIconForSection(cleanTitle)
+              content: fullContent,
+              icon: getIconForSection(cleanTitle),
+              subItems: subItems.length > 0 ? subItems : undefined
             };
+            
             if (isTargeting) {
               card.channel = getChannelColor(cleanTitle);
             }
@@ -244,12 +311,36 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
       // Save last subsection
       if (currentSubsection) {
         const cleanTitle = currentSubsection.title.replace(/^###\s*/, '').trim();
+        const fullContent = currentSubsection.content.join('\n').trim();
+        
+        // Parse sub-items from bullet points
+        const subItems: Array<{ label: string; value: string }> = [];
+        const contentLines = fullContent.split('\n');
+        
+        for (const contentLine of contentLines) {
+          const trimmed = contentLine.trim();
+          if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+            const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
+            const colonIndex = withoutBullet.indexOf(':');
+            
+            if (colonIndex > 0) {
+              const label = withoutBullet.substring(0, colonIndex).trim();
+              const value = withoutBullet.substring(colonIndex + 1).trim();
+              if (label && value) {
+                subItems.push({ label, value });
+              }
+            }
+          }
+        }
+        
         const card: any = {
           id: cleanTitle.toLowerCase().replace(/\s+/g, '-'),
           title: cleanTitle,
-          content: currentSubsection.content.join('\n').trim(),
-          icon: getIconForSection(cleanTitle)
+          content: fullContent,
+          icon: getIconForSection(cleanTitle),
+          subItems: subItems.length > 0 ? subItems : undefined
         };
+        
         if (isTargeting) {
           card.channel = getChannelColor(cleanTitle);
         }

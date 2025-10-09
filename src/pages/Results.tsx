@@ -18,7 +18,8 @@ interface InsightCard {
   title: string;
   content: string;
   icon: string;
-  channel?: string; // For campaign targeting cards
+  channel?: string;
+  subItems?: Array<{ label: string; value: string }>;
 }
 
 interface AnalysisData {
@@ -150,6 +151,16 @@ const Results = () => {
     const IconComponent = iconMap[card.icon] || FileText;
     const colors = card.channel ? channelColors[card.channel] : channelColors.default;
     
+    // Gradient colors for sub-cards
+    const gradients = [
+      'from-violet-500/10 to-purple-500/10 border-violet-200 dark:border-violet-800',
+      'from-blue-500/10 to-cyan-500/10 border-blue-200 dark:border-blue-800',
+      'from-emerald-500/10 to-teal-500/10 border-emerald-200 dark:border-emerald-800',
+      'from-amber-500/10 to-orange-500/10 border-amber-200 dark:border-amber-800',
+      'from-rose-500/10 to-pink-500/10 border-rose-200 dark:border-rose-800',
+      'from-indigo-500/10 to-blue-500/10 border-indigo-200 dark:border-indigo-800',
+    ];
+    
     return (
       <Card className={`shadow-card hover:shadow-card-hover transition-all hover:scale-[1.02] group border-2 ${colors.border} ${colors.bg}`}>
         <CardHeader className="pb-3">
@@ -171,9 +182,27 @@ const Results = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-            {card.content}
-          </div>
+          {card.subItems && card.subItems.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {card.subItems.map((subItem, index) => (
+                <div
+                  key={subItem.label}
+                  className={`p-3 rounded-lg border bg-gradient-to-br ${gradients[index % gradients.length]} hover:shadow-md transition-all`}
+                >
+                  <div className="font-semibold text-sm mb-1 text-foreground">
+                    {subItem.label}
+                  </div>
+                  <div className="text-xs text-muted-foreground leading-relaxed">
+                    {subItem.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+              {card.content}
+            </div>
+          )}
         </CardContent>
       </Card>
     );
