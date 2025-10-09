@@ -22,9 +22,20 @@ interface InsightCard {
   subItems?: Array<{ label: string; value: string }>;
 }
 
+interface MediaPlanWeek {
+  weekNumber: number;
+  channels: Array<{
+    name: string;
+    campaignType: string;
+    budget: number;
+    percentage: number;
+  }>;
+}
+
 interface AnalysisData {
   customerInsight: InsightCard[];
   campaignTargeting: InsightCard[];
+  mediaPlan?: MediaPlanWeek[];
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -250,9 +261,10 @@ const Results = () => {
           </Card>
         ) : (
           <Tabs defaultValue="insight" className="w-full">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+            <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-3 mb-8">
               <TabsTrigger value="insight">Customer Insight</TabsTrigger>
               <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
+              <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
             </TabsList>
 
             {/* Customer Insight Tab */}
@@ -284,6 +296,107 @@ const Results = () => {
                 <Card className="shadow-card">
                   <CardContent className="py-12 text-center text-muted-foreground">
                     No campaign targeting data available
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Media Plan Tab */}
+            <TabsContent value="mediaplan" className="animate-fade-in">
+              {analysis?.mediaPlan && analysis.mediaPlan.length > 0 ? (
+                <div className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-bold mb-2">4-6 Week Media Plan</h3>
+                    <p className="text-muted-foreground">$100 weekly budget optimized for ROAS</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {analysis.mediaPlan.map((week) => {
+                      const totalBudget = week.channels.reduce((sum, ch) => sum + ch.budget, 0);
+                      const channelGroups = week.channels.reduce((acc, ch) => {
+                        if (!acc[ch.name]) acc[ch.name] = [];
+                        acc[ch.name].push(ch);
+                        return acc;
+                      }, {} as Record<string, typeof week.channels>);
+                      
+                      const getChannelStyles = (channelName: string) => {
+                        const lower = channelName.toLowerCase();
+                        if (lower.includes('google')) return { 
+                          bg: 'bg-blue-100 dark:bg-blue-950/30', 
+                          border: 'border-blue-200 dark:border-blue-800',
+                          text: 'text-blue-700 dark:text-blue-400'
+                        };
+                        if (lower.includes('meta')) return { 
+                          bg: 'bg-purple-100 dark:bg-purple-950/30', 
+                          border: 'border-purple-200 dark:border-purple-800',
+                          text: 'text-purple-700 dark:text-purple-400'
+                        };
+                        if (lower.includes('pinterest')) return { 
+                          bg: 'bg-red-100 dark:bg-red-950/30', 
+                          border: 'border-red-200 dark:border-red-800',
+                          text: 'text-red-700 dark:text-red-400'
+                        };
+                        if (lower.includes('tiktok')) return { 
+                          bg: 'bg-cyan-100 dark:bg-cyan-950/30', 
+                          border: 'border-cyan-200 dark:border-cyan-800',
+                          text: 'text-cyan-700 dark:text-cyan-400'
+                        };
+                        if (lower.includes('youtube')) return { 
+                          bg: 'bg-rose-100 dark:bg-rose-950/30', 
+                          border: 'border-rose-200 dark:border-rose-800',
+                          text: 'text-rose-700 dark:text-rose-400'
+                        };
+                        return { 
+                          bg: 'bg-gray-100 dark:bg-gray-950/30', 
+                          border: 'border-gray-200 dark:border-gray-800',
+                          text: 'text-gray-700 dark:text-gray-400'
+                        };
+                      };
+                      
+                      return (
+                        <Card key={week.weekNumber} className="shadow-card hover:shadow-card-hover transition-all border-2">
+                          <CardHeader className="pb-3 bg-gradient-to-br from-primary/5 to-primary/10">
+                            <CardTitle className="text-lg flex items-center justify-between">
+                              <span>Week {week.weekNumber}</span>
+                              <span className="text-primary font-bold">${totalBudget}</span>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pt-4">
+                            <div className="space-y-3">
+                              {Object.entries(channelGroups).map(([channelName, campaigns]) => {
+                                const channelTotal = campaigns.reduce((sum, c) => sum + c.budget, 0);
+                                const styles = getChannelStyles(channelName);
+                                
+                                return (
+                                  <div key={channelName} className="space-y-2">
+                                    <div className={`flex items-center justify-between p-2 rounded-lg ${styles.bg} border ${styles.border}`}>
+                                      <span className="font-semibold text-sm">{channelName}</span>
+                                      <span className={`${styles.text} font-bold text-sm`}>
+                                        ${channelTotal}
+                                      </span>
+                                    </div>
+                                    <div className="pl-3 space-y-1">
+                                      {campaigns.map((campaign, idx) => (
+                                        <div key={idx} className="flex items-center justify-between text-xs">
+                                          <span className="text-muted-foreground">• {campaign.campaignType}</span>
+                                          <span className="font-medium">${campaign.budget} ({campaign.percentage}%)</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <Card className="shadow-card">
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No media plan data available
                   </CardContent>
                 </Card>
               )}

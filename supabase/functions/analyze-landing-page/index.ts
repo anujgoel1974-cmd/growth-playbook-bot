@@ -148,7 +148,25 @@ Structure your response in TWO main sections:
 Landing page content:
 ${pageContent}
 
-CRITICAL: Use the bullet format shown above with labels followed by colons (e.g., "• Age: 25-45"). Keep each point concise.`;
+CRITICAL: Use the bullet format shown above with labels followed by colons (e.g., "• Age: 25-45"). Keep each point concise.
+
+## MEDIA PLAN
+
+Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Format exactly as shown:
+
+### Week 1
+• Google - PMax: $40 (40%)
+• Google - Search: $20 (20%)
+• Meta - Advantage+: $30 (30%)
+• Meta - Retargeting: $10 (10%)
+
+### Week 2
+[Similar format with adjusted budgets]
+
+### Week 3-6
+[Continue weekly breakdowns]
+
+Include only relevant channels and campaign types. Adjust budget allocation week-by-week based on typical learning phases and scaling strategy.`;
 
     console.log('Calling Lovable AI...');
     const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -350,32 +368,85 @@ CRITICAL: Use the bullet format shown above with labels followed by colons (e.g.
       return subsections;
     };
 
+    // Parse media plan from markdown
+    const parseMediaPlan = (content: string) => {
+      const weeks: Array<{ weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> }> = [];
+      const lines = content.split('\n');
+      let currentWeek: { weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> } | null = null;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Detect week headers
+        if (trimmed.startsWith('### Week')) {
+          if (currentWeek) {
+            weeks.push(currentWeek);
+          }
+          const weekMatch = trimmed.match(/Week (\d+)/i);
+          const weekNum = weekMatch ? parseInt(weekMatch[1]) : weeks.length + 1;
+          currentWeek = {
+            weekNumber: weekNum,
+            channels: []
+          };
+        } else if (currentWeek && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
+          // Parse budget line: "• Google - PMax: $40 (40%)"
+          const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
+          const match = withoutBullet.match(/^(.+?)\s*-\s*(.+?):\s*\$(\d+(?:\.\d+)?)\s*\((\d+)%\)/);
+          
+          if (match) {
+            const [, channel, campaignType, budget, percentage] = match;
+            currentWeek.channels.push({
+              name: channel.trim(),
+              campaignType: campaignType.trim(),
+              budget: parseFloat(budget),
+              percentage: parseInt(percentage)
+            });
+          }
+        }
+      }
+
+      if (currentWeek) {
+        weeks.push(currentWeek);
+      }
+
+      return weeks;
+    };
+
     // Structure the markdown response into sections
     const lower = analysisText.toLowerCase();
     const ciIdx = lower.indexOf('## customer insight');
     const ctIdx = lower.indexOf('## campaign targeting');
+    const mpIdx = lower.indexOf('## media plan');
 
-    let customerInsightCards: Array<{ id: string; title: string; content: string; icon: string }> = [];
-    let campaignTargetingCards: Array<{ id: string; title: string; content: string; icon: string }> = [];
+    let customerInsightCards: Array<{ id: string; title: string; content: string; icon: string; subItems?: Array<{ label: string; value: string }> }> = [];
+    let campaignTargetingCards: Array<{ id: string; title: string; content: string; icon: string; channel?: string; subItems?: Array<{ label: string; value: string }> }> = [];
+    let mediaPlanWeeks: Array<{ weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> }> = [];
 
     if (ciIdx !== -1 && ctIdx !== -1) {
       const ciContent = analysisText.slice(ciIdx, ctIdx).trim();
-      const ctContent = analysisText.slice(ctIdx).trim();
+      const ctContent = mpIdx !== -1 ? analysisText.slice(ctIdx, mpIdx).trim() : analysisText.slice(ctIdx).trim();
       customerInsightCards = parseSubsections(ciContent, false);
-      campaignTargetingCards = parseSubsections(ctContent, true); // Pass true for targeting to add channel info
+      campaignTargetingCards = parseSubsections(ctContent, true);
+      
+      // Parse media plan if exists
+      if (mpIdx !== -1) {
+        const mpContent = analysisText.slice(mpIdx).trim();
+        mediaPlanWeeks = parseMediaPlan(mpContent);
+      }
     } else {
-      // Fallback: try to parse any subsections found
       customerInsightCards = parseSubsections(analysisText, false);
     }
 
     const structuredData = {
       customerInsight: customerInsightCards,
-      campaignTargeting: campaignTargetingCards
+      campaignTargeting: campaignTargetingCards,
+      mediaPlan: mediaPlanWeeks
     };
     
     console.log('Structured response ready:', {
       customerInsightCards: customerInsightCards.length,
-      campaignTargetingCards: campaignTargetingCards.length
+      campaignTargetingCards: campaignTargetingCards.length,
+      mediaPlanWeeks: mediaPlanWeeks.length
     });
 
     return new Response(
