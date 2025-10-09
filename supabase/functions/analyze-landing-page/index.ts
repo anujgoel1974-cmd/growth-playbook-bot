@@ -63,11 +63,14 @@ CRITICAL FORMATTING RULES:
 - Keep each subsection concise with 3-5 bullet points maximum
 - Use bullet points (•) for all lists
 - Focus on actionable, specific insights
-- Avoid verbose paragraphs`;
+- Avoid verbose paragraphs
+- YOU MUST INCLUDE ALL THREE MAIN SECTIONS: Customer Insight, Campaign Targeting, AND Media Plan`;
     
     const userPrompt = `Analyze this landing page and provide comprehensive insights for marketing campaigns.
 
-Structure your response in TWO main sections:
+IMPORTANT: You MUST provide ALL THREE sections below. Do not skip any section.
+
+Structure your response EXACTLY as shown:
 
 ## CUSTOMER INSIGHT
 
@@ -152,7 +155,9 @@ CRITICAL: Use the bullet format shown above with labels followed by colons (e.g.
 
 ## MEDIA PLAN
 
-Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Format exactly as shown:
+CRITICAL: You MUST include this section with a 4-6 week breakdown.
+
+Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Use this EXACT format:
 
 ### Week 1
 • Google - PMax: $40 (40%)
@@ -161,12 +166,29 @@ Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Format
 • Meta - Retargeting: $10 (10%)
 
 ### Week 2
-[Similar format with adjusted budgets]
+• Google - PMax: $35 (35%)
+• Google - Search: $25 (25%)
+• Meta - Advantage+: $35 (35%)
+• Pinterest - Consideration: $5 (5%)
 
-### Week 3-6
-[Continue weekly breakdowns]
+### Week 3
+• Google - PMax: $30 (30%)
+• Google - Search: $25 (25%)
+• Meta - Advantage+: $35 (35%)
+• Pinterest - Consideration: $10 (10%)
 
-Include only relevant channels and campaign types. Adjust budget allocation week-by-week based on typical learning phases and scaling strategy.`;
+### Week 4
+• Google - PMax: $30 (30%)
+• Google - Search: $20 (20%)
+• Meta - Advantage+: $35 (35%)
+• Meta - Retargeting: $15 (15%)
+
+Continue with Weeks 5-6 if needed. Include only relevant channels for THIS product. Adjust allocations based on learning phases and scaling strategy.
+
+Landing page content:
+${pageContent}
+
+REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND Media Plan).`;
 
     console.log('Calling Lovable AI...');
     const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -181,7 +203,7 @@ Include only relevant channels and campaign types. Adjust budget allocation week
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 4000,
+        max_tokens: 6000,
       }),
     });
 
