@@ -3,20 +3,41 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Copy, Download } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Loader2, ArrowLeft, Copy, Download,
+  Users, Brain, Zap, MessageCircle, TrendingUp,
+  Target, UsersRound, Search, Palette, DollarSign, Megaphone, FileText
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-interface AnalysisSection {
-  title?: string;
-  content?: string;
-  raw?: string;
+interface InsightCard {
+  id: string;
+  title: string;
+  content: string;
+  icon: string;
 }
 
 interface AnalysisData {
-  customerInsight?: Record<string, AnalysisSection>;
-  campaignTargeting?: Record<string, AnalysisSection>;
+  customerInsight: InsightCard[];
+  campaignTargeting: InsightCard[];
 }
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  'users': Users,
+  'brain': Brain,
+  'zap': Zap,
+  'message-circle': MessageCircle,
+  'trending-up': TrendingUp,
+  'target': Target,
+  'users-round': UsersRound,
+  'search': Search,
+  'palette': Palette,
+  'dollar-sign': DollarSign,
+  'megaphone': Megaphone,
+  'file-text': FileText,
+};
 
 const Results = () => {
   const [searchParams] = useSearchParams();
@@ -79,14 +100,35 @@ const Results = () => {
     });
   };
 
-  const renderSection = (section: AnalysisSection | undefined, sectionName: string) => {
-    if (!section) return <p className="text-muted-foreground">No data available</p>;
+  const InsightCard = ({ card }: { card: InsightCard }) => {
+    const IconComponent = iconMap[card.icon] || FileText;
     
-    const content = section.content || section.raw || '';
     return (
-      <div className="prose prose-sm max-w-none">
-        <div className="whitespace-pre-wrap text-foreground">{content}</div>
-      </div>
+      <Card className="shadow-card hover:shadow-card-hover transition-all hover:scale-[1.02] group">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                <IconComponent className="h-5 w-5" />
+              </div>
+              <CardTitle className="text-lg">{card.title}</CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleCopy(card.content, card.title)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+            {card.content}
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -138,30 +180,16 @@ const Results = () => {
             </TabsList>
 
             {/* Customer Insight Tab */}
-            <TabsContent value="insight" className="space-y-6 animate-fade-in">
-              {analysis?.customerInsight && Object.entries(analysis.customerInsight).map(([key, section]) => (
-                <Card key={key} className="shadow-card hover:shadow-card-hover transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {section.title || key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopy(section.content || section.raw || '', section.title || key)}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {renderSection(section, key)}
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {(!analysis?.customerInsight || Object.keys(analysis.customerInsight).length === 0) && (
+            <TabsContent value="insight" className="animate-fade-in">
+              {analysis?.customerInsight && analysis.customerInsight.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {analysis.customerInsight.map((card) => (
+                    <InsightCard key={card.id} card={card} />
+                  ))}
+                </div>
+              ) : (
                 <Card className="shadow-card">
-                  <CardContent className="py-8 text-center text-muted-foreground">
+                  <CardContent className="py-12 text-center text-muted-foreground">
                     No customer insight data available
                   </CardContent>
                 </Card>
@@ -169,30 +197,16 @@ const Results = () => {
             </TabsContent>
 
             {/* Campaign Targeting Tab */}
-            <TabsContent value="targeting" className="space-y-6 animate-fade-in">
-              {analysis?.campaignTargeting && Object.entries(analysis.campaignTargeting).map(([key, section]) => (
-                <Card key={key} className="shadow-card hover:shadow-card-hover transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {section.title || key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopy(section.content || section.raw || '', section.title || key)}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {renderSection(section, key)}
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {(!analysis?.campaignTargeting || Object.keys(analysis.campaignTargeting).length === 0) && (
+            <TabsContent value="targeting" className="animate-fade-in">
+              {analysis?.campaignTargeting && analysis.campaignTargeting.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {analysis.campaignTargeting.map((card) => (
+                    <InsightCard key={card.id} card={card} />
+                  ))}
+                </div>
+              ) : (
                 <Card className="shadow-card">
-                  <CardContent className="py-8 text-center text-muted-foreground">
+                  <CardContent className="py-12 text-center text-muted-foreground">
                     No campaign targeting data available
                   </CardContent>
                 </Card>
