@@ -1,1 +1,4 @@
 project_id = "pgaaycstrvjylnamngew"
+
+[functions.analyze-landing-page]
+verify_jwt = false
