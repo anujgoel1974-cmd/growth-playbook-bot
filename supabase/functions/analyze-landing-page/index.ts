@@ -128,7 +128,15 @@ ${pageContent}`;
     
     if (!openAIData.choices || !openAIData.choices[0] || !openAIData.choices[0].message) {
       console.error('Invalid Lovable AI response structure:', JSON.stringify(openAIData, null, 2));
-      throw new Error('Invalid response from Lovable AI');
+      // Fallback: return a friendly placeholder instead of erroring
+      const structuredData = {
+        customerInsight: { full: { title: 'Customer Insight', content: 'No insights generated due to an upstream AI response format issue. Please try again.' } },
+        campaignTargeting: { full: { title: 'Campaign Targeting', content: 'No insights generated due to an upstream AI response format issue. Please try again.' } }
+      };
+      return new Response(
+        JSON.stringify({ success: true, analysis: structuredData, url }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     const analysisText = openAIData.choices[0].message.content;
@@ -136,33 +144,54 @@ ${pageContent}`;
     console.log('Content preview (first 1000 chars):', analysisText?.substring(0, 1000) || 'EMPTY');
     
     if (!analysisText || analysisText.trim() === '') {
-      throw new Error('Lovable AI returned empty content');
+      console.warn('Lovable AI returned empty content; using fallback.');
+      const structuredData = {
+        customerInsight: { full: { title: 'Customer Insight', content: 'No insights generated. Please try again shortly.' } },
+        campaignTargeting: { full: { title: 'Campaign Targeting', content: 'No insights generated. Please try again shortly.' } }
+      };
+      return new Response(
+        JSON.stringify({ success: true, analysis: structuredData, url }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    // Structure the markdown response into sections
-    const sections = analysisText.split('##').filter((s: string) => s.trim());
-    
-    const customerInsightSection = sections.find((s: string) => s.toLowerCase().includes('customer insight')) || '';
-    const campaignTargetingSection = sections.find((s: string) => s.toLowerCase().includes('campaign targeting')) || '';
-    
+    // Structure the markdown response into sections (robust parsing)
+    const lower = analysisText.toLowerCase();
+    const ciHeader = '## customer insight';
+    const ctHeader = '## campaign targeting';
+    const ciIdx = lower.indexOf(ciHeader);
+    const ctIdx = lower.indexOf(ctHeader);
+
+    let ciContent = '';
+    let ctContent = '';
+
+    if (ciIdx !== -1 && ctIdx !== -1) {
+      ciContent = analysisText.slice(ciIdx, ctIdx).trim();
+      ctContent = analysisText.slice(ctIdx).trim();
+    } else {
+      // Fallback: return full content in both tabs to avoid blank UI
+      ciContent = analysisText.trim();
+      ctContent = analysisText.trim();
+    }
+
     const structuredData = {
       customerInsight: {
         full: {
           title: "Customer Insight",
-          content: customerInsightSection.trim()
+          content: ciContent
         }
       },
       campaignTargeting: {
         full: {
           title: "Campaign Targeting",
-          content: campaignTargetingSection.trim()
+          content: ctContent
         }
       }
     };
     
     console.log('Structured response ready:', {
-      customerInsightLength: customerInsightSection.length,
-      campaignTargetingLength: campaignTargetingSection.length
+      customerInsightLength: ciContent.length,
+      campaignTargetingLength: ctContent.length
     });
 
     return new Response(
