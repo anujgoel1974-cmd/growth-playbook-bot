@@ -8,7 +8,8 @@ import {
   Loader2, ArrowLeft, Copy, Download,
   Users, Brain, Zap, MessageCircle, TrendingUp,
   Target, UsersRound, Search, Palette, DollarSign, Megaphone, FileText,
-  Share2, Image, Music, Video, Briefcase, Hash
+  Share2, Image, Music, Video, Briefcase, Hash, Building2, Shield, 
+  AlertCircle, CheckCircle, Award, ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,10 +36,24 @@ interface MediaPlanWeek {
   reasoning?: string;
 }
 
+interface CompetitorCard {
+  id: string;
+  competitorName: string;
+  url: string;
+  pricePoint: string;
+  keyStrength: string;
+  weakness: string;
+  icon: string;
+}
+
 interface AnalysisData {
   customerInsight: InsightCard[];
   campaignTargeting: InsightCard[];
   mediaPlan?: MediaPlanWeek[];
+  competitiveAnalysis?: {
+    competitors: CompetitorCard[];
+    insights: InsightCard[];
+  };
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -60,6 +75,12 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'video': Video,
   'briefcase': Briefcase,
   'hash': Hash,
+  'building-2': Building2,
+  'shield': Shield,
+  'alert-circle': AlertCircle,
+  'check-circle': CheckCircle,
+  'award': Award,
+  'external-link': ExternalLink,
 };
 
 const channelColors: Record<string, { bg: string; border: string; icon: string }> = {
@@ -265,10 +286,11 @@ const Results = () => {
           </Card>
         ) : (
           <Tabs defaultValue="insight" className="w-full">
-            <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-3 mb-8">
+            <TabsList className="grid w-full max-w-4xl mx-auto grid-cols-4 mb-8">
               <TabsTrigger value="insight">Customer Insight</TabsTrigger>
               <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
               <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
+              <TabsTrigger value="competitive">Competitive Analysis</TabsTrigger>
             </TabsList>
 
             {/* Customer Insight Tab */}
@@ -423,6 +445,90 @@ const Results = () => {
                 </Card>
               )}
             </TabsContent>
+
+            {/* Competitive Analysis Tab */}
+            <TabsContent value="competitive" className="animate-fade-in">
+              {analysis?.competitiveAnalysis ? (
+                <div className="space-y-8">
+                  {/* Competitors Section */}
+                  {analysis.competitiveAnalysis.competitors && analysis.competitiveAnalysis.competitors.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-2xl font-bold text-center mb-6">Top Competitors</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {analysis.competitiveAnalysis.competitors.map((competitor) => {
+                          const IconComponent = iconMap[competitor.icon] || Building2;
+                          
+                          return (
+                            <Card key={competitor.id} className="shadow-card hover:shadow-card-hover transition-all group border-2 border-border">
+                              <CardHeader className="pb-3 bg-gradient-to-br from-muted/30 to-muted/10">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                                      <IconComponent className="h-5 w-5" />
+                                    </div>
+                                    <CardTitle className="text-lg">{competitor.competitorName}</CardTitle>
+                                  </div>
+                                </div>
+                                {competitor.url && (
+                                  <CardDescription className="flex items-center gap-1 text-xs mt-2">
+                                    <a 
+                                      href={competitor.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 hover:underline text-primary"
+                                    >
+                                      Visit page <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  </CardDescription>
+                                )}
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                {competitor.pricePoint && (
+                                  <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-200 dark:border-blue-800">
+                                    <div className="font-semibold text-sm mb-1">Price Point</div>
+                                    <div className="text-xs text-muted-foreground">{competitor.pricePoint}</div>
+                                  </div>
+                                )}
+                                {competitor.keyStrength && (
+                                  <div className="p-3 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-800">
+                                    <div className="font-semibold text-sm mb-1">Key Strength</div>
+                                    <div className="text-xs text-muted-foreground">{competitor.keyStrength}</div>
+                                  </div>
+                                )}
+                                {competitor.weakness && (
+                                  <div className="p-3 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-200 dark:border-amber-800">
+                                    <div className="font-semibold text-sm mb-1">Weakness / Opportunity</div>
+                                    <div className="text-xs text-muted-foreground">{competitor.weakness}</div>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Competitive Insights Section */}
+                  {analysis.competitiveAnalysis.insights && analysis.competitiveAnalysis.insights.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-2xl font-bold text-center mb-6">Strategic Insights</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {analysis.competitiveAnalysis.insights.map((insight) => (
+                          <InsightCard key={insight.id} card={insight} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Card className="shadow-card">
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No competitive analysis data available
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
           </Tabs>
         )}
 
@@ -464,7 +570,11 @@ const Results = () => {
                         })),
                         reasoning: week.reasoning || ''
                       }))
-                    }
+                    },
+                    competitiveAnalysis: analysis.competitiveAnalysis ? {
+                      competitors: analysis.competitiveAnalysis.competitors || [],
+                      insights: analysis.competitiveAnalysis.insights || []
+                    } : undefined
                   };
 
                   await generatePDF(pdfData, url);

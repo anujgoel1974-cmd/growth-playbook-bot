@@ -64,11 +64,11 @@ CRITICAL FORMATTING RULES:
 - Use bullet points (•) for all lists
 - Focus on actionable, specific insights
 - Avoid verbose paragraphs
-- YOU MUST INCLUDE ALL THREE MAIN SECTIONS: Customer Insight, Campaign Targeting, AND Media Plan`;
+- YOU MUST INCLUDE ALL FOUR MAIN SECTIONS: Customer Insight, Campaign Targeting, Media Plan, AND Competitive Analysis`;
     
     const userPrompt = `Analyze this landing page and provide comprehensive insights for marketing campaigns.
 
-IMPORTANT: You MUST provide ALL THREE sections below. Do not skip any section.
+IMPORTANT: You MUST provide ALL FOUR sections below. Do not skip any section.
 
 Structure your response EXACTLY as shown:
 
@@ -189,10 +189,65 @@ Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Use th
 
 For each week, you MUST include a "**Reasoning:**" line explaining WHY these specific channels and allocations make sense for THIS product based on the landing page content (target audience, price point, product category, visual appeal, etc.). Continue with Weeks 5-6 if needed.
 
+## COMPETITIVE ANALYSIS
+
+Research and identify 3-5 competitors for this product/service. For each competitor, provide:
+
+### Competitor 1: [Brand Name]
+• URL: [competitor product page URL]
+• Price Point: [their pricing]
+• Key Strength: [what they do better than the analyzed page]
+• Weakness: [opportunity gap where analyzed page could win]
+
+### Competitor 2: [Brand Name]
+• URL: [competitor product page URL]
+• Price Point: [their pricing]
+• Key Strength: [what they do better]
+• Weakness: [opportunity gap]
+
+### Competitor 3: [Brand Name]
+• URL: [competitor product page URL]
+• Price Point: [their pricing]
+• Key Strength: [what they do better]
+• Weakness: [opportunity gap]
+
+(Include 4-5 competitors if relevant)
+
+### Your Competitive Advantages
+• Advantage 1: [specific differentiator vs competitors]
+• Advantage 2: [specific differentiator vs competitors]
+• Advantage 3: [specific differentiator vs competitors]
+
+### Areas for Improvement
+• Gap 1: [what competitors do better]
+• Gap 2: [what competitors do better]
+• Gap 3: [what competitors do better]
+
+### Market Positioning Strategy
+• Current Position: [where you stand in the market]
+• Recommended Position: [strategic positioning recommendation]
+• Messaging Angle: [unique angle to emphasize]
+
+### Pricing Analysis
+• Your Price: [analyzed page pricing]
+• Market Average: [competitive average]
+• Strategy: [pricing strategy recommendation]
+• Justification: [how to justify your price point]
+
+### Feature Differentiation
+• Unique Features: [features you have that competitors don't]
+• Missing Features: [features competitors offer that you lack]
+• Features to Highlight: [competitive advantages to emphasize in marketing]
+
+### Trust & Credibility Comparison
+• Your Trust Signals: [reviews, testimonials, badges on analyzed page]
+• Competitor Trust Signals: [what competitors use]
+• Recommendations: [how to improve trust signals]
+
 Landing page content:
 ${pageContent}
 
-REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND Media Plan).`;
+REMEMBER: Include ALL FOUR sections (Customer Insight, Campaign Targeting, Media Plan, AND Competitive Analysis).`;
 
     console.log('Calling Lovable AI...');
     const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -275,6 +330,13 @@ REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND 
       if (lowerTitle.includes('creative') || lowerTitle.includes('visual')) return 'palette';
       if (lowerTitle.includes('budget') || lowerTitle.includes('allocation')) return 'dollar-sign';
       if (lowerTitle.includes('campaign') || lowerTitle.includes('type')) return 'megaphone';
+      if (lowerTitle.includes('competitor')) return 'building-2';
+      if (lowerTitle.includes('advantage')) return 'shield';
+      if (lowerTitle.includes('improvement') || lowerTitle.includes('gap')) return 'alert-circle';
+      if (lowerTitle.includes('positioning')) return 'target';
+      if (lowerTitle.includes('pricing') || lowerTitle.includes('price')) return 'dollar-sign';
+      if (lowerTitle.includes('feature') || lowerTitle.includes('differentiation')) return 'check-circle';
+      if (lowerTitle.includes('trust') || lowerTitle.includes('credibility')) return 'award';
       return 'file-text';
     };
 
@@ -451,15 +513,64 @@ REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND 
       return weeks;
     };
 
+    // Parse competitors section
+    const parseCompetitors = (content: string) => {
+      const competitors: Array<{ id: string; competitorName: string; url: string; pricePoint: string; keyStrength: string; weakness: string; icon: string }> = [];
+      const lines = content.split('\n');
+      let currentCompetitor: any = null;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Detect competitor headers: "### Competitor 1: Brand Name"
+        if (trimmed.startsWith('### Competitor')) {
+          if (currentCompetitor && currentCompetitor.competitorName) {
+            competitors.push(currentCompetitor);
+          }
+          const match = trimmed.match(/### Competitor \d+:\s*(.+)/);
+          currentCompetitor = {
+            id: `competitor-${competitors.length + 1}`,
+            competitorName: match ? match[1].trim() : 'Unknown Competitor',
+            url: '',
+            pricePoint: '',
+            keyStrength: '',
+            weakness: '',
+            icon: 'building-2'
+          };
+        } else if (currentCompetitor && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
+          const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
+          const colonIndex = withoutBullet.indexOf(':');
+          
+          if (colonIndex > 0) {
+            const label = withoutBullet.substring(0, colonIndex).trim().toLowerCase();
+            const value = withoutBullet.substring(colonIndex + 1).trim();
+            
+            if (label.includes('url')) currentCompetitor.url = value;
+            else if (label.includes('price')) currentCompetitor.pricePoint = value;
+            else if (label.includes('strength')) currentCompetitor.keyStrength = value;
+            else if (label.includes('weakness')) currentCompetitor.weakness = value;
+          }
+        }
+      }
+
+      if (currentCompetitor && currentCompetitor.competitorName) {
+        competitors.push(currentCompetitor);
+      }
+
+      return competitors;
+    };
+
     // Structure the markdown response into sections
     const lower = analysisText.toLowerCase();
     const ciIdx = lower.indexOf('## customer insight');
     const ctIdx = lower.indexOf('## campaign targeting');
     const mpIdx = lower.indexOf('## media plan');
+    const caIdx = lower.indexOf('## competitive analysis');
 
     let customerInsightCards: Array<{ id: string; title: string; content: string; icon: string; subItems?: Array<{ label: string; value: string }> }> = [];
     let campaignTargetingCards: Array<{ id: string; title: string; content: string; icon: string; channel?: string; subItems?: Array<{ label: string; value: string }> }> = [];
     let mediaPlanWeeks: Array<{ weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> }> = [];
+    let competitiveAnalysisData: { competitors: any[]; insights: any[] } | undefined = undefined;
 
     if (ciIdx !== -1 && ctIdx !== -1) {
       const ciContent = analysisText.slice(ciIdx, ctIdx).trim();
@@ -469,8 +580,24 @@ REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND 
       
       // Parse media plan if exists
       if (mpIdx !== -1) {
-        const mpContent = analysisText.slice(mpIdx).trim();
+        const mpContent = caIdx !== -1 ? analysisText.slice(mpIdx, caIdx).trim() : analysisText.slice(mpIdx).trim();
         mediaPlanWeeks = parseMediaPlan(mpContent);
+      }
+      
+      // Parse competitive analysis if exists
+      if (caIdx !== -1) {
+        const caContent = analysisText.slice(caIdx).trim();
+        const competitors = parseCompetitors(caContent);
+        
+        // Parse non-competitor subsections as insights
+        const insights = parseSubsections(caContent, false).filter(card => 
+          !card.title.toLowerCase().includes('competitor')
+        );
+        
+        competitiveAnalysisData = {
+          competitors,
+          insights
+        };
       }
     } else {
       customerInsightCards = parseSubsections(analysisText, false);
@@ -479,13 +606,18 @@ REMEMBER: Include ALL THREE sections (Customer Insight, Campaign Targeting, AND 
     const structuredData = {
       customerInsight: customerInsightCards,
       campaignTargeting: campaignTargetingCards,
-      mediaPlan: mediaPlanWeeks
+      mediaPlan: mediaPlanWeeks,
+      competitiveAnalysis: competitiveAnalysisData
     };
     
     console.log('Structured response ready:', {
       customerInsightCards: customerInsightCards.length,
       campaignTargetingCards: campaignTargetingCards.length,
-      mediaPlanWeeks: mediaPlanWeeks.length
+      mediaPlanWeeks: mediaPlanWeeks.length,
+      competitiveAnalysis: competitiveAnalysisData ? {
+        competitors: competitiveAnalysisData.competitors.length,
+        insights: competitiveAnalysisData.insights.length
+      } : 'not included'
     });
 
     return new Response(

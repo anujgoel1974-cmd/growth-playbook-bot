@@ -19,6 +19,14 @@ interface MediaPlanWeek {
   reasoning: string;
 }
 
+interface CompetitorCard {
+  competitorName: string;
+  url: string;
+  pricePoint: string;
+  keyStrength: string;
+  weakness: string;
+}
+
 interface AnalysisData {
   customerInsight: {
     sections: InsightCard[];
@@ -28,6 +36,10 @@ interface AnalysisData {
   };
   mediaPlan: {
     weeks: MediaPlanWeek[];
+  };
+  competitiveAnalysis?: {
+    competitors: CompetitorCard[];
+    insights: InsightCard[];
   };
 }
 
@@ -350,6 +362,152 @@ export const generatePDF = async (data: AnalysisData, url: string): Promise<void
   });
 
   addPageNumber();
+
+  // Competitive Analysis Section
+  if (data.competitiveAnalysis) {
+    pdf.addPage();
+    yPosition = margin;
+
+    // Section title
+    pdf.setFontSize(20);
+    pdf.setTextColor(99, 102, 241);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Competitive Analysis', margin, yPosition);
+    yPosition += 15;
+
+    // Competitors
+    if (data.competitiveAnalysis.competitors && data.competitiveAnalysis.competitors.length > 0) {
+      pdf.setFontSize(14);
+      pdf.setTextColor(0);
+      pdf.text('Top Competitors', margin, yPosition);
+      yPosition += 10;
+
+      data.competitiveAnalysis.competitors.forEach((competitor, index) => {
+        checkPageBreak(40);
+
+        // Competitor name
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(59, 130, 246);
+        pdf.text(`${index + 1}. ${competitor.competitorName}`, margin, yPosition);
+        yPosition += 7;
+
+        // URL
+        if (competitor.url) {
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(100);
+          const urlLines = pdf.splitTextToSize(`URL: ${competitor.url}`, contentWidth - 5);
+          pdf.text(urlLines, margin + 2, yPosition);
+          yPosition += urlLines.length * 4;
+        }
+
+        // Details in a grid
+        const detailsStartY = yPosition;
+        
+        // Price Point
+        if (competitor.pricePoint) {
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setTextColor(0);
+          pdf.text('Price Point:', margin + 2, yPosition);
+          yPosition += 4;
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(70);
+          const priceLines = pdf.splitTextToSize(competitor.pricePoint, contentWidth - 10);
+          pdf.text(priceLines, margin + 4, yPosition);
+          yPosition += priceLines.length * 4 + 3;
+        }
+
+        // Key Strength
+        if (competitor.keyStrength) {
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setTextColor(0);
+          pdf.text('Key Strength:', margin + 2, yPosition);
+          yPosition += 4;
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(70);
+          const strengthLines = pdf.splitTextToSize(competitor.keyStrength, contentWidth - 10);
+          pdf.text(strengthLines, margin + 4, yPosition);
+          yPosition += strengthLines.length * 4 + 3;
+        }
+
+        // Weakness/Opportunity
+        if (competitor.weakness) {
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setTextColor(0);
+          pdf.text('Opportunity Gap:', margin + 2, yPosition);
+          yPosition += 4;
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(70);
+          const weaknessLines = pdf.splitTextToSize(competitor.weakness, contentWidth - 10);
+          pdf.text(weaknessLines, margin + 4, yPosition);
+          yPosition += weaknessLines.length * 4 + 3;
+        }
+
+        yPosition += 5;
+      });
+    }
+
+    // Strategic Insights
+    if (data.competitiveAnalysis.insights && data.competitiveAnalysis.insights.length > 0) {
+      checkPageBreak(30);
+      
+      yPosition += 10;
+      pdf.setFontSize(14);
+      pdf.setTextColor(0);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Strategic Insights', margin, yPosition);
+      yPosition += 10;
+
+      data.competitiveAnalysis.insights.forEach((insight) => {
+        checkPageBreak(25);
+
+        // Insight title
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(59, 130, 246);
+        pdf.text(insight.title, margin, yPosition);
+        yPosition += 7;
+
+        // Sub-items
+        if (insight.subItems && insight.subItems.length > 0) {
+          insight.subItems.forEach((item) => {
+            checkPageBreak(15);
+            
+            pdf.setFontSize(9);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(0);
+            pdf.text(`• ${item.label}:`, margin + 2, yPosition);
+            yPosition += 4;
+            
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(70);
+            const valueLines = pdf.splitTextToSize(item.value, contentWidth - 10);
+            pdf.text(valueLines, margin + 4, yPosition);
+            yPosition += valueLines.length * 4 + 2;
+          });
+        } else {
+          // Plain content
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(70);
+          const contentLines = pdf.splitTextToSize(insight.content, contentWidth - 5);
+          pdf.text(contentLines, margin + 2, yPosition);
+          yPosition += contentLines.length * 4;
+        }
+
+        yPosition += 8;
+      });
+    }
+
+    addPageNumber();
+  }
 
   // Footer page
   pdf.addPage();
