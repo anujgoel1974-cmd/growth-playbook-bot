@@ -55,10 +55,28 @@ serve(async (req) => {
     const pageContent = extractText(htmlContent);
     console.log('Extracted text content length:', pageContent.length);
 
-    // Prepare the prompt for OpenAI with structured output
-    const systemPrompt = `You are an AdTech strategist AI analyzing product landing pages.
-Provide detailed customer insights and campaign targeting recommendations.
-Be extremely detailed, structured, and actionable for SMB founders.`;
+    // Prepare the prompt for OpenAI
+    const systemPrompt = `You are an expert AdTech strategist analyzing product landing pages for SMB founders.
+
+Analyze the provided landing page content and return a detailed JSON response with this exact structure:
+
+{
+  "customerInsight": {
+    "personas": "Detailed demographics, psychographics, behaviors, and use-cases",
+    "tonality": "How to speak to them, personality cues, and communication style",
+    "painPoints": "Problems they face, jobs-to-be-done, and buying triggers",
+    "macroFactors": "Industry trends, seasonality, and market opportunities"
+  },
+  "campaignTargeting": {
+    "platforms": "Recommended ad platforms (Google, Meta, YouTube)",
+    "audiences": "Target demographics, interests, job titles, exclusions",
+    "keywords": "Keyword clusters with exact matches, phrase matches, and negatives",
+    "creatives": "Example headlines, primary text, CTAs, image/video concepts",
+    "budgets": "Campaign types (prospecting/retargeting/brand), daily budgets, and scaling rules"
+  }
+}
+
+Be extremely detailed and actionable. Use bullet points and clear formatting.`;
 
     console.log('Calling OpenAI API...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -76,22 +94,7 @@ Be extremely detailed, structured, and actionable for SMB founders.`;
           },
           { 
             role: 'user', 
-            content: `Analyze this landing page and provide insights in JSON format with two main sections:
-
-1. "customerInsight" with subsections:
-   - "personas": Demographics, psychographics, behaviors
-   - "tonality": How to speak to them
-   - "painPoints": Problems and motivators
-   - "macroFactors": Market trends and influences
-
-2. "campaignTargeting" with subsections:
-   - "platforms": Recommended ad platforms
-   - "audiences": Targeting details (demographics, interests)
-   - "keywords": Keyword clusters and negatives
-   - "creatives": Ad copy examples (headlines, CTAs, descriptions)
-   - "budgets": Campaign types, budget splits, scaling rules
-
-Landing page content:\n\n${pageContent}` 
+            content: `Analyze this product landing page:\n\n${pageContent}` 
           }
         ],
         response_format: { type: "json_object" },
@@ -107,32 +110,36 @@ Landing page content:\n\n${pageContent}`
 
     const openAIData = await openAIResponse.json();
     console.log('OpenAI response received successfully');
+    console.log('Full OpenAI response:', JSON.stringify(openAIData, null, 2));
+    
+    if (!openAIData.choices || !openAIData.choices[0] || !openAIData.choices[0].message) {
+      console.error('Invalid OpenAI response structure:', openAIData);
+      throw new Error('Invalid response from OpenAI API');
+    }
     
     const analysisText = openAIData.choices[0].message.content;
-    console.log('Analysis text preview:', analysisText.substring(0, 200));
+    console.log('Analysis text length:', analysisText?.length || 0);
+    console.log('Analysis text preview:', analysisText?.substring(0, 500) || 'EMPTY');
+    
+    if (!analysisText || analysisText.trim() === '') {
+      throw new Error('OpenAI returned empty content');
+    }
     
     // Parse the JSON response
     let analysisData;
     try {
       analysisData = JSON.parse(analysisText);
       console.log('Successfully parsed JSON response');
+      console.log('Parsed data structure:', {
+        hasCustomerInsight: !!analysisData.customerInsight,
+        hasCampaignTargeting: !!analysisData.campaignTargeting,
+        customerInsightKeys: Object.keys(analysisData.customerInsight || {}),
+        campaignTargetingKeys: Object.keys(analysisData.campaignTargeting || {})
+      });
     } catch (parseError) {
       console.error('Failed to parse OpenAI response as JSON:', parseError);
-      // Fallback: structure the text response
-      analysisData = {
-        customerInsight: {
-          overview: {
-            title: "Customer Insight",
-            content: analysisText.split('campaignTargeting')[0] || analysisText
-          }
-        },
-        campaignTargeting: {
-          overview: {
-            title: "Campaign Targeting",
-            content: analysisText.split('campaignTargeting')[1] || 'No campaign targeting data available'
-          }
-        }
-      };
+      console.error('Raw response text:', analysisText);
+      throw new Error('Failed to parse AI response as JSON');
     }
 
     // Ensure the data structure matches what the frontend expects
@@ -140,11 +147,6 @@ Landing page content:\n\n${pageContent}`
       customerInsight: analysisData.customerInsight || {},
       campaignTargeting: analysisData.campaignTargeting || {}
     };
-
-    console.log('Structured data keys:', {
-      customerInsight: Object.keys(structuredData.customerInsight),
-      campaignTargeting: Object.keys(structuredData.campaignTargeting)
-    });
 
     return new Response(
       JSON.stringify({ 
