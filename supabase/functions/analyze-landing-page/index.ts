@@ -91,23 +91,23 @@ Structure your response in TWO main sections:
 
 ## CAMPAIGN TARGETING
 
-### Recommended Platforms
-[3-5 bullet points: where to advertise and why]
+### Google Ads
+[3-5 bullet points covering: keyword strategy, audience targeting, campaign types, budget recommendations]
 
-### Audience Segments
-[3-5 bullet points: targeting parameters]
+### Meta Ads
+[3-5 bullet points covering: Facebook & Instagram audience targeting, creative formats, campaign objectives, budget allocation]
 
-### Keywords
-[3-5 bullet points: search terms]
+### Pinterest Ads
+[3-5 bullet points covering: visual strategy, audience targeting, campaign approach] (Only if relevant to the product)
 
-### Ad Creative Direction
-[3-5 bullet points: visual and copy recommendations]
+### TikTok Ads
+[3-5 bullet points covering: content strategy, audience targeting, campaign approach] (Only if relevant to the product)
 
-### Campaign Types
-[3-5 bullet points: campaign focus areas]
+### YouTube Ads
+[3-5 bullet points covering: video strategy, audience targeting, campaign approach] (Only if relevant to the product)
 
-### Budget Allocation
-[3-5 bullet points: investment priorities]
+### LinkedIn Ads
+[3-5 bullet points covering: B2B targeting, content strategy, campaign approach] (Only if relevant to the product)
 
 Landing page content:
 ${pageContent}
@@ -175,7 +175,7 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
       );
     }
     
-    // Helper function to map subsection titles to icons
+    // Helper function to map subsection titles to icons and channels
     const getIconForSection = (title: string): string => {
       const lowerTitle = title.toLowerCase();
       if (lowerTitle.includes('persona') || lowerTitle.includes('demographic')) return 'users';
@@ -183,18 +183,35 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
       if (lowerTitle.includes('pain') || lowerTitle.includes('trigger')) return 'zap';
       if (lowerTitle.includes('communication') || lowerTitle.includes('messaging')) return 'message-circle';
       if (lowerTitle.includes('market') || lowerTitle.includes('context')) return 'trending-up';
+      if (lowerTitle.includes('google')) return 'search';
+      if (lowerTitle.includes('meta') || lowerTitle.includes('facebook') || lowerTitle.includes('instagram')) return 'share-2';
+      if (lowerTitle.includes('pinterest')) return 'image';
+      if (lowerTitle.includes('tiktok')) return 'music';
+      if (lowerTitle.includes('youtube')) return 'video';
+      if (lowerTitle.includes('linkedin')) return 'briefcase';
       if (lowerTitle.includes('platform')) return 'target';
       if (lowerTitle.includes('audience') || lowerTitle.includes('segment')) return 'users-round';
-      if (lowerTitle.includes('keyword') || lowerTitle.includes('search')) return 'search';
+      if (lowerTitle.includes('keyword')) return 'hash';
       if (lowerTitle.includes('creative') || lowerTitle.includes('visual')) return 'palette';
       if (lowerTitle.includes('budget') || lowerTitle.includes('allocation')) return 'dollar-sign';
       if (lowerTitle.includes('campaign') || lowerTitle.includes('type')) return 'megaphone';
       return 'file-text';
     };
 
+    const getChannelColor = (title: string): string => {
+      const lowerTitle = title.toLowerCase();
+      if (lowerTitle.includes('google')) return 'google';
+      if (lowerTitle.includes('meta') || lowerTitle.includes('facebook') || lowerTitle.includes('instagram')) return 'meta';
+      if (lowerTitle.includes('pinterest')) return 'pinterest';
+      if (lowerTitle.includes('tiktok')) return 'tiktok';
+      if (lowerTitle.includes('youtube')) return 'youtube';
+      if (lowerTitle.includes('linkedin')) return 'linkedin';
+      return 'default';
+    };
+
     // Parse subsections from markdown
-    const parseSubsections = (content: string) => {
-      const subsections: Array<{ id: string; title: string; content: string; icon: string }> = [];
+    const parseSubsections = (content: string, isTargeting = false) => {
+      const subsections: Array<{ id: string; title: string; content: string; icon: string; channel?: string }> = [];
       const lines = content.split('\n');
       let currentSubsection: { title: string; content: string[] } | null = null;
 
@@ -203,12 +220,16 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
           // Save previous subsection if exists
           if (currentSubsection) {
             const cleanTitle = currentSubsection.title.replace(/^###\s*/, '').trim();
-            subsections.push({
+            const card: any = {
               id: cleanTitle.toLowerCase().replace(/\s+/g, '-'),
               title: cleanTitle,
               content: currentSubsection.content.join('\n').trim(),
               icon: getIconForSection(cleanTitle)
-            });
+            };
+            if (isTargeting) {
+              card.channel = getChannelColor(cleanTitle);
+            }
+            subsections.push(card);
           }
           // Start new subsection
           currentSubsection = {
@@ -223,12 +244,16 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
       // Save last subsection
       if (currentSubsection) {
         const cleanTitle = currentSubsection.title.replace(/^###\s*/, '').trim();
-        subsections.push({
+        const card: any = {
           id: cleanTitle.toLowerCase().replace(/\s+/g, '-'),
           title: cleanTitle,
           content: currentSubsection.content.join('\n').trim(),
           icon: getIconForSection(cleanTitle)
-        });
+        };
+        if (isTargeting) {
+          card.channel = getChannelColor(cleanTitle);
+        }
+        subsections.push(card);
       }
 
       return subsections;
@@ -245,11 +270,11 @@ Provide specific, actionable insights. Each subsection MUST have 3-5 concise bul
     if (ciIdx !== -1 && ctIdx !== -1) {
       const ciContent = analysisText.slice(ciIdx, ctIdx).trim();
       const ctContent = analysisText.slice(ctIdx).trim();
-      customerInsightCards = parseSubsections(ciContent);
-      campaignTargetingCards = parseSubsections(ctContent);
+      customerInsightCards = parseSubsections(ciContent, false);
+      campaignTargetingCards = parseSubsections(ctContent, true); // Pass true for targeting to add channel info
     } else {
       // Fallback: try to parse any subsections found
-      customerInsightCards = parseSubsections(analysisText);
+      customerInsightCards = parseSubsections(analysisText, false);
     }
 
     const structuredData = {

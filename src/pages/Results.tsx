@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Loader2, ArrowLeft, Copy, Download,
   Users, Brain, Zap, MessageCircle, TrendingUp,
-  Target, UsersRound, Search, Palette, DollarSign, Megaphone, FileText
+  Target, UsersRound, Search, Palette, DollarSign, Megaphone, FileText,
+  Share2, Image, Music, Video, Briefcase, Hash
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ interface InsightCard {
   title: string;
   content: string;
   icon: string;
+  channel?: string; // For campaign targeting cards
 }
 
 interface AnalysisData {
@@ -37,6 +39,50 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'dollar-sign': DollarSign,
   'megaphone': Megaphone,
   'file-text': FileText,
+  'share-2': Share2,
+  'image': Image,
+  'music': Music,
+  'video': Video,
+  'briefcase': Briefcase,
+  'hash': Hash,
+};
+
+const channelColors: Record<string, { bg: string; border: string; icon: string }> = {
+  'google': { 
+    bg: 'bg-blue-50 dark:bg-blue-950/30', 
+    border: 'border-blue-200 dark:border-blue-800', 
+    icon: 'text-blue-600 dark:text-blue-400' 
+  },
+  'meta': { 
+    bg: 'bg-purple-50 dark:bg-purple-950/30', 
+    border: 'border-purple-200 dark:border-purple-800', 
+    icon: 'text-purple-600 dark:text-purple-400' 
+  },
+  'pinterest': { 
+    bg: 'bg-red-50 dark:bg-red-950/30', 
+    border: 'border-red-200 dark:border-red-800', 
+    icon: 'text-red-600 dark:text-red-400' 
+  },
+  'tiktok': { 
+    bg: 'bg-cyan-50 dark:bg-cyan-950/30', 
+    border: 'border-cyan-200 dark:border-cyan-800', 
+    icon: 'text-cyan-600 dark:text-cyan-400' 
+  },
+  'youtube': { 
+    bg: 'bg-rose-50 dark:bg-rose-950/30', 
+    border: 'border-rose-200 dark:border-rose-800', 
+    icon: 'text-rose-600 dark:text-rose-400' 
+  },
+  'linkedin': { 
+    bg: 'bg-sky-50 dark:bg-sky-950/30', 
+    border: 'border-sky-200 dark:border-sky-800', 
+    icon: 'text-sky-600 dark:text-sky-400' 
+  },
+  'default': { 
+    bg: 'bg-card', 
+    border: 'border-border', 
+    icon: 'text-primary' 
+  },
 };
 
 const Results = () => {
@@ -102,13 +148,14 @@ const Results = () => {
 
   const InsightCard = ({ card }: { card: InsightCard }) => {
     const IconComponent = iconMap[card.icon] || FileText;
+    const colors = card.channel ? channelColors[card.channel] : channelColors.default;
     
     return (
-      <Card className="shadow-card hover:shadow-card-hover transition-all hover:scale-[1.02] group">
+      <Card className={`shadow-card hover:shadow-card-hover transition-all hover:scale-[1.02] group border-2 ${colors.border} ${colors.bg}`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+              <div className={`p-2 rounded-lg ${colors.icon} bg-white/50 dark:bg-black/20 group-hover:scale-110 transition-transform`}>
                 <IconComponent className="h-5 w-5" />
               </div>
               <CardTitle className="text-lg">{card.title}</CardTitle>
