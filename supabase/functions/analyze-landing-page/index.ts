@@ -56,27 +56,43 @@ serve(async (req) => {
     console.log('Extracted text content length:', pageContent.length);
 
     // Prepare the prompt for OpenAI
-    const systemPrompt = `You are an expert AdTech strategist analyzing product landing pages for SMB founders.
+    const systemPrompt = `You are an expert AdTech strategist. Analyze product landing pages and provide actionable insights for SMB founders running paid ads.`;
 
-Analyze the provided landing page content and return a detailed JSON response with this exact structure:
+    const userPrompt = `Analyze this product landing page and provide detailed insights in the following format:
 
-{
-  "customerInsight": {
-    "personas": "Detailed demographics, psychographics, behaviors, and use-cases",
-    "tonality": "How to speak to them, personality cues, and communication style",
-    "painPoints": "Problems they face, jobs-to-be-done, and buying triggers",
-    "macroFactors": "Industry trends, seasonality, and market opportunities"
-  },
-  "campaignTargeting": {
-    "platforms": "Recommended ad platforms (Google, Meta, YouTube)",
-    "audiences": "Target demographics, interests, job titles, exclusions",
-    "keywords": "Keyword clusters with exact matches, phrase matches, and negatives",
-    "creatives": "Example headlines, primary text, CTAs, image/video concepts",
-    "budgets": "Campaign types (prospecting/retargeting/brand), daily budgets, and scaling rules"
-  }
-}
+## CUSTOMER INSIGHT
 
-Be extremely detailed and actionable. Use bullet points and clear formatting.`;
+### Target Personas
+[Detailed demographics, psychographics, behaviors, lifestyle, pain points]
+
+### Communication Style
+[How to speak to them, tonality, personality cues]
+
+### Decision Triggers
+[What motivates them to buy, trust signals, objections]
+
+### Market Context
+[Industry trends, seasonality, competitive factors]
+
+## CAMPAIGN TARGETING
+
+### Recommended Platforms
+[Google Ads, Meta Ads, YouTube - with rationale]
+
+### Audience Targeting
+[Demographics, interests, job titles, lookalikes, exclusions]
+
+### Keyword Strategy
+[Core keywords, long-tail keywords, negative keywords]
+
+### Ad Creative Examples
+[Headlines, primary text, CTAs, image/video concepts]
+
+### Budget & Scaling
+[Campaign types, daily budgets, scaling rules, CPA targets]
+
+Landing page content:
+${pageContent}`;
 
     console.log('Calling OpenAI API...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -88,16 +104,9 @@ Be extremely detailed and actionable. Use bullet points and clear formatting.`;
       body: JSON.stringify({
         model: 'gpt-5-mini-2025-08-07',
         messages: [
-          { 
-            role: 'system', 
-            content: systemPrompt 
-          },
-          { 
-            role: 'user', 
-            content: `Analyze this product landing page:\n\n${pageContent}` 
-          }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
-        response_format: { type: "json_object" },
         max_completion_tokens: 4000,
       }),
     });
@@ -109,44 +118,52 @@ Be extremely detailed and actionable. Use bullet points and clear formatting.`;
     }
 
     const openAIData = await openAIResponse.json();
-    console.log('OpenAI response received successfully');
-    console.log('Full OpenAI response:', JSON.stringify(openAIData, null, 2));
+    console.log('OpenAI response received');
+    console.log('Response structure:', JSON.stringify({
+      hasChoices: !!openAIData.choices,
+      choicesLength: openAIData.choices?.length,
+      hasMessage: !!openAIData.choices?.[0]?.message,
+      hasContent: !!openAIData.choices?.[0]?.message?.content
+    }));
     
     if (!openAIData.choices || !openAIData.choices[0] || !openAIData.choices[0].message) {
-      console.error('Invalid OpenAI response structure:', openAIData);
+      console.error('Invalid OpenAI response structure:', JSON.stringify(openAIData, null, 2));
       throw new Error('Invalid response from OpenAI API');
     }
     
     const analysisText = openAIData.choices[0].message.content;
-    console.log('Analysis text length:', analysisText?.length || 0);
-    console.log('Analysis text preview:', analysisText?.substring(0, 500) || 'EMPTY');
+    console.log('Content length:', analysisText?.length || 0);
+    console.log('Content preview (first 1000 chars):', analysisText?.substring(0, 1000) || 'EMPTY');
     
     if (!analysisText || analysisText.trim() === '') {
       throw new Error('OpenAI returned empty content');
     }
     
-    // Parse the JSON response
-    let analysisData;
-    try {
-      analysisData = JSON.parse(analysisText);
-      console.log('Successfully parsed JSON response');
-      console.log('Parsed data structure:', {
-        hasCustomerInsight: !!analysisData.customerInsight,
-        hasCampaignTargeting: !!analysisData.campaignTargeting,
-        customerInsightKeys: Object.keys(analysisData.customerInsight || {}),
-        campaignTargetingKeys: Object.keys(analysisData.campaignTargeting || {})
-      });
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI response as JSON:', parseError);
-      console.error('Raw response text:', analysisText);
-      throw new Error('Failed to parse AI response as JSON');
-    }
-
-    // Ensure the data structure matches what the frontend expects
+    // Structure the markdown response into sections
+    const sections = analysisText.split('##').filter((s: string) => s.trim());
+    
+    const customerInsightSection = sections.find((s: string) => s.toLowerCase().includes('customer insight')) || '';
+    const campaignTargetingSection = sections.find((s: string) => s.toLowerCase().includes('campaign targeting')) || '';
+    
     const structuredData = {
-      customerInsight: analysisData.customerInsight || {},
-      campaignTargeting: analysisData.campaignTargeting || {}
+      customerInsight: {
+        full: {
+          title: "Customer Insight",
+          content: customerInsightSection.trim()
+        }
+      },
+      campaignTargeting: {
+        full: {
+          title: "Campaign Targeting",
+          content: campaignTargetingSection.trim()
+        }
+      }
     };
+    
+    console.log('Structured response ready:', {
+      customerInsightLength: customerInsightSection.length,
+      campaignTargetingLength: campaignTargetingSection.length
+    });
 
     return new Response(
       JSON.stringify({ 
