@@ -20,9 +20,9 @@ serve(async (req) => {
       throw new Error('URL is required');
     }
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     // Fetch the landing page content
@@ -94,31 +94,31 @@ serve(async (req) => {
 Landing page content:
 ${pageContent}`;
 
-    console.log('Calling OpenAI API...');
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log('Calling Lovable AI...');
+    const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_completion_tokens: 4000,
+        max_tokens: 4000,
       }),
     });
 
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', openAIResponse.status, errorText);
-      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
+      console.error('Lovable AI error:', openAIResponse.status, errorText);
+      throw new Error(`Lovable AI error: ${openAIResponse.status}`);
     }
 
     const openAIData = await openAIResponse.json();
-    console.log('OpenAI response received');
+    console.log('Lovable AI response received');
     console.log('Response structure:', JSON.stringify({
       hasChoices: !!openAIData.choices,
       choicesLength: openAIData.choices?.length,
@@ -127,8 +127,8 @@ ${pageContent}`;
     }));
     
     if (!openAIData.choices || !openAIData.choices[0] || !openAIData.choices[0].message) {
-      console.error('Invalid OpenAI response structure:', JSON.stringify(openAIData, null, 2));
-      throw new Error('Invalid response from OpenAI API');
+      console.error('Invalid Lovable AI response structure:', JSON.stringify(openAIData, null, 2));
+      throw new Error('Invalid response from Lovable AI');
     }
     
     const analysisText = openAIData.choices[0].message.content;
@@ -136,7 +136,7 @@ ${pageContent}`;
     console.log('Content preview (first 1000 chars):', analysisText?.substring(0, 1000) || 'EMPTY');
     
     if (!analysisText || analysisText.trim() === '') {
-      throw new Error('OpenAI returned empty content');
+      throw new Error('Lovable AI returned empty content');
     }
     
     // Structure the markdown response into sections
