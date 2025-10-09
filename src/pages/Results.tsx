@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generatePDF } from "@/utils/pdfExport";
+import { toast as sonnerToast } from "sonner";
 
 interface InsightCard {
   id: string;
@@ -107,6 +109,7 @@ const Results = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     if (!url) {
@@ -429,15 +432,62 @@ const Results = () => {
             <Button 
               size="lg" 
               className="gap-2"
-              onClick={() => {
-                toast({
-                  title: "Coming Soon",
-                  description: "PDF export functionality will be available soon",
-                });
+              disabled={isGeneratingPdf}
+              onClick={async () => {
+                if (!url || !analysis) return;
+                
+                setIsGeneratingPdf(true);
+                sonnerToast.loading("Generating PDF...", { id: "pdf-generation" });
+
+                try {
+                  // Map data structure for PDF export
+                  const pdfData = {
+                    customerInsight: {
+                      sections: analysis.customerInsight || []
+                    },
+                    campaignTargeting: {
+                      sections: analysis.campaignTargeting || []
+                    },
+                    mediaPlan: {
+                      weeks: (analysis.mediaPlan || []).map(week => ({
+                        week: week.weekNumber,
+                        channels: week.channels.map(ch => ({
+                          name: ch.name,
+                          budget: `$${ch.budget}`,
+                          campaignType: ch.campaignType,
+                          allocation: `${ch.percentage}%`,
+                          color: ch.name.toLowerCase().includes('google') ? 'google' :
+                                 ch.name.toLowerCase().includes('meta') ? 'meta' :
+                                 ch.name.toLowerCase().includes('pinterest') ? 'pinterest' :
+                                 ch.name.toLowerCase().includes('tiktok') ? 'tiktok' :
+                                 ch.name.toLowerCase().includes('youtube') ? 'youtube' : 'default'
+                        })),
+                        reasoning: week.reasoning || ''
+                      }))
+                    }
+                  };
+
+                  await generatePDF(pdfData, url);
+                  sonnerToast.success("PDF downloaded successfully!", { id: "pdf-generation" });
+                } catch (error) {
+                  console.error("PDF generation error:", error);
+                  sonnerToast.error("Failed to generate PDF. Please try again.", { id: "pdf-generation" });
+                } finally {
+                  setIsGeneratingPdf(false);
+                }
               }}
             >
-              <Download className="h-4 w-4" />
-              Download Full Playbook as PDF
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Download Full Playbook as PDF
+                </>
+              )}
             </Button>
           </div>
         )}
