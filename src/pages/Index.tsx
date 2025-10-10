@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Target, Zap, Loader2 } from "lucide-react";
+import { Search, Target, Zap, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [url, setUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [homepageUrl, setHomepageUrl] = useState("");
+  const [isExtracting, setIsExtracting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -42,6 +44,38 @@ const Index = () => {
     setTimeout(() => {
       navigate(`/results?url=${encodeURIComponent(url)}`);
       setIsAnalyzing(false);
+    }, 500);
+  };
+
+  const handleExtractCatalog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!homepageUrl) {
+      toast({
+        title: "URL Required",
+        description: "Please enter your homepage URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      new URL(homepageUrl);
+    } catch {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid homepage URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExtracting(true);
+    
+    // Navigate to sitemap page
+    setTimeout(() => {
+      navigate(`/sitemap?url=${encodeURIComponent(homepageUrl)}`);
+      setIsExtracting(false);
     }, 500);
   };
 
@@ -128,6 +162,58 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">
                   Receive detailed personas and ready-to-use campaign strategies
                 </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-12 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <div className="flex-1 h-px bg-border"></div>
+            <span className="text-muted-foreground text-sm font-medium">OR</span>
+            <div className="flex-1 h-px bg-border"></div>
+          </div>
+
+          {/* New Catalog Analysis Option */}
+          <div className="max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: "0.4s" }}>
+            <Card className="shadow-card-hover border-2 border-dashed border-accent/50">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="text-center space-y-2">
+                    <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
+                      <Package className="h-6 w-6 text-accent" />
+                    </div>
+                    <h3 className="text-xl font-semibold">Analyze Your Entire Product Catalog</h3>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      Extract and categorize all products from your e-commerce site for bulk campaign planning
+                    </p>
+                  </div>
+                  <form onSubmit={handleExtractCatalog} className="flex gap-3">
+                    <Input
+                      type="url"
+                      placeholder="Enter your homepage URL (e.g., https://example.com)"
+                      value={homepageUrl}
+                      onChange={(e) => setHomepageUrl(e.target.value)}
+                      className="flex-1 h-12"
+                      disabled={isExtracting}
+                    />
+                    <Button
+                      type="submit"
+                      size="lg"
+                      variant="outline"
+                      className="px-6 border-2"
+                      disabled={isExtracting}
+                    >
+                      {isExtracting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Extracting...
+                        </>
+                      ) : (
+                        "Extract Catalog"
+                      )}
+                    </Button>
+                  </form>
+                </div>
               </CardContent>
             </Card>
           </div>
