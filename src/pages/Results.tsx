@@ -15,6 +15,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePDF } from "@/utils/pdfExport";
 import { toast as sonnerToast } from "sonner";
+import { MetaFeedAdPreview } from "@/components/ad-previews/MetaFeedAdPreview";
+import { InstagramStoryAdPreview } from "@/components/ad-previews/InstagramStoryAdPreview";
+import { GoogleSearchAdPreview } from "@/components/ad-previews/GoogleSearchAdPreview";
+import { GoogleDisplayAdPreview } from "@/components/ad-previews/GoogleDisplayAdPreview";
+import { PinterestPinPreview } from "@/components/ad-previews/PinterestPinPreview";
+import { TikTokAdPreview } from "@/components/ad-previews/TikTokAdPreview";
+import { YouTubeThumbnailPreview } from "@/components/ad-previews/YouTubeThumbnailPreview";
 
 interface InsightCard {
   id: string;
@@ -50,10 +57,12 @@ interface AdCreative {
   id: string;
   channel: string;
   channelType: string;
+  placement: string;
   headlines: string[];
   descriptions: string[];
   imagePrompt: string;
   imageUrl?: string;
+  imageAspectRatio?: string;
 }
 
 interface AnalysisData {
@@ -186,13 +195,34 @@ const Results = () => {
     analyzeUrl();
   }, [url, navigate, toast]);
 
-  const handleCopy = (text: string, section: string) => {
+  const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied!",
-      description: `${section} copied to clipboard`,
-    });
+    sonnerToast.success(`${label} copied to clipboard!`);
   };
+
+  // Extract recommended channels from media plan
+  const getRecommendedChannels = (mediaPlan: MediaPlanWeek[] | undefined): Set<string> => {
+    const channels = new Set<string>();
+    mediaPlan?.forEach(week => {
+      week.channels.forEach(ch => {
+        const channelName = ch.name.toLowerCase();
+        if (channelName.includes('google')) channels.add('google');
+        if (channelName.includes('meta') || channelName.includes('facebook') || channelName.includes('instagram')) {
+          channels.add('meta');
+        }
+        if (channelName.includes('pinterest')) channels.add('pinterest');
+        if (channelName.includes('tiktok')) channels.add('tiktok');
+        if (channelName.includes('youtube')) channels.add('youtube');
+        if (channelName.includes('linkedin')) channels.add('linkedin');
+      });
+    });
+    return channels;
+  };
+
+  const recommendedChannels = analysis?.mediaPlan ? getRecommendedChannels(analysis.mediaPlan) : new Set();
+  const filteredCreatives = analysis?.adCreatives?.filter(creative => 
+    recommendedChannels.has(creative.channelType)
+  ) || [];
 
   const AdCreativeCard = ({ creative }: { creative: AdCreative }) => {
     const creativeChannelColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -643,46 +673,77 @@ const Results = () => {
 
             {/* Ad Creative Tab */}
             <TabsContent value="adcreative" className="animate-fade-in">
-              {analysis?.adCreatives && analysis.adCreatives.length > 0 ? (
-                <>
+              {filteredCreatives.length > 0 ? (
+                <div className="space-y-8">
                   <div className="text-center mb-8">
-                    <h3 className="text-2xl font-bold mb-2">Ready-to-Use Ad Creatives</h3>
-                    <p className="text-muted-foreground max-w-2xl mx-auto">
-                      AI-generated headlines, descriptions, and images optimized for each advertising platform
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="mt-4"
-                      onClick={() => {
-                        const allCopy = analysis.adCreatives!.map(c => `
-${c.channel}
-${'='.repeat(c.channel.length)}
-
-Headlines:
-${c.headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}
-
-Descriptions:
-${c.descriptions.map((d, i) => `${i + 1}. ${d}`).join('\n')}
-                        `).join('\n\n');
-                        
-                        handleCopy(allCopy.trim(), 'All Ad Creatives');
-                      }}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy All Creatives
-                    </Button>
+                    <h3 className="text-2xl font-bold mb-2">Ad Creative Previews</h3>
+                    <p className="text-muted-foreground">See exactly how your ads will appear on each platform</p>
+                    <p className="text-sm text-muted-foreground mt-1">Showing creatives for channels in your Media Plan</p>
                   </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {analysis.adCreatives.map((creative) => (
-                      <AdCreativeCard key={creative.id} creative={creative} />
-                    ))}
+
+                  <div className="space-y-12">
+                    {Array.from(recommendedChannels).map(channelType => {
+                      const channelCreatives = filteredCreatives.filter(c => c.channelType === channelType);
+                      if (channelCreatives.length === 0) return null;
+
+                      return (
+                        <div key={channelType} className="space-y-6">
+                          <h4 className="text-xl font-bold capitalize flex items-center gap-2">
+                            {channelType} Ads
+                            <span className="text-sm font-normal text-muted-foreground">
+                              ({channelCreatives.length} placement{channelCreatives.length > 1 ? 's' : ''})
+                            </span>
+                          </h4>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {channelCreatives.map(creative => {
+                              const renderPreview = () => {
+                                if (creative.channelType === 'meta' && creative.placement === 'feed') return <MetaFeedAdPreview creative={creative} />;
+                                if (creative.channelType === 'meta' && creative.placement.includes('story')) return <InstagramStoryAdPreview creative={creative} />;
+                                if (creative.channelType === 'google' && creative.placement === 'search') return <GoogleSearchAdPreview creative={creative} />;
+                                if (creative.channelType === 'google' && creative.placement === 'display') return <GoogleDisplayAdPreview creative={creative} />;
+                                if (creative.channelType === 'pinterest') return <PinterestPinPreview creative={creative} />;
+                                if (creative.channelType === 'tiktok') return <TikTokAdPreview creative={creative} />;
+                                if (creative.channelType === 'youtube') return <YouTubeThumbnailPreview creative={creative} />;
+                                return <AdCreativeCard creative={creative} />;
+                              };
+
+                              return (
+                                <div key={creative.id} className="space-y-3">
+                                  {renderPreview()}
+                                  <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => {
+                                      const copyText = `${creative.channel}\n\nHeadlines:\n${creative.headlines.join('\n')}\n\nDescriptions:\n${creative.descriptions.join('\n')}`;
+                                      handleCopy(copyText, creative.channel);
+                                    }}>
+                                      <Copy className="h-3 w-3 mr-1" />Copy Specs
+                                    </Button>
+                                    {creative.imageUrl && (
+                                      <Button size="sm" variant="outline" onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = creative.imageUrl!;
+                                        link.download = `${creative.id}-image.png`;
+                                        link.click();
+                                        sonnerToast.success('Image downloaded!');
+                                      }}>
+                                        <Download className="h-3 w-3 mr-1" />Download
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </>
+                </div>
               ) : (
                 <Card className="shadow-card">
                   <CardContent className="py-12 text-center text-muted-foreground">
                     <Megaphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No ad creative data available</p>
+                    <p>No ad creatives available</p>
                   </CardContent>
                 </Card>
               )}

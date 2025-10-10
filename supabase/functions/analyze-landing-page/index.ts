@@ -269,38 +269,48 @@ Research and identify 3-5 competitors for this product/service. For each competi
 
 ## AD CREATIVE
 
-For each relevant advertising channel, create ad copy variations optimized for that platform's best practices and character limits.
+For each relevant advertising channel, create MULTIPLE placement-specific ad variations optimized for that platform's exact specifications.
 
-### Google Search Ads
-• Headline 1: [30 characters max, keyword-rich]
-• Headline 2: [30 characters max, value proposition]
-• Headline 3: [30 characters max, call to action]
-• Description 1: [90 characters max, benefits-focused]
-• Description 2: [90 characters max, trust signals]
-• Image Prompt: [Detailed description for AI image generation suitable for Google Display ads - describe visual style, product focus, color palette based on brand, composition (product-focused, clean background, professional), lighting, trust signals to incorporate]
+### Google Search Ads - Search Placement
+• Headline 1: [30 chars max]
+• Headline 2: [30 chars max]
+• Headline 3: [30 chars max]
+• Description 1: [90 chars max]
+• Description 2: [90 chars max]
+• Image Prompt (1:1 Square): [For Display Network - clean product shot, professional lighting]
 
-### Meta Ads (Facebook/Instagram)
-• Primary Text: [125 characters, attention-grabbing hook + value proposition]
-• Headline: [40 characters, clear benefit-driven CTA]
-• Description: [30 characters, supporting detail]
-• Image Prompt: [Detailed description for AI image generation suitable for social media - lifestyle imagery showing target audience using/benefiting from product, emotional appeal matching psychographics, brand colors, mobile-optimized composition, authentic feel, social proof elements]
+### Google Display Ads - Display Placement
+• Headline: [25 chars max, concise value prop]
+• Description: [90 chars max]
+• Image Prompt (1.91:1 Horizontal): [Banner style - product + benefit text overlay]
 
-### Pinterest Ads
-• Pin Title: [100 characters, aspirational + keyword-rich]
-• Pin Description: [500 characters, storytelling approach with benefits]
-• Image Prompt: [Detailed description for AI image generation in vertical 2:3 format - visually striking, product in aspirational setting, bright colors with high contrast, inspirational lifestyle context, flat lay or styled composition, Pinterest-aesthetic]
+### Meta Ads - Feed Placement
+• Primary Text: [125 chars - hook + value prop]
+• Headline: [40 chars - benefit-driven CTA]
+• Description: [30 chars - supporting detail]
+• Image Prompt (1:1 Square): [Lifestyle imagery with product, authentic feel, mobile-optimized]
 
-### TikTok Ads
-• Hook Text: [First 3 seconds text overlay, under 15 characters]
-• Main Message: [Text overlay for mid-video, under 30 characters]
-• CTA Text: [End screen call-to-action, under 20 characters]
-• Image Prompt: [Detailed description for AI image generation suitable for TikTok - dynamic, youth-oriented aesthetic, authentic/casual feel, mobile-first vertical composition, bold contrasting colors, space for text overlay, Gen-Z appeal, trending visual style]
+### Meta Ads - Story Placement
+• Text Overlay: [15 chars max - ultra-short hook]
+• CTA: [10 chars - "Shop Now", "Learn More"]
+• Image Prompt (9:16 Vertical): [Full-screen immersive, product hero shot with minimal text space]
 
-### YouTube Ads
-• Video Title: [100 characters, curiosity-driven]
-• Thumbnail Text: [5-7 words max, bold statement]
-• Description: [First 100 characters before "show more"]
-• Image Prompt: [Detailed description for AI thumbnail image - attention-grabbing composition, expressive faces or dramatic product shot, high contrast colors, text-overlay ready with clear focal point, YouTube thumbnail best practices]
+### Pinterest Ads - Pin Placement
+• Pin Title: [100 chars - aspirational + keyword-rich]
+• Pin Description: [500 chars - storytelling with benefits]
+• Image Prompt (2:3 Vertical): [Visually striking, bright colors, flat lay or styled, Pinterest aesthetic]
+
+### TikTok Ads - In-Feed Placement
+• Hook Text: [15 chars - first 3 seconds overlay]
+• Main Message: [30 chars - mid-video overlay]
+• CTA: [20 chars - end screen]
+• Image Prompt (9:16 Vertical): [Dynamic, youth-oriented, mobile-first, bold colors, text overlay space]
+
+### YouTube Ads - Video Placement
+• Video Title: [100 chars - curiosity-driven]
+• Thumbnail Text: [5-7 words - bold statement]
+• Description: [100 chars - above fold]
+• Image Prompt (16:9 Horizontal): [Attention-grabbing thumbnail, expressive faces OR dramatic product shot, high contrast]
 
 For each Image Prompt, synthesize insights from:
 - Customer Demographics and Psychographics (age, lifestyle, values)
@@ -630,9 +640,11 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       id: string;
       channel: string;
       channelType: string;
+      placement: string;
       headlines: string[];
       descriptions: string[];
       imagePrompt: string;
+      imageAspectRatio?: string;
     }> => {
       const creatives: Array<any> = [];
       const lines = content.split('\n');
@@ -641,12 +653,19 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       for (const line of lines) {
         const trimmed = line.trim();
         
-        // Detect channel headers: "### Google Search Ads"
+        // Detect channel headers: "### Google Search Ads - Search Placement"
         if (trimmed.startsWith('### ')) {
           if (currentCreative && currentCreative.channel) {
             creatives.push(currentCreative);
           }
-          const channelName = trimmed.replace(/^###\s*/, '').trim();
+          const fullHeader = trimmed.replace(/^###\s*/, '').trim();
+          
+          // Parse "Google Search Ads - Search Placement" -> channel + placement
+          const parts = fullHeader.split('-').map(p => p.trim());
+          const channelName = parts[0];
+          const placementRaw = parts.length > 1 ? parts.slice(1).join(' ') : 'default';
+          const placement = placementRaw.toLowerCase().replace(/\s+placement$/i, '').trim();
+          
           const channelType = channelName.toLowerCase().includes('google') ? 'google'
             : channelName.toLowerCase().includes('meta') ? 'meta'
             : channelName.toLowerCase().includes('pinterest') ? 'pinterest'
@@ -654,13 +673,27 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
             : channelName.toLowerCase().includes('youtube') ? 'youtube'
             : 'default';
           
+          // Determine aspect ratio based on placement
+          let aspectRatio = '1:1'; // default square
+          if (placement.includes('story') || placement.includes('in-feed') || channelType === 'tiktok') {
+            aspectRatio = '9:16';
+          } else if (placement.includes('pin') || channelType === 'pinterest') {
+            aspectRatio = '2:3';
+          } else if (placement.includes('video') || placement.includes('youtube') || channelType === 'youtube') {
+            aspectRatio = '16:9';
+          } else if (placement.includes('display') && channelType === 'google') {
+            aspectRatio = '1.91:1';
+          }
+          
           currentCreative = {
-            id: channelName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            id: `${channelName}-${placement}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
             channel: channelName,
             channelType,
+            placement,
             headlines: [],
             descriptions: [],
-            imagePrompt: ''
+            imagePrompt: '',
+            imageAspectRatio: aspectRatio
           };
         } else if (currentCreative && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
           const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
@@ -674,7 +707,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
             if (lowerLabel.includes('headline') || lowerLabel.includes('primary text') || 
                 lowerLabel.includes('pin title') || lowerLabel.includes('hook') || 
                 lowerLabel.includes('main message') || lowerLabel.includes('video title') || 
-                lowerLabel.includes('thumbnail text')) {
+                lowerLabel.includes('thumbnail text') || lowerLabel.includes('text overlay')) {
               currentCreative.headlines.push(value);
             } else if (lowerLabel.includes('description') || lowerLabel.includes('pin description') || 
                        lowerLabel.includes('cta')) {
@@ -706,8 +739,17 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
           try {
             console.log(`Generating image for ${creative.channel}...`);
             
-            // Enhanced prompt to keep product intact and deterministic
-            const enhancedPrompt = `CRITICAL INSTRUCTIONS: You MUST keep the main product from the base image EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact. DO NOT modify, alter, or reimagine the product itself in any way. ONLY add creative background elements, lighting effects, lifestyle context, or platform-specific styling AROUND the product to make it suitable for ${creative.channel} advertising. The product is the hero and must remain perfectly preserved. ${creative.imagePrompt}`;
+            // Enhanced prompt with aspect ratio instructions
+            const aspectRatioMap: Record<string, string> = {
+              '1:1': 'square 1:1 format, centered composition',
+              '9:16': 'vertical 9:16 format for mobile stories, full-screen immersive',
+              '2:3': 'vertical 2:3 Pinterest-optimized format',
+              '16:9': 'horizontal 16:9 landscape format for YouTube thumbnails',
+              '1.91:1': 'horizontal 1.91:1 banner format for display ads'
+            };
+            const aspectInstruction = aspectRatioMap[creative.imageAspectRatio || '1:1'];
+            
+            const enhancedPrompt = `CRITICAL: Generate in ${aspectInstruction}. You MUST keep the main product from the base image EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact. DO NOT modify, alter, or reimagine the product itself in any way. ONLY add creative background elements, lighting effects, lifestyle context, or platform-specific styling AROUND the product to make it suitable for ${creative.channel} ${creative.placement} advertising. The product is the hero and must remain perfectly preserved. ${creative.imagePrompt}`;
             
             // Build message content with product image if available
             const messageContent: any[] = [
