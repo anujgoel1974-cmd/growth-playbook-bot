@@ -8,7 +8,11 @@ const corsHeaders = {
 interface ProductLink {
   url: string;
   title: string;
+  description?: string;
+  price?: string;
   imageUrl?: string;
+  variants?: string[];
+  sku?: string;
 }
 
 interface Subcategory {
@@ -63,8 +67,13 @@ serve(async (req) => {
       );
     }
 
+    // Fetch detailed product information for each link
+    console.log("Fetching detailed product information...");
+    const enrichedProducts = await enrichProductDetails(productLinks);
+    console.log("Enriched products:", enrichedProducts.length);
+
     // Use AI to categorize products
-    const categories = await categorizeWithAI(productLinks);
+    const categories = await categorizeWithAI(enrichedProducts);
     console.log("Categorized into", categories.length, "categories");
 
     return new Response(
@@ -72,7 +81,7 @@ serve(async (req) => {
         success: true,
         sitemap: {
           homepageUrl: url,
-          totalProducts: productLinks.length,
+          totalProducts: enrichedProducts.length,
           categories: categories,
           extractedAt: new Date().toISOString(),
         }
@@ -130,8 +139,122 @@ function extractProductLinks(html: string, baseUrl: string): ProductLink[] {
     }
   }
 
-  // Limit to 100 products for MVP (can increase later)
-  return products.slice(0, 100);
+  // Limit to 50 products for MVP (due to individual page fetching)
+  return products.slice(0, 50);
+}
+
+async function enrichProductDetails(products: ProductLink[]): Promise<ProductLink[]> {
+  const enrichedProducts: ProductLink[] = [];
+  
+  // Process products in batches to avoid overwhelming the server
+  const batchSize = 10;
+  for (let i = 0; i < products.length; i += batchSize) {
+    const batch = products.slice(i, i + batchSize);
+    
+    const batchPromises = batch.map(async (product) => {
+      try {
+        console.log(`Fetching details for: ${product.url}`);
+        const response = await fetch(product.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; LandingPageAnalyzer/1.0)',
+          },
+        });
+
+        if (!response.ok) {
+          console.error(`Failed to fetch ${product.url}: ${response.statusText}`);
+          return product; // Return original if fetch fails
+        }
+
+        const html = await response.text();
+        
+        // Extract detailed product information
+        const enriched = extractProductDetails(html, product);
+        return enriched;
+      } catch (error) {
+        console.error(`Error enriching product ${product.url}:`, error);
+        return product; // Return original if error
+      }
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    enrichedProducts.push(...batchResults);
+  }
+
+  return enrichedProducts;
+}
+
+function extractProductDetails(html: string, originalProduct: ProductLink): ProductLink {
+  const product = { ...originalProduct };
+
+  // Extract title from multiple possible sources
+  const titleMatch = 
+    html.match(/<h1[^>]*>([^<]+)<\/h1>/i) ||
+    html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<title>([^<]+)<\/title>/i);
+  
+  if (titleMatch && titleMatch[1]) {
+    product.title = titleMatch[1].trim();
+  }
+
+  // Extract description
+  const descMatch = 
+    html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i);
+  
+  if (descMatch && descMatch[1]) {
+    product.description = descMatch[1].trim();
+  }
+
+  // Extract price - multiple patterns for different e-commerce platforms
+  const priceMatch = 
+    html.match(/["']price["']:\s*["']?(\d+\.?\d*)["']?/i) ||
+    html.match(/<span[^>]*class=["'][^"']*price[^"']*["'][^>]*>[\s\S]*?([\$£€]\d+\.?\d*)/i) ||
+    html.match(/<meta[^>]*property=["']product:price:amount["'][^>]*content=["']([^"']+)["']/i);
+  
+  if (priceMatch && priceMatch[1]) {
+    product.price = priceMatch[1].trim();
+  }
+
+  // Extract main product image
+  const imgMatch = 
+    html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<img[^>]*class=["'][^"']*product[^"']*["'][^>]*src=["']([^"']+)["']/i);
+  
+  if (imgMatch && imgMatch[1]) {
+    let imageUrl = imgMatch[1];
+    // Ensure absolute URL
+    if (!imageUrl.startsWith('http')) {
+      const urlObj = new URL(originalProduct.url);
+      imageUrl = new URL(imageUrl, urlObj.origin).href;
+    }
+    product.imageUrl = imageUrl;
+  }
+
+  // Extract SKU
+  const skuMatch = 
+    html.match(/["']sku["']:\s*["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]*property=["']product:retailer_item_id["'][^>]*content=["']([^"']+)["']/i);
+  
+  if (skuMatch && skuMatch[1]) {
+    product.sku = skuMatch[1].trim();
+  }
+
+  // Extract variants (sizes, colors, etc.)
+  const variants: string[] = [];
+  const variantMatches = html.matchAll(/<option[^>]*value=["']([^"']+)["'][^>]*>([^<]+)<\/option>/gi);
+  
+  for (const match of variantMatches) {
+    const variantText = match[2].trim();
+    if (variantText && !variantText.toLowerCase().includes('select') && variantText.length < 50) {
+      variants.push(variantText);
+    }
+  }
+  
+  if (variants.length > 0) {
+    product.variants = variants.slice(0, 10); // Limit to 10 variants
+  }
+
+  return product;
 }
 
 async function categorizeWithAI(products: ProductLink[]): Promise<Category[]> {
@@ -141,7 +264,14 @@ async function categorizeWithAI(products: ProductLink[]): Promise<Category[]> {
     throw new Error("LOVABLE_API_KEY not configured");
   }
 
-  const productList = products.map((p, i) => `${i + 1}. ${p.title} - ${p.url}`).join('\n');
+  const productList = products.map((p, i) => {
+    let details = `${i + 1}. ${p.title}`;
+    if (p.price) details += ` ($${p.price})`;
+    if (p.sku) details += ` [SKU: ${p.sku}]`;
+    if (p.description) details += ` - ${p.description.substring(0, 100)}`;
+    if (p.variants && p.variants.length > 0) details += ` (Variants: ${p.variants.join(', ')})`;
+    return details;
+  }).join('\n');
 
   const prompt = `You are an e-commerce analyst. Below are ${products.length} product URLs from a website. Categorize them into logical categories and subcategories.
 

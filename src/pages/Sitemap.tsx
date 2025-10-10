@@ -10,7 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 interface ProductLink {
   url: string;
   title: string;
+  description?: string;
+  price?: string;
   imageUrl?: string;
+  variants?: string[];
+  sku?: string;
 }
 
 interface Subcategory {
@@ -179,8 +183,50 @@ const Sitemap = () => {
                             {subcategory.products.map((product, prodIdx) => (
                               <Card key={prodIdx} className="hover:shadow-lg transition-all hover-scale">
                                 <CardContent className="pt-6 space-y-3">
-                                  <p className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">{product.title}</p>
-                                  <div className="flex gap-2">
+                                  {product.imageUrl && (
+                                    <div className="w-full h-40 rounded-md overflow-hidden bg-muted mb-3">
+                                      <img 
+                                        src={product.imageUrl} 
+                                        alt={product.title}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                  <div className="space-y-2">
+                                    <p className="font-semibold text-sm line-clamp-2 min-h-[2.5rem]">{product.title}</p>
+                                    
+                                    {product.price && (
+                                      <p className="text-primary font-bold text-lg">${product.price}</p>
+                                    )}
+                                    
+                                    {product.sku && (
+                                      <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+                                    )}
+                                    
+                                    {product.description && (
+                                      <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+                                    )}
+                                    
+                                    {product.variants && product.variants.length > 0 && (
+                                      <div className="flex flex-wrap gap-1">
+                                        {product.variants.slice(0, 3).map((variant, vIdx) => (
+                                          <span key={vIdx} className="text-xs px-2 py-1 bg-accent/10 rounded-full">
+                                            {variant}
+                                          </span>
+                                        ))}
+                                        {product.variants.length > 3 && (
+                                          <span className="text-xs px-2 py-1 bg-muted rounded-full">
+                                            +{product.variants.length - 3}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex gap-2 pt-2">
                                     <Button
                                       size="sm"
                                       className="flex-1 bg-gradient-primary hover:opacity-90 transition-opacity"
