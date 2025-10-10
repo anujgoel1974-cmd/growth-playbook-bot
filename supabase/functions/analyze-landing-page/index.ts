@@ -55,6 +55,29 @@ serve(async (req) => {
     const pageContent = extractText(htmlContent);
     console.log('Extracted text content length:', pageContent.length);
 
+    // Extract product image URL from HTML for ad creative generation
+    let productImageUrl = '';
+    try {
+      const ogImageMatch = htmlContent.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+      if (ogImageMatch && ogImageMatch[1]) {
+        productImageUrl = ogImageMatch[1];
+      } else {
+        // Fallback: Look for main product images
+        const imgMatch = htmlContent.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/i);
+        if (imgMatch && imgMatch[1]) {
+          productImageUrl = imgMatch[1];
+        }
+      }
+      // Ensure absolute URL
+      if (productImageUrl && !productImageUrl.startsWith('http')) {
+        const urlObj = new URL(url);
+        productImageUrl = new URL(productImageUrl, urlObj.origin).href;
+      }
+      console.log('Extracted product image URL:', productImageUrl);
+    } catch (error) {
+      console.error('Error extracting product image:', error);
+    }
+
     // Prepare the prompt for AI
     const systemPrompt = `You are an AI marketing analyst specializing in landing page analysis and ad campaign strategy. Your role is to provide actionable insights that marketing teams can use to create highly targeted campaigns. Focus on delivering practical, data-driven recommendations based on the landing page content. 
 
@@ -670,10 +693,11 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       return creatives;
     };
 
-    // Generate images for ad creatives using Gemini
+    // Generate images for ad creatives using Gemini with product image as base
     const generateAdImages = async (
       creatives: Array<any>,
-      apiKey: string
+      apiKey: string,
+      baseProductImageUrl: string
     ): Promise<Array<any>> => {
       const updatedCreatives: Array<any> = [];
       
@@ -681,6 +705,27 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         if (creative.imagePrompt) {
           try {
             console.log(`Generating image for ${creative.channel}...`);
+            
+            // Enhanced prompt to keep product intact and deterministic
+            const enhancedPrompt = `CRITICAL INSTRUCTIONS: You MUST keep the main product from the base image EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact. DO NOT modify, alter, or reimagine the product itself in any way. ONLY add creative background elements, lighting effects, lifestyle context, or platform-specific styling AROUND the product to make it suitable for ${creative.channel} advertising. The product is the hero and must remain perfectly preserved. ${creative.imagePrompt}`;
+            
+            // Build message content with product image if available
+            const messageContent: any[] = [
+              {
+                type: 'text',
+                text: enhancedPrompt
+              }
+            ];
+            
+            // Add product image as base for editing/composition
+            if (baseProductImageUrl) {
+              messageContent.push({
+                type: 'image_url',
+                image_url: {
+                  url: baseProductImageUrl
+                }
+              });
+            }
             
             const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
               method: 'POST',
@@ -693,7 +738,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
                 messages: [
                   {
                     role: 'user',
-                    content: creative.imagePrompt
+                    content: messageContent
                   }
                 ],
                 modalities: ['image', 'text']
@@ -772,12 +817,12 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         };
       }
 
-      // Parse ad creative if exists
-      if (acIdx !== -1) {
-        const acContent = analysisText.slice(acIdx).trim();
-        const parsedCreatives = parseAdCreatives(acContent);
-        adCreatives = await generateAdImages(parsedCreatives, lovableApiKey);
-      }
+    // Parse ad creative if exists
+    if (acIdx !== -1) {
+      const acContent = analysisText.slice(acIdx).trim();
+      const parsedCreatives = parseAdCreatives(acContent);
+      adCreatives = await generateAdImages(parsedCreatives, lovableApiKey, productImageUrl);
+    }
     } else {
       customerInsightCards = parseSubsections(analysisText, false);
     }
