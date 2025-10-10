@@ -127,54 +127,15 @@ const Index = () => {
             </Card>
           </form>
 
-          {/* How It Works */}
-          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto pt-8 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            <Card className="shadow-card hover:shadow-card-hover transition-all hover-scale">
-              <CardContent className="pt-6 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <Search className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg">① Paste Your URL</h3>
-                <p className="text-sm text-muted-foreground">
-                  Enter any product landing page you want to analyze
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card hover:shadow-card-hover transition-all hover-scale">
-              <CardContent className="pt-6 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
-                  <Zap className="h-6 w-6 text-accent" />
-                </div>
-                <h3 className="font-semibold text-lg">② AI Scrapes & Analyzes</h3>
-                <p className="text-sm text-muted-foreground">
-                  Our AI extracts and understands your product positioning
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card hover:shadow-card-hover transition-all hover-scale">
-              <CardContent className="pt-6 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg">③ Get Insights + Plan</h3>
-                <p className="text-sm text-muted-foreground">
-                  Receive detailed personas and ready-to-use campaign strategies
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Divider */}
-          <div className="flex items-center gap-4 my-12 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+          <div className="flex items-center gap-4 my-12 animate-fade-in" style={{ animationDelay: "0.2s" }}>
             <div className="flex-1 h-px bg-border"></div>
             <span className="text-muted-foreground text-sm font-medium">OR</span>
             <div className="flex-1 h-px bg-border"></div>
           </div>
 
-          {/* New Catalog Analysis Option */}
-          <div className="max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: "0.4s" }}>
+          {/* Catalog Analysis Option */}
+          <div className="max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <Card className="shadow-card-hover border-2 border-dashed border-accent/50">
               <CardContent className="pt-6">
                 <div className="space-y-4">
@@ -214,6 +175,45 @@ const Index = () => {
                     </Button>
                   </form>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* How It Works */}
+          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto pt-8 animate-fade-in" style={{ animationDelay: "0.4s" }}>
+            <Card className="shadow-card hover:shadow-card-hover transition-all hover-scale">
+              <CardContent className="pt-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Search className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-semibold text-lg">① Paste Your URL</h3>
+                <p className="text-sm text-muted-foreground">
+                  Enter any product landing page you want to analyze
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card hover:shadow-card-hover transition-all hover-scale">
+              <CardContent className="pt-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
+                  <Zap className="h-6 w-6 text-accent" />
+                </div>
+                <h3 className="font-semibold text-lg">② AI Scrapes & Analyzes</h3>
+                <p className="text-sm text-muted-foreground">
+                  Our AI extracts and understands your product positioning
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card hover:shadow-card-hover transition-all hover-scale">
+              <CardContent className="pt-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Target className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-semibold text-lg">③ Get Insights + Plan</h3>
+                <p className="text-sm text-muted-foreground">
+                  Receive detailed personas and ready-to-use campaign strategies
+                </p>
               </CardContent>
             </Card>
           </div>
