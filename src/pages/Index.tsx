@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Target, Zap } from "lucide-react";
+import { Search, Target, Zap, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -79,7 +79,14 @@ const Index = () => {
                     className="px-8 bg-gradient-primary hover:opacity-90 transition-opacity"
                     disabled={isAnalyzing}
                   >
-                    {isAnalyzing ? "Analyzing..." : "Analyze My Page"}
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      "Analyze My Page"
+                    )}
                   </Button>
                 </div>
               </CardContent>

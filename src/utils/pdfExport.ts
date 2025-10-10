@@ -27,6 +27,16 @@ interface CompetitorCard {
   weakness: string;
 }
 
+interface AdCreative {
+  id: string;
+  channel: string;
+  channelType: string;
+  headlines: string[];
+  descriptions: string[];
+  imagePrompt: string;
+  imageUrl?: string;
+}
+
 interface AnalysisData {
   customerInsight: {
     sections: InsightCard[];
@@ -41,6 +51,7 @@ interface AnalysisData {
     competitors: CompetitorCard[];
     insights: InsightCard[];
   };
+  adCreatives?: AdCreative[];
 }
 
 const channelColors: Record<string, string> = {
@@ -506,6 +517,77 @@ export const generatePDF = async (data: AnalysisData, url: string): Promise<void
       });
     }
 
+    addPageNumber();
+  }
+
+  // Page: Ad Creative
+  if (data.adCreatives && data.adCreatives.length > 0) {
+    pdf.addPage();
+    yPosition = margin;
+    
+    pdf.setFontSize(20);
+    pdf.setTextColor(99, 102, 241);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Ad Creative', margin, yPosition);
+    yPosition += 15;
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('AI-generated ad copy and images', margin, yPosition);
+    yPosition += 15;
+    
+    for (const creative of data.adCreatives) {
+      checkPageBreak(120);
+      
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(creative.channel, margin, yPosition);
+      yPosition += 10;
+      pdf.setFont('helvetica', 'normal');
+      
+      if (creative.imageUrl) {
+        try {
+          pdf.addImage(creative.imageUrl, 'PNG', margin, yPosition, 80, 60);
+          yPosition += 65;
+        } catch (error) {
+          console.error('Error adding image:', error);
+          yPosition += 10;
+        }
+      }
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Headlines:', margin, yPosition);
+      yPosition += 6;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      
+      creative.headlines.forEach((headline, idx) => {
+        const wrapped = pdf.splitTextToSize(`H${idx + 1}: ${headline}`, contentWidth - 10);
+        pdf.text(wrapped, margin + 2, yPosition);
+        yPosition += wrapped.length * 5 + 2;
+      });
+      yPosition += 3;
+      
+      if (creative.descriptions.length > 0) {
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Descriptions:', margin, yPosition);
+        yPosition += 6;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10);
+        
+        creative.descriptions.forEach((desc, idx) => {
+          const wrapped = pdf.splitTextToSize(`D${idx + 1}: ${desc}`, contentWidth - 10);
+          pdf.text(wrapped, margin + 2, yPosition);
+          yPosition += wrapped.length * 5 + 2;
+        });
+      }
+      
+      yPosition += 10;
+    }
+    
     addPageNumber();
   }
 

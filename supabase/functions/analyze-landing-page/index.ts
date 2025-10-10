@@ -64,11 +64,11 @@ CRITICAL FORMATTING RULES:
 - Use bullet points (•) for all lists
 - Focus on actionable, specific insights
 - Avoid verbose paragraphs
-- YOU MUST INCLUDE ALL FOUR MAIN SECTIONS: Customer Insight, Campaign Targeting, Media Plan, AND Competitive Analysis`;
+- YOU MUST INCLUDE ALL FIVE MAIN SECTIONS: Customer Insight, Campaign Targeting, Media Plan, Competitive Analysis, AND Ad Creative`;
     
     const userPrompt = `Analyze this landing page and provide comprehensive insights for marketing campaigns.
 
-IMPORTANT: You MUST provide ALL FOUR sections below. Do not skip any section.
+IMPORTANT: You MUST provide ALL FIVE sections below. Do not skip any section.
 
 Structure your response EXACTLY as shown:
 
@@ -244,10 +244,52 @@ Research and identify 3-5 competitors for this product/service. For each competi
 • Competitor Trust Signals: [what competitors use]
 • Recommendations: [how to improve trust signals]
 
+## AD CREATIVE
+
+For each relevant advertising channel, create ad copy variations optimized for that platform's best practices and character limits.
+
+### Google Search Ads
+• Headline 1: [30 characters max, keyword-rich]
+• Headline 2: [30 characters max, value proposition]
+• Headline 3: [30 characters max, call to action]
+• Description 1: [90 characters max, benefits-focused]
+• Description 2: [90 characters max, trust signals]
+• Image Prompt: [Detailed description for AI image generation suitable for Google Display ads - describe visual style, product focus, color palette based on brand, composition (product-focused, clean background, professional), lighting, trust signals to incorporate]
+
+### Meta Ads (Facebook/Instagram)
+• Primary Text: [125 characters, attention-grabbing hook + value proposition]
+• Headline: [40 characters, clear benefit-driven CTA]
+• Description: [30 characters, supporting detail]
+• Image Prompt: [Detailed description for AI image generation suitable for social media - lifestyle imagery showing target audience using/benefiting from product, emotional appeal matching psychographics, brand colors, mobile-optimized composition, authentic feel, social proof elements]
+
+### Pinterest Ads
+• Pin Title: [100 characters, aspirational + keyword-rich]
+• Pin Description: [500 characters, storytelling approach with benefits]
+• Image Prompt: [Detailed description for AI image generation in vertical 2:3 format - visually striking, product in aspirational setting, bright colors with high contrast, inspirational lifestyle context, flat lay or styled composition, Pinterest-aesthetic]
+
+### TikTok Ads
+• Hook Text: [First 3 seconds text overlay, under 15 characters]
+• Main Message: [Text overlay for mid-video, under 30 characters]
+• CTA Text: [End screen call-to-action, under 20 characters]
+• Image Prompt: [Detailed description for AI image generation suitable for TikTok - dynamic, youth-oriented aesthetic, authentic/casual feel, mobile-first vertical composition, bold contrasting colors, space for text overlay, Gen-Z appeal, trending visual style]
+
+### YouTube Ads
+• Video Title: [100 characters, curiosity-driven]
+• Thumbnail Text: [5-7 words max, bold statement]
+• Description: [First 100 characters before "show more"]
+• Image Prompt: [Detailed description for AI thumbnail image - attention-grabbing composition, expressive faces or dramatic product shot, high contrast colors, text-overlay ready with clear focal point, YouTube thumbnail best practices]
+
+For each Image Prompt, synthesize insights from:
+- Customer Demographics and Psychographics (age, lifestyle, values)
+- Pain Points and Decision Triggers (emotions to evoke)
+- Competitive Advantages (unique features to highlight)
+- Brand colors and style extracted from the landing page
+Include specific details about composition, lighting, mood, color palette, and platform-specific best practices.
+
 Landing page content:
 ${pageContent}
 
-REMEMBER: Include ALL FOUR sections (Customer Insight, Campaign Targeting, Media Plan, AND Competitive Analysis).`;
+REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media Plan, Competitive Analysis, AND Ad Creative).`;
 
     console.log('Calling Lovable AI...');
     const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -560,17 +602,147 @@ REMEMBER: Include ALL FOUR sections (Customer Insight, Campaign Targeting, Media
       return competitors;
     };
 
+    // Parse ad creatives section
+    const parseAdCreatives = (content: string): Array<{
+      id: string;
+      channel: string;
+      channelType: string;
+      headlines: string[];
+      descriptions: string[];
+      imagePrompt: string;
+    }> => {
+      const creatives: Array<any> = [];
+      const lines = content.split('\n');
+      let currentCreative: any = null;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Detect channel headers: "### Google Search Ads"
+        if (trimmed.startsWith('### ')) {
+          if (currentCreative && currentCreative.channel) {
+            creatives.push(currentCreative);
+          }
+          const channelName = trimmed.replace(/^###\s*/, '').trim();
+          const channelType = channelName.toLowerCase().includes('google') ? 'google'
+            : channelName.toLowerCase().includes('meta') ? 'meta'
+            : channelName.toLowerCase().includes('pinterest') ? 'pinterest'
+            : channelName.toLowerCase().includes('tiktok') ? 'tiktok'
+            : channelName.toLowerCase().includes('youtube') ? 'youtube'
+            : 'default';
+          
+          currentCreative = {
+            id: channelName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            channel: channelName,
+            channelType,
+            headlines: [],
+            descriptions: [],
+            imagePrompt: ''
+          };
+        } else if (currentCreative && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
+          const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
+          const colonIndex = withoutBullet.indexOf(':');
+          
+          if (colonIndex > 0) {
+            const label = withoutBullet.substring(0, colonIndex).trim();
+            const value = withoutBullet.substring(colonIndex + 1).trim();
+            const lowerLabel = label.toLowerCase();
+            
+            if (lowerLabel.includes('headline') || lowerLabel.includes('primary text') || 
+                lowerLabel.includes('pin title') || lowerLabel.includes('hook') || 
+                lowerLabel.includes('main message') || lowerLabel.includes('video title') || 
+                lowerLabel.includes('thumbnail text')) {
+              currentCreative.headlines.push(value);
+            } else if (lowerLabel.includes('description') || lowerLabel.includes('pin description') || 
+                       lowerLabel.includes('cta')) {
+              currentCreative.descriptions.push(value);
+            } else if (lowerLabel.includes('image prompt')) {
+              currentCreative.imagePrompt = value;
+            }
+          }
+        }
+      }
+
+      if (currentCreative && currentCreative.channel) {
+        creatives.push(currentCreative);
+      }
+
+      return creatives;
+    };
+
+    // Generate images for ad creatives using Gemini
+    const generateAdImages = async (
+      creatives: Array<any>,
+      apiKey: string
+    ): Promise<Array<any>> => {
+      const updatedCreatives: Array<any> = [];
+      
+      for (const creative of creatives) {
+        if (creative.imagePrompt) {
+          try {
+            console.log(`Generating image for ${creative.channel}...`);
+            
+            const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash-image-preview',
+                messages: [
+                  {
+                    role: 'user',
+                    content: creative.imagePrompt
+                  }
+                ],
+                modalities: ['image', 'text']
+              }),
+            });
+            
+            if (imageResponse.ok) {
+              const imageData = await imageResponse.json();
+              const generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+              
+              if (generatedImage) {
+                console.log(`Successfully generated image for ${creative.channel}`);
+                updatedCreatives.push({
+                  ...creative,
+                  imageUrl: generatedImage
+                });
+              } else {
+                console.log(`No image in response for ${creative.channel}`);
+                updatedCreatives.push(creative);
+              }
+            } else {
+              console.error(`Failed to generate image for ${creative.channel}: ${imageResponse.status}`);
+              updatedCreatives.push(creative);
+            }
+          } catch (error) {
+            console.error(`Error generating image for ${creative.channel}:`, error);
+            updatedCreatives.push(creative);
+          }
+        } else {
+          updatedCreatives.push(creative);
+        }
+      }
+      
+      return updatedCreatives;
+    };
+
     // Structure the markdown response into sections
     const lower = analysisText.toLowerCase();
     const ciIdx = lower.indexOf('## customer insight');
     const ctIdx = lower.indexOf('## campaign targeting');
     const mpIdx = lower.indexOf('## media plan');
     const caIdx = lower.indexOf('## competitive analysis');
+    const acIdx = lower.indexOf('## ad creative');
 
     let customerInsightCards: Array<{ id: string; title: string; content: string; icon: string; subItems?: Array<{ label: string; value: string }> }> = [];
     let campaignTargetingCards: Array<{ id: string; title: string; content: string; icon: string; channel?: string; subItems?: Array<{ label: string; value: string }> }> = [];
     let mediaPlanWeeks: Array<{ weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> }> = [];
     let competitiveAnalysisData: { competitors: any[]; insights: any[] } | undefined = undefined;
+    let adCreatives: Array<any> = [];
 
     if (ciIdx !== -1 && ctIdx !== -1) {
       const ciContent = analysisText.slice(ciIdx, ctIdx).trim();
@@ -586,7 +758,7 @@ REMEMBER: Include ALL FOUR sections (Customer Insight, Campaign Targeting, Media
       
       // Parse competitive analysis if exists
       if (caIdx !== -1) {
-        const caContent = analysisText.slice(caIdx).trim();
+        const caContent = acIdx !== -1 ? analysisText.slice(caIdx, acIdx).trim() : analysisText.slice(caIdx).trim();
         const competitors = parseCompetitors(caContent);
         
         // Parse non-competitor subsections as insights
@@ -599,6 +771,13 @@ REMEMBER: Include ALL FOUR sections (Customer Insight, Campaign Targeting, Media
           insights
         };
       }
+
+      // Parse ad creative if exists
+      if (acIdx !== -1) {
+        const acContent = analysisText.slice(acIdx).trim();
+        const parsedCreatives = parseAdCreatives(acContent);
+        adCreatives = await generateAdImages(parsedCreatives, lovableApiKey);
+      }
     } else {
       customerInsightCards = parseSubsections(analysisText, false);
     }
@@ -607,7 +786,8 @@ REMEMBER: Include ALL FOUR sections (Customer Insight, Campaign Targeting, Media
       customerInsight: customerInsightCards,
       campaignTargeting: campaignTargetingCards,
       mediaPlan: mediaPlanWeeks,
-      competitiveAnalysis: competitiveAnalysisData
+      competitiveAnalysis: competitiveAnalysisData,
+      adCreatives: adCreatives.length > 0 ? adCreatives : undefined
     };
     
     console.log('Structured response ready:', {
@@ -617,7 +797,8 @@ REMEMBER: Include ALL FOUR sections (Customer Insight, Campaign Targeting, Media
       competitiveAnalysis: competitiveAnalysisData ? {
         competitors: competitiveAnalysisData.competitors.length,
         insights: competitiveAnalysisData.insights.length
-      } : 'not included'
+      } : 'not included',
+      adCreatives: adCreatives.length
     });
 
     return new Response(
