@@ -688,7 +688,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         const trimmed = line.trim();
         
         // Detect competitor headers: "### Competitor 1: Brand Name"
-        if (trimmed.startsWith('### Competitor')) {
+        if (/^#{3,4}\s*Competitor\b/i.test(trimmed)) {
           // Add the last creative to the previous competitor before pushing
           if (currentCreative && currentCompetitor) {
             currentCompetitor.creatives.push(currentCreative);
@@ -697,10 +697,11 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
           if (currentCompetitor && currentCompetitor.competitorName) {
             competitors.push(currentCompetitor);
           }
-          const match = trimmed.match(/### Competitor \d+:\s*(.+)/);
+          // Extract competitor name after optional number and delimiter
+          const nameMatch = trimmed.match(/^#{3,4}\s*Competitor(?:\s+\d+)??\s*[:\-]?\s*(.+)/i);
           currentCompetitor = {
             id: `competitor-${competitors.length + 1}`,
-            competitorName: match ? match[1].trim() : 'Unknown Competitor',
+            competitorName: nameMatch ? nameMatch[1].trim() : 'Unknown Competitor',
             url: '',
             pricePoint: '',
             keyStrength: '',
@@ -710,19 +711,19 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
           };
           inCreatives = false;
           currentCreative = null;
-        } else if (currentCompetitor && trimmed.startsWith('#### Ad Creatives:')) {
+        } else if (currentCompetitor && /^#{4,5}\s*Ad Creatives\b/i.test(trimmed)) {
           // Add last creative before entering creatives section
           if (currentCreative) {
             currentCompetitor.creatives.push(currentCreative);
             currentCreative = null;
           }
           inCreatives = true;
-        } else if (currentCompetitor && inCreatives && trimmed.startsWith('**')) {
-          // Parse creative platform: **Meta Feed:**
+        } else if (currentCompetitor && inCreatives && (trimmed.startsWith('**') || trimmed.startsWith('__'))) {
+          // Parse creative platform: **Meta Feed:** or **Meta Feed**
           if (currentCreative) {
             currentCompetitor.creatives.push(currentCreative);
           }
-          const platformMatch = trimmed.match(/\*\*(.+?):\*\*/);
+          const platformMatch = trimmed.match(/^(?:\*\*|__)\s*(.+?)\s*:?\s*(?:\*\*|__)/);
           currentCreative = {
             platform: platformMatch ? platformMatch[1].trim() : 'Unknown Platform',
             headline: '',
