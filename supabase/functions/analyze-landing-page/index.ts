@@ -679,31 +679,77 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
           imageUrl?: string;
         }>;
       }> = [];
+
+      const NON_COMP_SECTION_TITLES = new Set([
+        'your competitive advantages',
+        'areas for improvement',
+        'market positioning strategy',
+        'pricing analysis',
+        'feature differentiation',
+        'trust & credibility comparison',
+        'strategic insights',
+        'competitive insights'
+      ]);
+
       const lines = content.split('\n');
       let currentCompetitor: any = null;
       let inCreatives = false;
       let currentCreative: any = null;
 
-      for (const line of lines) {
+      // Helper: finalize current creative
+      const flushCreative = () => {
+        if (currentCompetitor && currentCreative) {
+          currentCompetitor.creatives.push(currentCreative);
+          currentCreative = null;
+        }
+      };
+
+      // Helper: finalize current competitor
+      const flushCompetitor = () => {
+        flushCreative();
+        if (currentCompetitor && currentCompetitor.competitorName) {
+          competitors.push(currentCompetitor);
+          console.log('parseCompetitors: pushed competitor', currentCompetitor.competitorName);
+        }
+        currentCompetitor = null;
+        inCreatives = false;
+      };
+
+      // Helper: detect if the next few lines look like a competitor details block (URL, Price, etc.)
+      const looksLikeCompetitorBlock = (startIndex: number) => {
+        for (let i = startIndex; i < Math.min(lines.length, startIndex + 6); i++) {
+          const t = lines[i].trim().toLowerCase();
+          if (/^[•\-*]\s*url\s*:/.test(t)) return true;
+          if (/^[•\-*]\s*price/.test(t)) return true;
+          if (/^[•\-*]\s*key\s*strength/.test(t)) return true;
+        }
+        return false;
+      };
+
+      for (let idx = 0; idx < lines.length; idx++) {
+        const line = lines[idx];
         const trimmed = line.trim();
-        
-        // Detect competitor headers and sections
-        if (/^#{2,6}\s*Competitor\b/i.test(trimmed) || /^(?:\*\*|__)\s*Competitor\b/i.test(trimmed)) {
-          // Finalize previous creative and competitor
-          if (currentCreative && currentCompetitor) {
-            currentCompetitor.creatives.push(currentCreative);
-            currentCreative = null;
-          }
-          if (currentCompetitor && currentCompetitor.competitorName) {
-            competitors.push(currentCompetitor);
-          }
+        const lower = trimmed.toLowerCase();
+
+        // Skip the section title line itself (e.g., ## COMPETITIVE ANALYSIS)
+        if (/^##\s*competitive analysis\b/i.test(lower)) {
+          continue;
+        }
+
+        // Detect explicit competitor headers like "### Competitor 2: Brand"
+        if (/^#{2,6}\s*competitor\b/i.test(lower) || /^(?:\*\*|__)\s*competitor\b/i.test(lower)) {
+          flushCompetitor();
+
           // Extract competitor name after optional number and delimiter
           let name = 'Unknown Competitor';
-          const headerMatch = trimmed.match(/^#{2,6}\s*Competitor(?:\s+\d+)?\s*[:\-]?\s*(.+)/i);
-          const boldMatch = trimmed.match(/^(?:\*\*|__)\s*Competitor(?:\s+\d+)?\s*[:\-]?\s*(.+?)(?:\*\*|__)\s*$/i);
+          const headerMatch = trimmed.match(/^#{2,6}\s*Competitor(?:\s+\d+)?\s*[:\-–—]?\s*(.+)/i);
+          const boldMatch = trimmed.match(/^(?:\*\*|__)\s*Competitor(?:\s+\d+)?\s*[:\-–—]?\s*(.+?)(?:\*\*|__)\s*$/i);
           if (headerMatch && headerMatch[1]) name = headerMatch[1].trim();
           else if (boldMatch && boldMatch[1]) name = boldMatch[1].trim();
-          
+
+          // Normalize: remove any leading 'Competitor N:' fragments that slipped through
+          name = name.replace(/^Competitor\s*\d+\s*[:\-–—]\s*/i, '').trim();
+
           currentCompetitor = {
             id: `competitor-${competitors.length + 1}`,
             competitorName: name,
@@ -714,75 +760,109 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
             icon: 'building-2',
             creatives: []
           };
+          console.log('parseCompetitors: started competitor', name);
           inCreatives = false;
           currentCreative = null;
-        } else if (currentCompetitor && (/^#{2,6}\s*Ad\s*Creative(?:s)?\b/i.test(trimmed) || /^(?:\*\*|__)\s*Ad\s*Creative(?:s)?\s*:?\s*(?:\*\*|__)/i.test(trimmed))) {
-          // Enter creatives section
-          if (currentCreative) {
-            currentCompetitor.creatives.push(currentCreative);
+          continue;
+        }
+
+        // Heuristic: some models emit headers like "### Brand Name" without the word Competitor
+        // Treat as competitor header if it isn't a known non-competitive subsection and the following lines look like details (URL/Price/etc.)
+        if (/^#{3,6}\s+/.test(trimmed) && !/^#{2,6}\s*ad\s*creative/i.test(lower)) {
+          const headerTitle = trimmed.replace(/^#{3,6}\s+/, '').trim();
+          const headerTitleLower = headerTitle.toLowerCase();
+          if (!NON_COMP_SECTION_TITLES.has(headerTitleLower) && looksLikeCompetitorBlock(idx + 1)) {
+            flushCompetitor();
+            currentCompetitor = {
+              id: `competitor-${competitors.length + 1}`,
+              competitorName: headerTitle,
+              url: '',
+              pricePoint: '',
+              keyStrength: '',
+              weakness: '',
+              icon: 'building-2',
+              creatives: []
+            };
+            console.log('parseCompetitors: heuristically started competitor', headerTitle);
+            inCreatives = false;
             currentCreative = null;
+            continue;
           }
+        }
+
+        // Enter creatives subsection (support "Ad Creatives", "Ad Examples", etc.)
+        if (currentCompetitor && (/^#{2,6}\s*(ad\s*creative(?:s)?|ad\s*examples)\b/i.test(lower)
+          || /^(?:\*\*|__)\s*(ad\s*creative(?:s)?|ad\s*examples)\s*:?(?:\*\*|__)/i.test(trimmed))) {
+          flushCreative();
           inCreatives = true;
-        } else if (currentCompetitor && inCreatives && (trimmed.startsWith('**') || trimmed.startsWith('__') || /^#{4,6}\s+/.test(trimmed))) {
-          // Parse creative platform: bold or subheader (e.g., ##### Meta Feed)
-          if (currentCreative) {
-            currentCompetitor.creatives.push(currentCreative);
-          }
+          continue;
+        }
+
+        // Creative platform detection inside creatives: support bold, headers, or plain "Meta Feed:" style
+        if (currentCompetitor && inCreatives && (
+          trimmed.startsWith('**') || trimmed.startsWith('__') || /^#{4,6}\s+/.test(trimmed) || /^[A-Za-z][A-Za-z0-9 /+\-&]+:\s*$/.test(trimmed)
+        )) {
+          flushCreative();
           let platform = 'Unknown Platform';
-          const boldPlat = trimmed.match(/^(?:\*\*|__)\s*(.+?)\s*:?\s*(?:\*\*|__)/);
+          const boldPlat = trimmed.match(/^(?:\*\*|__)\s*(.+?)\s*:?(?:\*\*|__)/);
           const headerPlat = trimmed.match(/^#{4,6}\s*(.+?)\s*:?\s*$/);
+          const plainPlat = trimmed.match(/^([A-Za-z][A-Za-z0-9 /+\-&]+):\s*$/);
           if (boldPlat && boldPlat[1]) platform = boldPlat[1].trim();
           else if (headerPlat && headerPlat[1]) platform = headerPlat[1].trim();
+          else if (plainPlat && plainPlat[1]) platform = plainPlat[1].trim();
+
           currentCreative = {
             platform,
             headline: '',
             description: '',
             imagePrompt: ''
           };
-        } else if (currentCompetitor && currentCreative && (/^[•\-\*]\s*/.test(trimmed))) {
+          continue;
+        }
+
+        // Parse creative bullets
+        if (currentCompetitor && currentCreative && (/^[•\-\*]\s*/.test(trimmed))) {
           const withoutBullet = trimmed.replace(/^[•\-\*]\s*/, '');
           const colonIndex = withoutBullet.indexOf(':');
-          
           if (colonIndex > 0) {
             const label = withoutBullet.substring(0, colonIndex).trim().toLowerCase();
             const value = withoutBullet.substring(colonIndex + 1).trim();
-            
             if (label.includes('headline')) currentCreative.headline = value;
-            else if (label.includes('description') || label.includes('cta')) currentCreative.description = value;
+            else if (label.includes('description') || label.includes('cta') || label.includes('primary text')) currentCreative.description = value;
             else if (label.includes('image')) currentCreative.imagePrompt = value;
           }
-        } else if (currentCompetitor && !inCreatives && (/^[•\-\*]\s*/.test(trimmed))) {
+          continue;
+        }
+
+        // Parse competitor detail bullets (outside creatives)
+        if (currentCompetitor && !inCreatives && (/^[•\-\*]\s*/.test(trimmed))) {
           const withoutBullet = trimmed.replace(/^[•\-\*]\s*/, '');
           const colonIndex = withoutBullet.indexOf(':');
-          
           if (colonIndex > 0) {
             const label = withoutBullet.substring(0, colonIndex).trim().toLowerCase();
             const value = withoutBullet.substring(colonIndex + 1).trim();
-            
             if (label.includes('url')) currentCompetitor.url = value;
             else if (label.includes('price')) currentCompetitor.pricePoint = value;
             else if (label.includes('strength')) currentCompetitor.keyStrength = value;
             else if (label.includes('weakness')) currentCompetitor.weakness = value;
           }
-        } else if (/^#{2,6}\s+/.test(trimmed) && currentCompetitor) {
-          // Any other new header ends the current competitor block
-          if (currentCreative) {
-            currentCompetitor.creatives.push(currentCreative);
-            currentCreative = null;
+          continue;
+        }
+
+        // Any other new top-level header ends the current competitor (but do not end when it's still part of creatives entry label)
+        if (/^#{2,6}\s+/.test(trimmed) && currentCompetitor) {
+          const headerTitle = trimmed.replace(/^#{2,6}\s+/, '').trim().toLowerCase();
+          if (!/^ad\s*creative/.test(headerTitle)) {
+            flushCompetitor();
           }
-          competitors.push(currentCompetitor);
-          currentCompetitor = null;
-          inCreatives = false;
+          continue;
         }
       }
 
-      if (currentCreative && currentCompetitor) {
-        currentCompetitor.creatives.push(currentCreative);
-      }
-      if (currentCompetitor && currentCompetitor.competitorName) {
-        competitors.push(currentCompetitor);
-      }
+      // Flush any remaining blocks
+      flushCompetitor();
 
+      console.log('parseCompetitors: total competitors', competitors.length);
       return competitors;
     };
 
@@ -1000,6 +1080,10 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       if (caIdx !== -1) {
         const caContent = acIdx !== -1 ? analysisText.slice(caIdx, acIdx).trim() : analysisText.slice(caIdx).trim();
         const competitors = parseCompetitors(caContent);
+        console.log('Competitive Analysis parsing result:', {
+          total: competitors.length,
+          items: competitors.map(c => ({ name: c.competitorName, creatives: c.creatives?.length || 0 }))
+        });
         
         // Generate images for competitor creatives
         const competitorsWithImages = [];
