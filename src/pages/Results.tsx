@@ -682,7 +682,7 @@ const Results = () => {
                   </div>
 
                   <div className="space-y-12">
-                    {Array.from(recommendedChannels).map(channelType => {
+                    {Array.from(recommendedChannels).map((channelType: string) => {
                       const channelCreatives = filteredCreatives.filter(c => c.channelType === channelType);
                       if (channelCreatives.length === 0) return null;
 
