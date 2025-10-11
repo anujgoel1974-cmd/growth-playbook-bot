@@ -260,17 +260,52 @@ Research and identify 3-5 competitors for this product/service. For each competi
 • Key Strength: [what they do better than the analyzed page]
 • Weakness: [opportunity gap where analyzed page could win]
 
+#### Ad Creatives:
+For each competitor, generate 2-3 realistic example ad creatives based on their likely advertising strategy:
+
+**Meta Feed:**
+• Headline: [realistic headline they would use]
+• Description: [realistic ad copy they would use]
+• Image Prompt: [description of the visual/product they would feature]
+
+**Google Display:**
+• Headline: [realistic headline they would use]
+• Description: [realistic ad copy they would use]
+• Image Prompt: [description of the visual/product they would feature]
+
 ### Competitor 2: [Brand Name]
 • URL: [competitor product page URL]
 • Price Point: [their pricing]
 • Key Strength: [what they do better]
 • Weakness: [opportunity gap]
 
+#### Ad Creatives:
+**Meta Feed:**
+• Headline: [realistic headline they would use]
+• Description: [realistic ad copy they would use]
+• Image Prompt: [description of the visual/product they would feature]
+
+**Google Display:**
+• Headline: [realistic headline they would use]
+• Description: [realistic ad copy they would use]
+• Image Prompt: [description of the visual/product they would feature]
+
 ### Competitor 3: [Brand Name]
 • URL: [competitor product page URL]
 • Price Point: [their pricing]
 • Key Strength: [what they do better]
 • Weakness: [opportunity gap]
+
+#### Ad Creatives:
+**Meta Feed:**
+• Headline: [realistic headline they would use]
+• Description: [realistic ad copy they would use]
+• Image Prompt: [description of the visual/product they would feature]
+
+**Google Display:**
+• Headline: [realistic headline they would use]
+• Description: [realistic ad copy they would use]
+• Image Prompt: [description of the visual/product they would feature]
 
 (Include 4-5 competitors if relevant)
 
@@ -628,9 +663,26 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
 
     // Parse competitors section
     const parseCompetitors = (content: string) => {
-      const competitors: Array<{ id: string; competitorName: string; url: string; pricePoint: string; keyStrength: string; weakness: string; icon: string }> = [];
+      const competitors: Array<{ 
+        id: string; 
+        competitorName: string; 
+        url: string; 
+        pricePoint: string; 
+        keyStrength: string; 
+        weakness: string; 
+        icon: string;
+        creatives?: Array<{
+          platform: string;
+          headline: string;
+          description: string;
+          imagePrompt: string;
+          imageUrl?: string;
+        }>;
+      }> = [];
       const lines = content.split('\n');
       let currentCompetitor: any = null;
+      let inCreatives = false;
+      let currentCreative: any = null;
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -648,9 +700,38 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
             pricePoint: '',
             keyStrength: '',
             weakness: '',
-            icon: 'building-2'
+            icon: 'building-2',
+            creatives: []
           };
-        } else if (currentCompetitor && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
+          inCreatives = false;
+          currentCreative = null;
+        } else if (currentCompetitor && trimmed.startsWith('#### Ad Creatives:')) {
+          inCreatives = true;
+        } else if (currentCompetitor && inCreatives && trimmed.startsWith('**')) {
+          // Parse creative platform: **Meta Feed:**
+          if (currentCreative) {
+            currentCompetitor.creatives.push(currentCreative);
+          }
+          const platformMatch = trimmed.match(/\*\*(.+?):\*\*/);
+          currentCreative = {
+            platform: platformMatch ? platformMatch[1].trim() : 'Unknown Platform',
+            headline: '',
+            description: '',
+            imagePrompt: ''
+          };
+        } else if (currentCompetitor && currentCreative && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
+          const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
+          const colonIndex = withoutBullet.indexOf(':');
+          
+          if (colonIndex > 0) {
+            const label = withoutBullet.substring(0, colonIndex).trim().toLowerCase();
+            const value = withoutBullet.substring(colonIndex + 1).trim();
+            
+            if (label.includes('headline')) currentCreative.headline = value;
+            else if (label.includes('description')) currentCreative.description = value;
+            else if (label.includes('image')) currentCreative.imagePrompt = value;
+          }
+        } else if (currentCompetitor && !inCreatives && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
           const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
           const colonIndex = withoutBullet.indexOf(':');
           
@@ -666,6 +747,9 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         }
       }
 
+      if (currentCreative && currentCompetitor) {
+        currentCompetitor.creatives.push(currentCreative);
+      }
       if (currentCompetitor && currentCompetitor.competitorName) {
         competitors.push(currentCompetitor);
       }
@@ -888,13 +972,72 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         const caContent = acIdx !== -1 ? analysisText.slice(caIdx, acIdx).trim() : analysisText.slice(caIdx).trim();
         const competitors = parseCompetitors(caContent);
         
+        // Generate images for competitor creatives
+        const competitorsWithImages = [];
+        for (const competitor of competitors) {
+          if (competitor.creatives && competitor.creatives.length > 0) {
+            const updatedCreatives = [];
+            for (const creative of competitor.creatives) {
+              try {
+                console.log(`Generating image for ${competitor.competitorName} - ${creative.platform}...`);
+                const imagePrompt = `Create a realistic ${creative.platform} ad creative for a competitor brand. ${creative.imagePrompt}. Professional marketing image, high quality, realistic product photography style.`;
+                
+                const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${lovableApiKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    model: 'google/gemini-2.5-flash-image-preview',
+                    messages: [
+                      {
+                        role: 'user',
+                        content: imagePrompt
+                      }
+                    ],
+                    modalities: ['image', 'text']
+                  }),
+                });
+                
+                if (imageResponse.ok) {
+                  const imageData = await imageResponse.json();
+                  const generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+                  
+                  if (generatedImage) {
+                    console.log(`Successfully generated image for ${competitor.competitorName} - ${creative.platform}`);
+                    updatedCreatives.push({
+                      ...creative,
+                      imageUrl: generatedImage
+                    });
+                  } else {
+                    updatedCreatives.push(creative);
+                  }
+                } else {
+                  console.error(`Failed to generate image: ${imageResponse.status}`);
+                  updatedCreatives.push(creative);
+                }
+              } catch (error) {
+                console.error(`Error generating competitor creative image:`, error);
+                updatedCreatives.push(creative);
+              }
+            }
+            competitorsWithImages.push({
+              ...competitor,
+              creatives: updatedCreatives
+            });
+          } else {
+            competitorsWithImages.push(competitor);
+          }
+        }
+        
         // Parse non-competitor subsections as insights
         const insights = parseSubsections(caContent, false).filter(card => 
           !card.title.toLowerCase().includes('competitor')
         );
         
         competitiveAnalysisData = {
-          competitors,
+          competitors: competitorsWithImages,
           insights
         };
       }

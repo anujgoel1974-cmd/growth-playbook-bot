@@ -54,6 +54,13 @@ interface CompetitorCard {
   keyStrength: string;
   weakness: string;
   icon: string;
+  creatives?: Array<{
+    platform: string;
+    headline: string;
+    description: string;
+    imagePrompt: string;
+    imageUrl?: string;
+  }>;
 }
 
 interface AdCreative {
@@ -758,6 +765,62 @@ const Results = () => {
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Competitor Ad Creatives Section */}
+                  {analysis.competitiveAnalysis.competitors.some(c => c.creatives && c.creatives.length > 0) && (
+                    <div className="space-y-6 mt-12">
+                      <h3 className="text-2xl font-bold text-center mb-6">Competitor Ad Examples</h3>
+                      <p className="text-muted-foreground text-center mb-8">
+                        Realistic examples of what competitor ads might look like based on their strategy
+                      </p>
+                      
+                      {analysis.competitiveAnalysis.competitors.map((competitor) => {
+                        if (!competitor.creatives || competitor.creatives.length === 0) return null;
+                        
+                        return (
+                          <div key={competitor.id} className="space-y-4">
+                            <h4 className="text-xl font-bold flex items-center gap-2">
+                              {competitor.competitorName}
+                              <span className="text-sm font-normal text-muted-foreground">
+                                ({competitor.creatives.length} example{competitor.creatives.length > 1 ? 's' : ''})
+                              </span>
+                            </h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {competitor.creatives.map((creative, idx) => (
+                                <Card key={`${competitor.id}-creative-${idx}`} className="shadow-card overflow-hidden">
+                                  <CardHeader className="pb-3 bg-gradient-to-br from-muted/30 to-muted/10">
+                                    <CardTitle className="text-sm">{creative.platform}</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="p-0">
+                                    {creative.imageUrl && (
+                                      <div className="relative w-full aspect-square">
+                                        <img 
+                                          src={creative.imageUrl} 
+                                          alt={`${competitor.competitorName} - ${creative.platform}`}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    )}
+                                    <div className="p-4 space-y-3">
+                                      <div>
+                                        <div className="text-xs font-semibold text-muted-foreground mb-1">Headline</div>
+                                        <div className="text-sm font-medium">{creative.headline}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-xs font-semibold text-muted-foreground mb-1">Description</div>
+                                        <div className="text-xs text-muted-foreground">{creative.description}</div>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
