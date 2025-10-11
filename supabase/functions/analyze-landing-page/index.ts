@@ -689,6 +689,11 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         
         // Detect competitor headers: "### Competitor 1: Brand Name"
         if (trimmed.startsWith('### Competitor')) {
+          // Add the last creative to the previous competitor before pushing
+          if (currentCreative && currentCompetitor) {
+            currentCompetitor.creatives.push(currentCreative);
+            currentCreative = null;
+          }
           if (currentCompetitor && currentCompetitor.competitorName) {
             competitors.push(currentCompetitor);
           }
@@ -706,6 +711,11 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
           inCreatives = false;
           currentCreative = null;
         } else if (currentCompetitor && trimmed.startsWith('#### Ad Creatives:')) {
+          // Add last creative before entering creatives section
+          if (currentCreative) {
+            currentCompetitor.creatives.push(currentCreative);
+            currentCreative = null;
+          }
           inCreatives = true;
         } else if (currentCompetitor && inCreatives && trimmed.startsWith('**')) {
           // Parse creative platform: **Meta Feed:**
