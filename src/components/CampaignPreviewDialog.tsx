@@ -79,24 +79,39 @@ export const CampaignPreviewDialog = ({
           objective: "Maximize conversions with automated bidding",
           targeting: "All Google inventory (Search, Display, YouTube, Gmail, Discover)",
           bidStrategy: "Target ROAS or Maximize Conversion Value",
+          bidAmount: "$2.50 - $5.00 CPA target",
           assets: "Requires headlines, descriptions, images, logos, and videos",
           placements: "Automated across all Google properties",
+          keywords: ["luxury ceramics", "artisan pottery", "home decor", "handcrafted mugs", "designer tableware"],
+          interests: ["Home & Garden", "Interior Design", "Luxury Lifestyle", "Artisan Crafts"],
+          locations: ["United States", "United Kingdom", "Canada", "Australia"],
+          demographics: "Age 25-54, All genders, HHI $75k+",
         };
       } else if (campaignTypeLower.includes('search')) {
         return {
           objective: "Drive high-intent traffic through search",
           targeting: "Keyword-based targeting on Google Search",
           bidStrategy: "Manual CPC or Target CPA",
+          bidAmount: "$1.50 - $3.00 per click",
           assets: "3 headlines (30 chars each), 2 descriptions (90 chars each)",
           placements: "Google Search Results, Search Partners",
+          keywords: ["buy ceramic mugs online", "luxury pottery", "artisan ceramics", "designer tableware", "handmade mugs"],
+          interests: ["Shopping", "Home Decor Enthusiasts"],
+          locations: ["United States", "United Kingdom", "Canada"],
+          demographics: "Age 25-64, All genders, Purchase intent: High",
         };
       } else if (campaignTypeLower.includes('display')) {
         return {
           objective: "Build awareness through visual ads",
           targeting: "Contextual, audience, and placement targeting",
           bidStrategy: "Target CPA or Maximize Conversions",
+          bidAmount: "$0.50 - $1.50 per click",
           assets: "Responsive display ads with images and headlines",
           placements: "Google Display Network (3M+ websites)",
+          keywords: ["home decor", "interior design", "luxury goods", "artisan products"],
+          interests: ["Home & Garden", "Art & Design", "Luxury Shoppers"],
+          locations: ["United States", "Europe", "Australia"],
+          demographics: "Age 25-54, All genders, Affinity: Home Decor",
         };
       }
     } else if (channelType.includes('meta')) {
@@ -105,16 +120,26 @@ export const CampaignPreviewDialog = ({
           objective: "Sales with AI-powered optimization",
           targeting: "Automated targeting with Advantage+ audience",
           bidStrategy: "Highest volume or value optimization",
+          bidAmount: "$15 - $30 CPA target",
           assets: "Up to 5 headlines, 5 descriptions, 10 images/videos",
           placements: "Facebook, Instagram Feed, Stories, Reels (auto)",
+          keywords: [],
+          interests: ["Home Decor", "Interior Design", "Luxury Goods", "Art Collectors", "Sustainable Living"],
+          locations: ["United States", "United Kingdom", "Canada", "Australia", "New Zealand"],
+          demographics: "Age 25-54, All genders, Income: Top 25%",
         };
       } else if (campaignTypeLower.includes('retarget')) {
         return {
           objective: "Re-engage website visitors and cart abandoners",
           targeting: "Custom audiences (website visitors, app users, customer lists)",
           bidStrategy: "Lowest cost per result",
+          bidAmount: "$10 - $25 CPA target",
           assets: "Dynamic product ads or custom creative",
           placements: "Facebook & Instagram Feed, Stories",
+          keywords: [],
+          interests: ["Engaged with your business"],
+          locations: ["Worldwide (based on visitor data)"],
+          demographics: "Age 18-65+, All genders, Website visitors (last 30 days)",
         };
       }
     } else if (channelType.includes('pinterest')) {
@@ -122,24 +147,39 @@ export const CampaignPreviewDialog = ({
         objective: "Drive consideration and traffic",
         targeting: "Interest-based, keyword, and actalike audiences",
         bidStrategy: "Automatic or custom bidding",
+        bidAmount: "$0.75 - $2.00 per click",
         assets: "Vertical images (2:3), Pin title, description",
         placements: "Home feed, search results, related pins",
+        keywords: ["ceramic mugs", "home decor ideas", "pottery inspiration", "artisan gifts", "luxury tableware"],
+        interests: ["Home Decor", "DIY & Crafts", "Interior Design", "Sustainable Living"],
+        locations: ["United States", "United Kingdom", "Canada"],
+        demographics: "Age 25-54, 80% Female, Interest in home improvement",
       };
     } else if (channelType.includes('tiktok')) {
       return {
         objective: "Engagement and traffic from Gen Z/Millennials",
         targeting: "Interest, behavior, and lookalike audiences",
         bidStrategy: "Lowest cost or cost cap",
+        bidAmount: "$1.00 - $2.50 per click",
         assets: "9:16 vertical video, hook text, CTA",
         placements: "TikTok feed, TopView, branded effects",
+        keywords: [],
+        interests: ["Home Decor", "Aesthetic Lifestyle", "Small Business Support", "Artisan Products"],
+        locations: ["United States", "United Kingdom", "Canada"],
+        demographics: "Age 18-34, All genders, Video completion rate: 50%+",
       };
     } else if (channelType.includes('youtube')) {
       return {
         objective: "Video views and brand awareness",
         targeting: "Demographic, affinity, in-market, and custom intent",
         bidStrategy: "Maximum CPV or Target CPM",
+        bidAmount: "$0.10 - $0.30 per view",
         assets: "Video ads (skippable/non-skippable), thumbnails",
         placements: "YouTube videos, search results, home feed",
+        keywords: ["home decor haul", "pottery making", "luxury lifestyle", "interior design tips"],
+        interests: ["Home & Garden", "Design & Architecture", "DIY & Crafts"],
+        locations: ["United States", "United Kingdom", "Canada", "Australia"],
+        demographics: "Age 25-54, All genders, In-market: Home Decor",
       };
     }
 
@@ -147,8 +187,13 @@ export const CampaignPreviewDialog = ({
       objective: "Drive results for your business",
       targeting: "Optimized audience targeting",
       bidStrategy: "Automated bidding strategy",
+      bidAmount: "Platform optimized",
       assets: "Platform-specific creative assets",
       placements: "Recommended placements for this channel",
+      keywords: [],
+      interests: [],
+      locations: [],
+      demographics: "Broad targeting",
     };
   };
 
@@ -245,6 +290,16 @@ export const CampaignPreviewDialog = ({
                       <p className="text-sm">{settings.bidStrategy}</p>
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Bid Amount</p>
+                      <p className="text-sm font-semibold">{settings.bidAmount}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Demographics</p>
+                      <p className="text-sm">{settings.demographics}</p>
+                    </div>
+                  </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Targeting</p>
                     <p className="text-sm">{settings.targeting}</p>
@@ -257,6 +312,38 @@ export const CampaignPreviewDialog = ({
                     <p className="text-sm font-medium text-muted-foreground mb-1">Required Assets</p>
                     <p className="text-sm">{settings.assets}</p>
                   </div>
+                  {settings.locations && settings.locations.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Target Locations</p>
+                      <div className="flex flex-wrap gap-2">
+                        {settings.locations.map((location, idx) => (
+                          <Badge key={idx} variant="outline">{location}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {settings.interests && settings.interests.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Target Interests</p>
+                      <div className="flex flex-wrap gap-2">
+                        {settings.interests.map((interest, idx) => (
+                          <Badge key={idx} variant="secondary">{interest}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {settings.keywords && settings.keywords.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Target Keywords</p>
+                      <div className="flex flex-wrap gap-2">
+                        {settings.keywords.map((keyword, idx) => (
+                          <Badge key={idx} className="bg-primary/10 text-primary hover:bg-primary/20">
+                            {keyword}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
