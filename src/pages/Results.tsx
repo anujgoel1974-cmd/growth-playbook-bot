@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Loader2, ArrowLeft, Copy, Download,
   Users, Brain, Zap, MessageCircle, TrendingUp,
@@ -157,6 +159,8 @@ const Results = () => {
     campaign: MediaPlanWeek['channels'][0];
     weekNumber: number;
   } | null>(null);
+  const [dailyBudget, setDailyBudget] = useState<number>(15);
+  const [numberOfWeeks, setNumberOfWeeks] = useState<number>(4);
 
   useEffect(() => {
     if (!url) {
@@ -229,6 +233,31 @@ const Results = () => {
   const filteredCreatives = analysis?.adCreatives?.filter(creative => 
     recommendedChannels.has(creative.channelType)
   ) || [];
+
+  // Calculate adjusted media plan based on user inputs
+  const calculateAdjustedMediaPlan = (): MediaPlanWeek[] | undefined => {
+    if (!analysis?.mediaPlan) return undefined;
+
+    const totalBudget = dailyBudget * 7 * numberOfWeeks;
+    const budgetPerWeek = totalBudget / numberOfWeeks;
+
+    return Array.from({ length: numberOfWeeks }, (_, i) => {
+      const sourceWeek = analysis.mediaPlan[i % analysis.mediaPlan.length];
+      const weekOriginalTotal = sourceWeek.channels.reduce((s, ch) => s + ch.budget, 0);
+      
+      return {
+        weekNumber: i + 1,
+        reasoning: sourceWeek.reasoning,
+        channels: sourceWeek.channels.map(ch => ({
+          ...ch,
+          budget: Math.round((ch.budget / weekOriginalTotal) * budgetPerWeek),
+          percentage: Math.round((ch.budget / weekOriginalTotal) * 100)
+        }))
+      };
+    });
+  };
+
+  const adjustedMediaPlan = calculateAdjustedMediaPlan();
 
   const AdCreativeCard = ({ creative }: { creative: AdCreative }) => {
     const creativeChannelColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -478,9 +507,61 @@ const Results = () => {
             <TabsContent value="mediaplan" className="animate-fade-in">
               {analysis?.mediaPlan && analysis.mediaPlan.length > 0 ? (
                 <div className="space-y-6">
+                  {/* Budget Controls */}
+                  <Card className="shadow-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Campaign Budget Settings</CardTitle>
+                      <CardDescription>Adjust your daily budget and campaign duration</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="dailyBudget" className="text-sm font-semibold">
+                            Daily Budget ($)
+                          </Label>
+                          <Input
+                            id="dailyBudget"
+                            type="number"
+                            min="1"
+                            max="10000"
+                            value={dailyBudget}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              setDailyBudget(Math.max(1, Math.min(10000, value)));
+                            }}
+                            className="text-lg font-bold"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Weekly: ${dailyBudget * 7}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="numberOfWeeks" className="text-sm font-semibold">
+                            Number of Weeks
+                          </Label>
+                          <Input
+                            id="numberOfWeeks"
+                            type="number"
+                            min="1"
+                            max="12"
+                            value={numberOfWeeks}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              setNumberOfWeeks(Math.max(1, Math.min(12, value)));
+                            }}
+                            className="text-lg font-bold"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Total Budget: ${dailyBudget * 7 * numberOfWeeks}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   <div className="text-center mb-8">
-                    <h3 className="text-2xl font-bold mb-2">4-6 Week Media Plan</h3>
-                    <p className="text-muted-foreground">$100 weekly budget optimized for ROAS</p>
+                    <h3 className="text-2xl font-bold mb-2">{numberOfWeeks}-Week Media Plan</h3>
+                    <p className="text-muted-foreground">${dailyBudget * 7} weekly budget optimized for ROAS</p>
                     <p className="text-sm text-primary mt-2 flex items-center justify-center gap-1">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -491,7 +572,7 @@ const Results = () => {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {analysis.mediaPlan.map((week) => {
+                    {adjustedMediaPlan?.map((week) => {
                       const totalBudget = week.channels.reduce((sum, ch) => sum + ch.budget, 0);
                       const channelGroups = week.channels.reduce((acc, ch) => {
                         if (!acc[ch.name]) acc[ch.name] = [];
