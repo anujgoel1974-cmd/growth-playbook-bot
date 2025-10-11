@@ -22,6 +22,7 @@ import { GoogleDisplayAdPreview } from "@/components/ad-previews/GoogleDisplayAd
 import { PinterestPinPreview } from "@/components/ad-previews/PinterestPinPreview";
 import { TikTokAdPreview } from "@/components/ad-previews/TikTokAdPreview";
 import { YouTubeThumbnailPreview } from "@/components/ad-previews/YouTubeThumbnailPreview";
+import { CampaignPreviewDialog } from "@/components/CampaignPreviewDialog";
 
 interface InsightCard {
   id: string;
@@ -152,6 +153,10 @@ const Results = () => {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<{
+    campaign: MediaPlanWeek['channels'][0];
+    weekNumber: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!url) {
@@ -476,6 +481,13 @@ const Results = () => {
                   <div className="text-center mb-8">
                     <h3 className="text-2xl font-bold mb-2">4-6 Week Media Plan</h3>
                     <p className="text-muted-foreground">$100 weekly budget optimized for ROAS</p>
+                    <p className="text-sm text-primary mt-2 flex items-center justify-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Click on any campaign type to preview settings and ad creatives
+                    </p>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -543,14 +555,31 @@ const Results = () => {
                                         ${channelTotal}
                                       </span>
                                     </div>
-                                    <div className="pl-3 space-y-1">
-                                      {campaigns.map((campaign, idx) => (
-                                        <div key={idx} className="flex items-center justify-between text-xs">
-                                          <span className="text-muted-foreground">• {campaign.campaignType}</span>
-                                          <span className="font-medium">${campaign.budget} ({campaign.percentage}%)</span>
-                                        </div>
-                                      ))}
-                                    </div>
+                                     <div className="pl-3 space-y-1">
+                                       {campaigns.map((campaign, idx) => (
+                                         <button
+                                           key={idx}
+                                           onClick={() => setSelectedCampaign({ campaign, weekNumber: week.weekNumber })}
+                                           className="w-full flex items-center justify-between text-xs hover:bg-primary/5 p-2 rounded transition-colors cursor-pointer group"
+                                         >
+                                           <span className="text-muted-foreground group-hover:text-primary flex items-center gap-1">
+                                             • {campaign.campaignType}
+                                             <svg 
+                                               className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" 
+                                               fill="none" 
+                                               stroke="currentColor" 
+                                               viewBox="0 0 24 24"
+                                             >
+                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                             </svg>
+                                           </span>
+                                           <span className="font-medium group-hover:text-primary">
+                                             ${campaign.budget} ({campaign.percentage}%)
+                                           </span>
+                                         </button>
+                                       ))}
+                                     </div>
                                   </div>
                                 );
                               })}
@@ -821,6 +850,17 @@ const Results = () => {
               )}
             </Button>
           </div>
+        )}
+
+        {/* Campaign Preview Dialog */}
+        {selectedCampaign && (
+          <CampaignPreviewDialog
+            isOpen={!!selectedCampaign}
+            onClose={() => setSelectedCampaign(null)}
+            campaign={selectedCampaign.campaign}
+            weekNumber={selectedCampaign.weekNumber}
+            adCreatives={filteredCreatives}
+          />
         )}
       </div>
     </div>
