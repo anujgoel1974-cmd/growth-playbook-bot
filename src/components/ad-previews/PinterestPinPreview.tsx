@@ -6,6 +6,7 @@ interface PinterestPinPreviewProps {
     headlines: string[];
     descriptions: string[];
     imageUrl?: string;
+    logoUrl?: string;
   };
 }
 
@@ -46,7 +47,11 @@ export const PinterestPinPreview = ({ creative }: PinterestPinPreviewProps) => {
       {/* Pin Footer */}
       <div className="p-2 flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-orange-400" />
+          {creative.logoUrl ? (
+            <img src={creative.logoUrl} alt="Brand logo" className="w-6 h-6 rounded-full object-cover" />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-orange-400" />
+          )}
           <span className="text-xs font-semibold">Your Brand</span>
         </div>
         <div className="flex gap-1">

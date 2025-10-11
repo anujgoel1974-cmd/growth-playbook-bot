@@ -78,6 +78,44 @@ serve(async (req) => {
       console.error('Error extracting product image:', error);
     }
 
+    // Extract logo URL from HTML
+    let logoUrl = '';
+    try {
+      // Try multiple common logo patterns
+      const logoPatterns = [
+        /<meta[^>]*property=["']og:logo["'][^>]*content=["']([^"']+)["']/i,
+        /<link[^>]*rel=["']icon["'][^>]*href=["']([^"']+)["']/i,
+        /<link[^>]*rel=["']apple-touch-icon["'][^>]*href=["']([^"']+)["']/i,
+        /<img[^>]*class=["'][^"']*logo[^"']*["'][^>]*src=["']([^"']+)["']/i,
+        /<img[^>]*alt=["'][^"']*logo[^"']*["'][^>]*src=["']([^"']+)["']/i,
+        /<img[^>]*src=["']([^"']*logo[^"']*)["']/i,
+      ];
+      
+      for (const pattern of logoPatterns) {
+        const match = htmlContent.match(pattern);
+        if (match && match[1]) {
+          logoUrl = match[1];
+          break;
+        }
+      }
+      
+      // Ensure absolute URL
+      if (logoUrl && !logoUrl.startsWith('http')) {
+        const urlObj = new URL(url);
+        logoUrl = new URL(logoUrl, urlObj.origin).href;
+      }
+      
+      // Filter out SVG icons and very small images (likely favicons)
+      if (logoUrl && (logoUrl.includes('.svg') || logoUrl.includes('favicon') || logoUrl.includes('icon'))) {
+        // Keep it but log
+        console.log('Extracted logo URL (may be icon):', logoUrl);
+      } else if (logoUrl) {
+        console.log('Extracted logo URL:', logoUrl);
+      }
+    } catch (error) {
+      console.error('Error extracting logo:', error);
+    }
+
     // Prepare the prompt for AI
     const systemPrompt = `You are an AI marketing analyst specializing in landing page analysis and ad campaign strategy. Your role is to provide actionable insights that marketing teams can use to create highly targeted campaigns. Focus on delivering practical, data-driven recommendations based on the landing page content. 
 
@@ -730,7 +768,8 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
     const generateAdImages = async (
       creatives: Array<any>,
       apiKey: string,
-      baseProductImageUrl: string
+      baseProductImageUrl: string,
+      brandLogoUrl: string
     ): Promise<Array<any>> => {
       const updatedCreatives: Array<any> = [];
       
@@ -795,7 +834,8 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
                 console.log(`Successfully generated image for ${creative.channel}`);
                 updatedCreatives.push({
                   ...creative,
-                  imageUrl: generatedImage
+                  imageUrl: generatedImage,
+                  logoUrl: brandLogoUrl
                 });
               } else {
                 console.log(`No image in response for ${creative.channel}`);
@@ -863,7 +903,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
     if (acIdx !== -1) {
       const acContent = analysisText.slice(acIdx).trim();
       const parsedCreatives = parseAdCreatives(acContent);
-      adCreatives = await generateAdImages(parsedCreatives, lovableApiKey, productImageUrl);
+      adCreatives = await generateAdImages(parsedCreatives, lovableApiKey, productImageUrl, logoUrl);
     }
     } else {
       customerInsightCards = parseSubsections(analysisText, false);

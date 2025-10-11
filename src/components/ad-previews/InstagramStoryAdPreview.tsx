@@ -5,6 +5,7 @@ interface InstagramStoryAdPreviewProps {
     headlines: string[];
     descriptions: string[];
     imageUrl?: string;
+    logoUrl?: string;
   };
 }
 
@@ -20,7 +21,11 @@ export const InstagramStoryAdPreview = ({ creative }: InstagramStoryAdPreviewPro
       {/* Story Header */}
       <div className="absolute top-8 left-0 right-0 px-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 border-2 border-white" />
+          {creative.logoUrl ? (
+            <img src={creative.logoUrl} alt="Brand logo" className="w-8 h-8 rounded-full object-cover border-2 border-white" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 border-2 border-white" />
+          )}
           <span className="text-white text-sm font-semibold drop-shadow-lg">Your Brand</span>
         </div>
         <span className="text-white text-xs drop-shadow-lg">Sponsored</span>

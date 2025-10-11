@@ -6,6 +6,7 @@ interface YouTubeThumbnailPreviewProps {
     headlines: string[];
     descriptions: string[];
     imageUrl?: string;
+    logoUrl?: string;
   };
 }
 
@@ -60,7 +61,11 @@ export const YouTubeThumbnailPreview = ({ creative }: YouTubeThumbnailPreviewPro
           {title}
         </h4>
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-400 to-orange-400" />
+          {creative.logoUrl ? (
+            <img src={creative.logoUrl} alt="Brand logo" className="w-9 h-9 rounded-full object-cover" />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-400 to-orange-400" />
+          )}
           <div className="text-xs text-muted-foreground">
             <div className="font-semibold">Your Brand</div>
             <div>Sponsored • 2.4M views • 2 days ago</div>

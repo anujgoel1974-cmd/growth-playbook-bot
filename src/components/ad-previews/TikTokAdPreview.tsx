@@ -6,6 +6,7 @@ interface TikTokAdPreviewProps {
     headlines: string[];
     descriptions: string[];
     imageUrl?: string;
+    logoUrl?: string;
   };
 }
 
@@ -48,7 +49,11 @@ export const TikTokAdPreview = ({ creative }: TikTokAdPreviewProps) => {
       {/* Right Sidebar Actions */}
       <div className="absolute right-2 bottom-24 flex flex-col gap-4 z-10">
         <div className="flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 border-2 border-white" />
+          {creative.logoUrl ? (
+            <img src={creative.logoUrl} alt="Brand logo" className="w-12 h-12 rounded-full object-cover border-2 border-white" />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 border-2 border-white" />
+          )}
         </div>
         <button className="flex flex-col items-center text-white">
           <Heart className="w-8 h-8" fill="white" />

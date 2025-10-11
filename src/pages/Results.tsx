@@ -62,6 +62,7 @@ interface AdCreative {
   descriptions: string[];
   imagePrompt: string;
   imageUrl?: string;
+  logoUrl?: string;
   imageAspectRatio?: string;
 }
 

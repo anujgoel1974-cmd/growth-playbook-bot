@@ -5,6 +5,7 @@ interface GoogleDisplayAdPreviewProps {
     headlines: string[];
     descriptions: string[];
     imageUrl?: string;
+    logoUrl?: string;
   };
 }
 
@@ -35,9 +36,14 @@ export const GoogleDisplayAdPreview = ({ creative }: GoogleDisplayAdPreviewProps
 
       {/* Text Content */}
       <div className="p-3 space-y-2">
-        <h4 className="font-bold text-sm text-foreground">
-          {headline}
-        </h4>
+        <div className="flex items-center gap-2 mb-2">
+          {creative.logoUrl && (
+            <img src={creative.logoUrl} alt="Brand logo" className="w-6 h-6 object-contain" />
+          )}
+          <h4 className="font-bold text-sm text-foreground">
+            {headline}
+          </h4>
+        </div>
         <p className="text-xs text-muted-foreground line-clamp-2">
           {description}
         </p>

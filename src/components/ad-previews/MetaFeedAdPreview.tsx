@@ -6,6 +6,7 @@ interface MetaFeedAdPreviewProps {
     headlines: string[];
     descriptions: string[];
     imageUrl?: string;
+    logoUrl?: string;
     channel: string;
   };
 }
@@ -20,7 +21,11 @@ export const MetaFeedAdPreview = ({ creative }: MetaFeedAdPreviewProps) => {
       {/* Profile Header */}
       <div className="flex items-center justify-between p-3 border-b">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400" />
+          {creative.logoUrl ? (
+            <img src={creative.logoUrl} alt="Brand logo" className="w-10 h-10 rounded-full object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400" />
+          )}
           <div>
             <div className="font-semibold text-sm">Your Brand</div>
             <div className="text-xs text-muted-foreground flex items-center gap-1">
