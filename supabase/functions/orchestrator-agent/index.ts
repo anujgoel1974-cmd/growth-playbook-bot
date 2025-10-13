@@ -176,7 +176,7 @@ serve(async (req) => {
       // Mark session as failed
       await supabase.from('analysis_sessions').update({
         status: 'failed',
-        error: analysisError.message,
+        error: analysisError instanceof Error ? analysisError.message : 'Analysis failed',
         completed_at: new Date().toISOString()
       }).eq('id', session.id);
 
@@ -187,7 +187,7 @@ serve(async (req) => {
     console.error('[Orchestrator] Fatal error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Orchestration failed'
+      error: error instanceof Error ? error.message : 'Orchestration failed'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

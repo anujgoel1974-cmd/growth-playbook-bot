@@ -103,7 +103,7 @@ async function scrapeCompetitorProducts(domain: string, limit: number = 3) {
     return products;
     
   } catch (error) {
-    console.error(`[Research Agent] Error scraping ${domain}:`, error.message);
+    console.error(`[Research Agent] Error scraping ${domain}:`, error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
@@ -173,7 +173,7 @@ serve(async (req) => {
     console.error('[Research Agent] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Research enhancement failed'
+      error: error instanceof Error ? error.message : 'Research enhancement failed'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
