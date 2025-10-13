@@ -13,10 +13,8 @@ import {
   Users, Brain, Zap, MessageCircle, TrendingUp,
   Target, UsersRound, Search, Palette, DollarSign, Megaphone, FileText,
   Share2, Image, Music, Video, Briefcase, Hash, Building2, Shield, 
-  AlertCircle, CheckCircle, Award, ExternalLink, Sparkles, Heart, 
-  MousePointerClick, Focus, Type, Info
+  AlertCircle, CheckCircle, Award, ExternalLink
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePDF } from "@/utils/pdfExport";
@@ -182,19 +180,6 @@ const Results = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sectionProgress, setSectionProgress] = useState<Record<string, number>>({
-    customer_insight: 0,
-    campaign_targeting: 0,
-    media_plan: 0,
-    competitive_analysis: 0,
-    ad_creative: 0
-  });
-  const [activeAgents, setActiveAgents] = useState<Array<{
-    name: string;
-    status: string;
-    progress: number;
-  }>>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<{
     campaign: MediaPlanWeek['channels'][0];
@@ -227,7 +212,7 @@ const Results = () => {
         setIsLoading(true);
         setError(null);
 
-        console.log('Calling orchestrator-agent function...');
+        console.log('Calling analyze-landing-page function...');
         
         // Create a timeout promise for 3 minutes
         const timeoutPromise = new Promise((_, reject) => {
@@ -235,7 +220,7 @@ const Results = () => {
         });
         
         // Race between the function call and timeout
-        const functionPromise = supabase.functions.invoke('orchestrator-agent', {
+        const functionPromise = supabase.functions.invoke('analyze-landing-page', {
           body: { url }
         });
         
@@ -254,12 +239,6 @@ const Results = () => {
         }
 
         console.log('Analysis successful:', data);
-        
-        // Store session ID for real-time updates
-        if (data.sessionId) {
-          setSessionId(data.sessionId);
-        }
-        
         setAnalysis(data.analysis);
       } catch (err) {
         console.error('Error analyzing URL:', err);
@@ -276,98 +255,6 @@ const Results = () => {
 
     analyzeUrl();
   }, [url, navigate, toast]);
-
-  // Real-time subscription for progressive updates
-  useEffect(() => {
-    if (!sessionId) return;
-
-    console.log('[Results] Setting up real-time subscription for session:', sessionId);
-
-    const channel = supabase
-      .channel(`analysis-progress-${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'analysis_progress',
-          filter: `session_id=eq.${sessionId}`
-        },
-        (payload) => {
-          console.log('[Results] Progress update received:', payload);
-          const { section_name, progress_percentage, status, data: sectionData } = payload.new;
-          
-          // Update progress
-          setSectionProgress(prev => ({
-            ...prev,
-            [section_name]: progress_percentage
-          }));
-          
-          // Update agent activity
-          if (status === 'enhancing') {
-            setActiveAgents(prev => {
-              const agentName = `Research Agent`;
-              const exists = prev.find(a => a.name === agentName);
-              if (!exists) {
-                return [...prev, {
-                  name: agentName,
-                  status: 'Enriching competitive data',
-                  progress: progress_percentage
-                }];
-              }
-              return prev.map(a => 
-                a.name === agentName 
-                  ? { ...a, progress: progress_percentage }
-                  : a
-              );
-            });
-          }
-          
-          // Remove agent when complete
-          if (status === 'completed') {
-            setActiveAgents(prev => prev.filter(a => !a.name.includes('Research Agent')));
-          }
-          
-          // If section completed, update analysis state progressively
-          if (status === 'completed' && sectionData) {
-            setAnalysis(prev => {
-              if (!prev) return prev;
-              
-              // Merge new section data into existing analysis
-              if (section_name === 'customer_insight' && sectionData.cards) {
-                return { ...prev, customerInsight: sectionData.cards };
-              }
-              if (section_name === 'campaign_targeting' && sectionData.cards) {
-                return { ...prev, campaignTargeting: sectionData.cards };
-              }
-              if (section_name === 'media_plan' && sectionData.weeks) {
-                return { ...prev, mediaPlan: sectionData.weeks };
-              }
-              if (section_name === 'competitive_analysis') {
-                return { 
-                  ...prev, 
-                  competitiveAnalysis: {
-                    competitors: sectionData.competitors || prev.competitiveAnalysis?.competitors || [],
-                    insights: sectionData.insights || prev.competitiveAnalysis?.insights || []
-                  }
-                };
-              }
-              if (section_name === 'ad_creative' && sectionData.creatives) {
-                return { ...prev, adCreatives: sectionData.creatives };
-              }
-              
-              return prev;
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('[Results] Cleaning up real-time subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [sessionId]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -397,10 +284,9 @@ const Results = () => {
   
   // Use customized creatives if available, otherwise use original
   const baseCreatives = customizedCreatives || analysis?.adCreatives || [];
-  // If no recommended channels are available yet, show all creatives as a sensible fallback
-  const filteredCreatives = recommendedChannels.size > 0
-    ? baseCreatives.filter(creative => recommendedChannels.has(creative.channelType))
-    : baseCreatives;
+  const filteredCreatives = baseCreatives.filter(creative => 
+    recommendedChannels.has(creative.channelType)
+  );
 
   // Calculate adjusted media plan based on user inputs
   const calculateAdjustedMediaPlan = (): MediaPlanWeek[] | undefined => {
@@ -667,37 +553,6 @@ const Results = () => {
           </div>
         </div>
 
-        {/* Agent Activity Panel */}
-        {activeAgents.length > 0 && (
-          <Card className="mb-6 border-primary/20 bg-primary/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-sm font-medium">
-                <Sparkles className="mr-2 h-4 w-4 animate-pulse text-primary" />
-                🤖 Active Agents: {activeAgents.length}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {activeAgents.map(agent => (
-                <div key={agent.name} className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{agent.name}</p>
-                    <p className="text-xs text-muted-foreground">{agent.status}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary transition-all duration-300"
-                        style={{ width: `${agent.progress}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground w-8">{agent.progress}%</span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
         {isLoading ? (
           <AnalysisLoader />
         ) : error ? (
@@ -710,51 +565,11 @@ const Results = () => {
         ) : (
           <Tabs defaultValue="insight" className="w-full">
             <TabsList className="grid w-full max-w-5xl mx-auto grid-cols-5 mb-8">
-              <TabsTrigger value="insight" className="relative">
-                Customer Insight
-                {sectionProgress.customer_insight < 100 && sectionProgress.customer_insight > 0 && (
-                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                )}
-                {sectionProgress.customer_insight === 100 && (
-                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="competitive" className="relative">
-                Competitive Analysis
-                {sectionProgress.competitive_analysis < 100 && sectionProgress.competitive_analysis > 0 && (
-                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                )}
-                {sectionProgress.competitive_analysis === 100 && (
-                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="targeting" className="relative">
-                Campaign Targeting
-                {sectionProgress.campaign_targeting < 100 && sectionProgress.campaign_targeting > 0 && (
-                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                )}
-                {sectionProgress.campaign_targeting === 100 && (
-                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="adcreative" className="relative">
-                Ad Creative
-                {sectionProgress.ad_creative < 100 && sectionProgress.ad_creative > 0 && (
-                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                )}
-                {sectionProgress.ad_creative === 100 && (
-                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="mediaplan" className="relative">
-                Media Plan
-                {sectionProgress.media_plan < 100 && sectionProgress.media_plan > 0 && (
-                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                )}
-                {sectionProgress.media_plan === 100 && (
-                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
-                )}
-              </TabsTrigger>
+              <TabsTrigger value="insight">Customer Insight</TabsTrigger>
+              <TabsTrigger value="competitive">Competitive Analysis</TabsTrigger>
+              <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
+              <TabsTrigger value="adcreative">Ad Creative</TabsTrigger>
+              <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
             </TabsList>
 
             {/* Customer Insight Tab */}
@@ -1184,30 +999,11 @@ const Results = () => {
                   <Card className="shadow-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-primary" />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <CardTitle className="text-lg">Customize Ad Copy</CardTitle>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs">
-                                    <p className="text-sm">
-                                      Fine-tune your ad messaging without re-analyzing your landing page. 
-                                      Select filters to adjust tone, emotion, and style across all ad creatives. 
-                                      Perfect for testing different messaging angles quickly.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <CardDescription>
-                              Adjust messaging tone and style to match your brand
-                            </CardDescription>
-                          </div>
+                        <div>
+                          <CardTitle className="text-lg">Customize Ad Copy</CardTitle>
+                          <CardDescription>
+                            Adjust messaging tone and style to match your brand
+                          </CardDescription>
                         </div>
                         <Button
                           variant="ghost"
@@ -1221,20 +1017,17 @@ const Results = () => {
                     
                     {showFilters && (
                       <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {/* Brand Voice */}
-                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
-                            <div className="flex items-center gap-2">
-                              <Palette className="h-4 w-4 text-primary" />
-                              <Label htmlFor="brandVoice" className="text-sm font-semibold">
-                                Brand Voice
-                              </Label>
-                            </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="brandVoice" className="text-sm font-semibold">
+                              Brand Voice
+                            </Label>
                             <Select
                               value={adFilters.brandVoice}
                               onValueChange={(value) => setAdFilters({ ...adFilters, brandVoice: value })}
                             >
-                              <SelectTrigger id="brandVoice" className="h-10">
+                              <SelectTrigger id="brandVoice">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1246,29 +1039,26 @@ const Results = () => {
                                 <SelectItem value="urgent">Urgent</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                              {adFilters.brandVoice === 'professional' && '💼 Clear, trustworthy, authoritative'}
-                              {adFilters.brandVoice === 'friendly' && '😊 Conversational, warm, approachable'}
-                              {adFilters.brandVoice === 'playful' && '🎉 Fun, creative, energetic'}
-                              {adFilters.brandVoice === 'luxurious' && '✨ Elegant, sophisticated, premium'}
-                              {adFilters.brandVoice === 'educational' && '📚 Informative, helpful, empowering'}
-                              {adFilters.brandVoice === 'urgent' && '⚡ Action-oriented, time-sensitive'}
+                            <p className="text-xs text-muted-foreground">
+                              {adFilters.brandVoice === 'professional' && 'Clear, trustworthy, authoritative'}
+                              {adFilters.brandVoice === 'friendly' && 'Conversational, warm, approachable'}
+                              {adFilters.brandVoice === 'playful' && 'Fun, creative, energetic'}
+                              {adFilters.brandVoice === 'luxurious' && 'Elegant, sophisticated, premium'}
+                              {adFilters.brandVoice === 'educational' && 'Informative, helpful, empowering'}
+                              {adFilters.brandVoice === 'urgent' && 'Action-oriented, time-sensitive'}
                             </p>
                           </div>
 
                           {/* Emotional Hook */}
-                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
-                            <div className="flex items-center gap-2">
-                              <Heart className="h-4 w-4 text-primary" />
-                              <Label htmlFor="emotionalHook" className="text-sm font-semibold">
-                                Emotional Hook
-                              </Label>
-                            </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="emotionalHook" className="text-sm font-semibold">
+                              Emotional Hook
+                            </Label>
                             <Select
                               value={adFilters.emotionalHook}
                               onValueChange={(value) => setAdFilters({ ...adFilters, emotionalHook: value })}
                             >
-                              <SelectTrigger id="emotionalHook" className="h-10">
+                              <SelectTrigger id="emotionalHook">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1280,29 +1070,26 @@ const Results = () => {
                                 <SelectItem value="value">Value</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                              {adFilters.emotionalHook === 'fomo' && '⏰ Limited time, don\'t miss out'}
-                              {adFilters.emotionalHook === 'aspiration' && '🎯 Achieve goals, transformation'}
-                              {adFilters.emotionalHook === 'problem-solution' && '🔧 Address pain points'}
-                              {adFilters.emotionalHook === 'social-proof' && '⭐ Testimonials, popularity'}
-                              {adFilters.emotionalHook === 'exclusivity' && '👑 Limited access, VIP treatment'}
-                              {adFilters.emotionalHook === 'value' && '💰 Savings, great deal'}
+                            <p className="text-xs text-muted-foreground">
+                              {adFilters.emotionalHook === 'fomo' && 'Limited time, don\'t miss out'}
+                              {adFilters.emotionalHook === 'aspiration' && 'Achieve goals, transformation'}
+                              {adFilters.emotionalHook === 'problem-solution' && 'Address pain points'}
+                              {adFilters.emotionalHook === 'social-proof' && 'Testimonials, popularity'}
+                              {adFilters.emotionalHook === 'exclusivity' && 'Limited access, VIP treatment'}
+                              {adFilters.emotionalHook === 'value' && 'Savings, great deal'}
                             </p>
                           </div>
 
                           {/* Call to Action */}
-                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
-                            <div className="flex items-center gap-2">
-                              <MousePointerClick className="h-4 w-4 text-primary" />
-                              <Label htmlFor="cta" className="text-sm font-semibold">
-                                Call-to-Action
-                              </Label>
-                            </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="cta" className="text-sm font-semibold">
+                              Call-to-Action
+                            </Label>
                             <Select
                               value={adFilters.cta}
                               onValueChange={(value) => setAdFilters({ ...adFilters, cta: value })}
                             >
-                              <SelectTrigger id="cta" className="h-10">
+                              <SelectTrigger id="cta">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1315,24 +1102,18 @@ const Results = () => {
                                 <SelectItem value="limited-offer">Limited Offer</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                              Primary action you want users to take
-                            </p>
                           </div>
 
                           {/* Emphasis */}
-                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
-                            <div className="flex items-center gap-2">
-                              <Focus className="h-4 w-4 text-primary" />
-                              <Label htmlFor="emphasis" className="text-sm font-semibold">
-                                Content Emphasis
-                              </Label>
-                            </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="emphasis" className="text-sm font-semibold">
+                              Content Emphasis
+                            </Label>
                             <Select
                               value={adFilters.emphasis}
                               onValueChange={(value) => setAdFilters({ ...adFilters, emphasis: value })}
                             >
-                              <SelectTrigger id="emphasis" className="h-10">
+                              <SelectTrigger id="emphasis">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1344,24 +1125,18 @@ const Results = () => {
                                 <SelectItem value="craftsmanship">Craftsmanship</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                              What aspect to highlight in your messaging
-                            </p>
                           </div>
 
                           {/* Length */}
-                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50 md:col-span-2">
-                            <div className="flex items-center gap-2">
-                              <Type className="h-4 w-4 text-primary" />
-                              <Label htmlFor="length" className="text-sm font-semibold">
-                                Copy Length
-                              </Label>
-                            </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="length" className="text-sm font-semibold">
+                              Copy Length
+                            </Label>
                             <Select
                               value={adFilters.length}
                               onValueChange={(value) => setAdFilters({ ...adFilters, length: value })}
                             >
-                              <SelectTrigger id="length" className="h-10">
+                              <SelectTrigger id="length">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1370,9 +1145,6 @@ const Results = () => {
                                 <SelectItem value="detailed">Detailed</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                              Adjust verbosity to match your audience preferences
-                            </p>
                           </div>
                         </div>
 

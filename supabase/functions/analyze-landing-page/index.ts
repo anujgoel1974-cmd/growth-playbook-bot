@@ -264,71 +264,18 @@ serve(async (req) => {
       }
     };
 
-    // Define tools that the AI can use autonomously
-    const tools = [
-      {
-        type: "function",
-        function: {
-          name: "scrape_competitor",
-          description: "Scrape a competitor website to get real product information including names, prices, and images. Use this when you need actual competitive data.",
-          parameters: {
-            type: "object",
-            properties: {
-              domain: {
-                type: "string",
-                description: "The domain of the competitor website (e.g., 'competitor.com')"
-              },
-              category: {
-                type: "string",
-                description: "Product category to search for (e.g., 'leather-bags', 'watches')"
-              }
-            },
-            required: ["domain", "category"],
-            additionalProperties: false
-          }
-        }
-      },
-      {
-        type: "function",
-        function: {
-          name: "search_market_info",
-          description: "Search for market information, trends, or industry data. Use this when you need current market insights, pricing trends, or industry benchmarks.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: {
-                type: "string",
-                description: "The search query (e.g., 'leather bag market trends 2025', 'average price point for premium bags')"
-              }
-            },
-            required: ["query"],
-            additionalProperties: false
-          }
-        }
-      }
-    ];
-
-    // Prepare the prompt for AI with tool guidance
-    const systemPrompt = `You are an AI marketing analyst with autonomous capabilities. You can use tools to gather competitive intelligence and market data.
-
-AVAILABLE TOOLS:
-1. scrape_competitor: Get real product data from competitor websites
-2. search_market_info: Search for market trends, pricing, and industry insights
-
-WORKFLOW:
-1. First, analyze the landing page content provided
-2. If you need competitive data, use scrape_competitor for 2-3 key competitors
-3. If you need market context, use search_market_info
-4. After gathering needed data, provide comprehensive analysis
+    // Prepare the prompt for AI
+    const systemPrompt = `You are an AI marketing analyst specializing in landing page analysis and ad campaign strategy. Your role is to provide actionable insights that marketing teams can use to create highly targeted campaigns. Focus on delivering practical, data-driven recommendations based on the landing page content. 
 
 CRITICAL FORMATTING RULES:
 - Use ### for subsection headers (e.g., "### Target Personas", "### Demographics")
 - Keep each subsection concise with 3-5 bullet points maximum
 - Use bullet points (•) for all lists
 - Focus on actionable, specific insights
+- Avoid verbose paragraphs
 - YOU MUST INCLUDE ALL FIVE MAIN SECTIONS: Customer Insight, Campaign Targeting, Media Plan, Competitive Analysis, AND Ad Creative`;
     
-    const userPrompt = `Analyze this landing page and provide comprehensive insights for marketing campaigns. Use your tools autonomously to gather competitive and market data as needed.
+    const userPrompt = `Analyze this landing page and provide comprehensive insights for marketing campaigns.
 
 IMPORTANT: You MUST provide ALL FIVE sections below. Do not skip any section.
 
@@ -453,7 +400,7 @@ For each week, you MUST include a "**Reasoning:**" line explaining WHY these spe
 
 ## COMPETITIVE ANALYSIS
 
-CRITICAL: Use your scrape_competitor tool to get REAL competitor data. Identify 3-4 competing brands and scrape their products.
+CRITICAL: Identify 3-4 REAL competing brands in the same product category and price range as the analyzed URL.
 
 For each competitor, provide:
 
@@ -571,116 +518,52 @@ ${pageContent}
 
 REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media Plan, Competitive Analysis, AND Ad Creative).`;
 
-    // Tool execution handler
-    const executeTool = async (toolName: string, toolArgs: any) => {
-      console.log(`Executing tool: ${toolName}`, toolArgs);
-      
-      if (toolName === 'scrape_competitor') {
-        const products = await scrapeCompetitorProducts(toolArgs.domain, toolArgs.category);
-        return {
-          domain: toolArgs.domain,
-          category: toolArgs.category,
-          productsFound: products.length,
-          products: products.slice(0, 3) // Return max 3 products per competitor
-        };
-      } else if (toolName === 'search_market_info') {
-        // For now, return a simulated response - in production, integrate real search API
-        return {
-          query: toolArgs.query,
-          insights: "Market data integration pending. Use landing page context for now."
-        };
-      }
-      
-      return { error: "Unknown tool" };
-    };
+    console.log('Calling Lovable AI...');
+    const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 6000,
+      }),
+    });
 
-    // Agentic loop: call AI, handle tool calls, repeat until final answer
-    console.log('Starting agentic analysis loop...');
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
-    ];
-    
-    let iterationCount = 0;
-    const maxIterations = 10; // Prevent infinite loops
-    let finalAnalysisText = '';
-    
-    while (iterationCount < maxIterations) {
-      iterationCount++;
-      console.log(`Agent iteration ${iterationCount}...`);
-      
-      const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: messages,
-          tools: tools,
-          max_tokens: 6000,
-        }),
-      });
-
-      if (!openAIResponse.ok) {
-        const errorText = await openAIResponse.text();
-        console.error('Lovable AI error:', openAIResponse.status, errorText);
-        throw new Error(`Lovable AI error: ${openAIResponse.status}`);
-      }
-
-      const openAIData = await openAIResponse.json();
-      const aiMessage = openAIData.choices[0].message;
-      
-      // Add AI response to message history
-      messages.push(aiMessage);
-      
-      // Check if AI wants to call tools
-      if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
-        console.log(`AI requested ${aiMessage.tool_calls.length} tool calls`);
-        
-        // Execute all requested tools in parallel
-        const toolResults = await Promise.all(
-          aiMessage.tool_calls.map(async (toolCall: any) => {
-            const result = await executeTool(
-              toolCall.function.name,
-              JSON.parse(toolCall.function.arguments)
-            );
-            
-            return {
-              role: 'tool',
-              tool_call_id: toolCall.id,
-              name: toolCall.function.name,
-              content: JSON.stringify(result)
-            };
-          })
-        );
-        
-        // Add tool results to message history
-        messages.push(...toolResults);
-        
-        // Continue loop to get AI's next response
-        continue;
-      }
-      
-      // No tool calls - AI has final answer
-      if (aiMessage.content) {
-        finalAnalysisText = aiMessage.content;
-        console.log('Agent completed analysis');
-        break;
-      }
-      
-      // Safety: if no content and no tool calls, break
-      console.warn('AI returned neither content nor tool calls');
-      break;
+    if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
+      console.error('Lovable AI error:', openAIResponse.status, errorText);
+      throw new Error(`Lovable AI error: ${openAIResponse.status}`);
     }
-    
-    if (!finalAnalysisText) {
-      throw new Error('Agent failed to produce final analysis');
-    }
-    
-    const analysisText = finalAnalysisText;
+
+    const openAIData = await openAIResponse.json();
     console.log('Lovable AI response received');
+    console.log('Response structure:', JSON.stringify({
+      hasChoices: !!openAIData.choices,
+      choicesLength: openAIData.choices?.length,
+      hasMessage: !!openAIData.choices?.[0]?.message,
+      hasContent: !!openAIData.choices?.[0]?.message?.content
+    }));
+    
+    if (!openAIData.choices || !openAIData.choices[0] || !openAIData.choices[0].message) {
+      console.error('Invalid Lovable AI response structure:', JSON.stringify(openAIData, null, 2));
+      // Fallback: return a friendly placeholder instead of erroring
+      const structuredData = {
+        customerInsight: { full: { title: 'Customer Insight', content: 'No insights generated due to an upstream AI response format issue. Please try again.' } },
+        campaignTargeting: { full: { title: 'Campaign Targeting', content: 'No insights generated due to an upstream AI response format issue. Please try again.' } }
+      };
+      return new Response(
+        JSON.stringify({ success: true, analysis: structuredData, url }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const analysisText = openAIData.choices[0].message.content;
     console.log('Content length:', analysisText?.length || 0);
     console.log('Content preview (first 1000 chars):', analysisText?.substring(0, 1000) || 'EMPTY');
     
