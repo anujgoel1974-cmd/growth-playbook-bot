@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { generatePDF } from "@/utils/pdfExport";
 import { toast as sonnerToast } from "sonner";
 import { MetaFeedAdPreview } from "@/components/ad-previews/MetaFeedAdPreview";
+import { AnalysisLoader } from "@/components/AnalysisLoader";
 import { InstagramStoryAdPreview } from "@/components/ad-previews/InstagramStoryAdPreview";
 import { GoogleSearchAdPreview } from "@/components/ad-previews/GoogleSearchAdPreview";
 import { GoogleDisplayAdPreview } from "@/components/ad-previews/GoogleDisplayAdPreview";
@@ -476,15 +477,7 @@ const Results = () => {
         </div>
 
         {isLoading ? (
-          <Card className="shadow-card">
-            <CardContent className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                <p className="text-muted-foreground">Analyzing your landing page...</p>
-                <p className="text-sm text-muted-foreground mt-2">This may take up to 2 minutes</p>
-              </div>
-            </CardContent>
-          </Card>
+          <AnalysisLoader />
         ) : error ? (
           <Card className="shadow-card">
             <CardContent className="py-12 text-center">
@@ -496,10 +489,10 @@ const Results = () => {
           <Tabs defaultValue="insight" className="w-full">
             <TabsList className="grid w-full max-w-5xl mx-auto grid-cols-5 mb-8">
               <TabsTrigger value="insight">Customer Insight</TabsTrigger>
-              <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
-              <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
               <TabsTrigger value="competitive">Competitive Analysis</TabsTrigger>
+              <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
               <TabsTrigger value="adcreative">Ad Creative</TabsTrigger>
+              <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
             </TabsList>
 
             {/* Customer Insight Tab */}
