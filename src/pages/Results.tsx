@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Loader2, ArrowLeft, Copy, Download,
   Users, Brain, Zap, MessageCircle, TrendingUp,
@@ -185,6 +187,19 @@ const Results = () => {
   } | null>(null);
   const [dailyBudget, setDailyBudget] = useState<number>(15);
   const [numberOfWeeks, setNumberOfWeeks] = useState<number>(4);
+  
+  // Ad Creative Customization State
+  const [showFilters, setShowFilters] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [customizedCreatives, setCustomizedCreatives] = useState<AdCreative[] | null>(null);
+  const [adFilters, setAdFilters] = useState({
+    brandVoice: 'friendly',
+    emotionalHook: 'aspiration',
+    cta: 'shop-now',
+    emphasis: 'benefits',
+    length: 'balanced',
+  });
+  const [applyToAllChannels, setApplyToAllChannels] = useState(true);
 
   useEffect(() => {
     if (!url) {
@@ -266,9 +281,12 @@ const Results = () => {
   };
 
   const recommendedChannels = analysis?.mediaPlan ? getRecommendedChannels(analysis.mediaPlan) : new Set();
-  const filteredCreatives = analysis?.adCreatives?.filter(creative => 
+  
+  // Use customized creatives if available, otherwise use original
+  const baseCreatives = customizedCreatives || analysis?.adCreatives || [];
+  const filteredCreatives = baseCreatives.filter(creative => 
     recommendedChannels.has(creative.channelType)
-  ) || [];
+  );
 
   // Calculate adjusted media plan based on user inputs
   const calculateAdjustedMediaPlan = (): MediaPlanWeek[] | undefined => {
@@ -304,6 +322,53 @@ const Results = () => {
   };
 
   const adjustedMediaPlan = calculateAdjustedMediaPlan();
+
+  const handleRegenerateAdCopy = async () => {
+    if (!analysis?.adCreatives || !url) return;
+    
+    setIsRegenerating(true);
+    sonnerToast.loading("Regenerating ad copy with your preferences...", { id: "regenerate-ads" });
+
+    try {
+      // Extract brand info from URL and analysis
+      const brandInfo = {
+        productName: url.split('/').pop() || 'product',
+        productCategory: analysis.customerInsight?.[0]?.content || 'product',
+        brandVoice: analysis.customerInsight?.find(c => c.title.toLowerCase().includes('voice'))?.content,
+      };
+
+      const { data, error } = await supabase.functions.invoke('regenerate-ad-copy', {
+        body: {
+          adCreatives: analysis.adCreatives,
+          brandInfo,
+          filters: adFilters,
+          channelsToRegenerate: applyToAllChannels ? undefined : Array.from(recommendedChannels),
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data.success) {
+        setCustomizedCreatives(data.adCreatives);
+        sonnerToast.success(`Successfully regenerated ${data.regeneratedCount} ad creatives!`, { id: "regenerate-ads" });
+      } else {
+        throw new Error(data.error || 'Failed to regenerate ad copy');
+      }
+    } catch (error) {
+      console.error('Error regenerating ad copy:', error);
+      sonnerToast.error(
+        error instanceof Error ? error.message : 'Failed to regenerate ad copy',
+        { id: "regenerate-ads" }
+      );
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const handleResetToOriginal = () => {
+    setCustomizedCreatives(null);
+    sonnerToast.success("Reset to original ad copy");
+  };
 
   const AdCreativeCard = ({ creative }: { creative: AdCreative }) => {
     const creativeChannelColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -929,6 +994,216 @@ const Results = () => {
                     <p className="text-muted-foreground">See exactly how your ads will appear on each platform</p>
                     <p className="text-sm text-muted-foreground mt-1">Showing creatives for channels in your Media Plan</p>
                   </div>
+
+                  {/* Customization Panel */}
+                  <Card className="shadow-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg">Customize Ad Copy</CardTitle>
+                          <CardDescription>
+                            Adjust messaging tone and style to match your brand
+                          </CardDescription>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowFilters(!showFilters)}
+                        >
+                          {showFilters ? 'Hide Filters' : 'Show Filters'}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    
+                    {showFilters && (
+                      <CardContent className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {/* Brand Voice */}
+                          <div className="space-y-2">
+                            <Label htmlFor="brandVoice" className="text-sm font-semibold">
+                              Brand Voice
+                            </Label>
+                            <Select
+                              value={adFilters.brandVoice}
+                              onValueChange={(value) => setAdFilters({ ...adFilters, brandVoice: value })}
+                            >
+                              <SelectTrigger id="brandVoice">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="professional">Professional</SelectItem>
+                                <SelectItem value="friendly">Friendly</SelectItem>
+                                <SelectItem value="playful">Playful</SelectItem>
+                                <SelectItem value="luxurious">Luxurious</SelectItem>
+                                <SelectItem value="educational">Educational</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              {adFilters.brandVoice === 'professional' && 'Clear, trustworthy, authoritative'}
+                              {adFilters.brandVoice === 'friendly' && 'Conversational, warm, approachable'}
+                              {adFilters.brandVoice === 'playful' && 'Fun, creative, energetic'}
+                              {adFilters.brandVoice === 'luxurious' && 'Elegant, sophisticated, premium'}
+                              {adFilters.brandVoice === 'educational' && 'Informative, helpful, empowering'}
+                              {adFilters.brandVoice === 'urgent' && 'Action-oriented, time-sensitive'}
+                            </p>
+                          </div>
+
+                          {/* Emotional Hook */}
+                          <div className="space-y-2">
+                            <Label htmlFor="emotionalHook" className="text-sm font-semibold">
+                              Emotional Hook
+                            </Label>
+                            <Select
+                              value={adFilters.emotionalHook}
+                              onValueChange={(value) => setAdFilters({ ...adFilters, emotionalHook: value })}
+                            >
+                              <SelectTrigger id="emotionalHook">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fomo">FOMO</SelectItem>
+                                <SelectItem value="aspiration">Aspiration</SelectItem>
+                                <SelectItem value="problem-solution">Problem-Solution</SelectItem>
+                                <SelectItem value="social-proof">Social Proof</SelectItem>
+                                <SelectItem value="exclusivity">Exclusivity</SelectItem>
+                                <SelectItem value="value">Value</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              {adFilters.emotionalHook === 'fomo' && 'Limited time, don\'t miss out'}
+                              {adFilters.emotionalHook === 'aspiration' && 'Achieve goals, transformation'}
+                              {adFilters.emotionalHook === 'problem-solution' && 'Address pain points'}
+                              {adFilters.emotionalHook === 'social-proof' && 'Testimonials, popularity'}
+                              {adFilters.emotionalHook === 'exclusivity' && 'Limited access, VIP treatment'}
+                              {adFilters.emotionalHook === 'value' && 'Savings, great deal'}
+                            </p>
+                          </div>
+
+                          {/* Call to Action */}
+                          <div className="space-y-2">
+                            <Label htmlFor="cta" className="text-sm font-semibold">
+                              Call-to-Action
+                            </Label>
+                            <Select
+                              value={adFilters.cta}
+                              onValueChange={(value) => setAdFilters({ ...adFilters, cta: value })}
+                            >
+                              <SelectTrigger id="cta">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="shop-now">Shop Now</SelectItem>
+                                <SelectItem value="learn-more">Learn More</SelectItem>
+                                <SelectItem value="get-started">Get Started</SelectItem>
+                                <SelectItem value="try-free">Try Free</SelectItem>
+                                <SelectItem value="book">Book Now</SelectItem>
+                                <SelectItem value="join">Join Us</SelectItem>
+                                <SelectItem value="limited-offer">Limited Offer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Emphasis */}
+                          <div className="space-y-2">
+                            <Label htmlFor="emphasis" className="text-sm font-semibold">
+                              Content Emphasis
+                            </Label>
+                            <Select
+                              value={adFilters.emphasis}
+                              onValueChange={(value) => setAdFilters({ ...adFilters, emphasis: value })}
+                            >
+                              <SelectTrigger id="emphasis">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="features">Product Features</SelectItem>
+                                <SelectItem value="benefits">Benefits & Results</SelectItem>
+                                <SelectItem value="price">Price/Value</SelectItem>
+                                <SelectItem value="brand-story">Brand Story</SelectItem>
+                                <SelectItem value="sustainability">Sustainability</SelectItem>
+                                <SelectItem value="craftsmanship">Craftsmanship</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Length */}
+                          <div className="space-y-2">
+                            <Label htmlFor="length" className="text-sm font-semibold">
+                              Copy Length
+                            </Label>
+                            <Select
+                              value={adFilters.length}
+                              onValueChange={(value) => setAdFilters({ ...adFilters, length: value })}
+                            >
+                              <SelectTrigger id="length">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="short">Short & Punchy</SelectItem>
+                                <SelectItem value="balanced">Balanced</SelectItem>
+                                <SelectItem value="detailed">Detailed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Apply to All Channels Checkbox */}
+                        <div className="flex items-center space-x-2 pt-4 border-t">
+                          <Checkbox
+                            id="applyToAll"
+                            checked={applyToAllChannels}
+                            onCheckedChange={(checked) => setApplyToAllChannels(checked as boolean)}
+                          />
+                          <Label
+                            htmlFor="applyToAll"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Apply to all channels in Media Plan
+                          </Label>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 pt-2">
+                          <Button
+                            onClick={handleRegenerateAdCopy}
+                            disabled={isRegenerating}
+                            className="flex-1"
+                          >
+                            {isRegenerating ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Regenerating...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="h-4 w-4 mr-2" />
+                                Regenerate Ad Copy
+                              </>
+                            )}
+                          </Button>
+                          
+                          {customizedCreatives && (
+                            <Button
+                              onClick={handleResetToOriginal}
+                              variant="outline"
+                            >
+                              Reset to Original
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {customizedCreatives && (
+                          <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium text-primary">
+                              Viewing customized ad copy
+                            </span>
+                          </div>
+                        )}
+                      </CardContent>
+                    )}
+                  </Card>
 
                   <div className="space-y-12">
                     {Array.from(recommendedChannels).map((channelType: string) => {
