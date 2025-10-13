@@ -259,13 +259,23 @@ const Results = () => {
 
   // Calculate adjusted media plan based on user inputs
   const calculateAdjustedMediaPlan = (): MediaPlanWeek[] | undefined => {
-    if (!analysis?.mediaPlan) return undefined;
+    if (!analysis?.mediaPlan || analysis.mediaPlan.length === 0) return undefined;
 
     const totalBudget = dailyBudget * 7 * numberOfWeeks;
     const budgetPerWeek = totalBudget / numberOfWeeks;
 
     return Array.from({ length: numberOfWeeks }, (_, i) => {
       const sourceWeek = analysis.mediaPlan[i % analysis.mediaPlan.length];
+      
+      // Safety check: ensure sourceWeek and channels exist
+      if (!sourceWeek || !sourceWeek.channels || sourceWeek.channels.length === 0) {
+        return {
+          weekNumber: i + 1,
+          channels: [],
+          reasoning: sourceWeek?.reasoning
+        };
+      }
+      
       const weekOriginalTotal = sourceWeek.channels.reduce((s, ch) => s + ch.budget, 0);
       
       return {
