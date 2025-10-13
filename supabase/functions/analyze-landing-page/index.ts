@@ -1469,13 +1469,26 @@ For each Image Prompt, synthesize insights from the customer profile to create v
         console.log(`  [${i}] ${c.channel} - ${c.placement}: ${c.headlines.length} headlines, ${c.descriptions.length} descriptions`);
       });
       
-      // Generate images
-      const creativesWithImages = await generateAdImages(parsedCreatives, lovableApiKey, analysisId);
-      
-      await storeAgentOutput(analysisId, 'ad-creative', creativesWithImages);
-      console.log('✓ [Creative Generation Agent] Complete');
-      
-      return creativesWithImages;
+      // Immediately store text-only creatives and kick off image generation in background
+      await storeAgentOutput(analysisId, 'ad-creative', parsedCreatives);
+
+      try {
+        // Generate images in background (fire-and-forget)
+        setTimeout(async () => {
+          try {
+            const withImages = await generateAdImages(parsedCreatives, lovableApiKey, analysisId);
+            await storeAgentOutput(analysisId, 'ad-creative', withImages);
+            console.log('✓ [Creative Generation Agent] Images generated and stored');
+          } catch (e) {
+            console.error('Background image generation failed:', e);
+          }
+        }, 0);
+      } catch (bgErr) {
+        console.error('Background image generation scheduling failed:', bgErr);
+      }
+
+      console.log('✓ [Creative Generation Agent] Complete (background image gen running)');
+      return parsedCreatives;
     };
 
     // ===============================

@@ -282,7 +282,7 @@ const Results = () => {
     const channel = supabase
       .channel('agent-progress')
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'agent_context',
         filter: `analysis_id=eq.${sessionId}`
@@ -297,6 +297,32 @@ const Results = () => {
       console.log('Unsubscribing from agent progress');
       supabase.removeChannel(channel); 
     };
+  }, [sessionId]);
+
+  // Poll for updated ad-creative images
+  useEffect(() => {
+    if (!sessionId) return;
+    const fetchLatest = async () => {
+      const { data, error } = await supabase
+        .from('agent_context')
+        .select('output_data, created_at')
+        .eq('analysis_id', sessionId)
+        .eq('agent_name', 'ad-creative')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (!error && data && data.length > 0) {
+        const latest = data[0].output_data as AdCreative[];
+        setAnalysis(prev => {
+          if (!prev) return prev;
+          const current = prev.adCreatives || [];
+          const changed = latest.some((c, i) => c.imageUrl && (!current[i] || current[i].imageUrl !== c.imageUrl));
+          return changed ? { ...prev, adCreatives: latest } : prev;
+        });
+      }
+    };
+    const interval = setInterval(fetchLatest, 4000);
+    fetchLatest();
+    return () => clearInterval(interval);
   }, [sessionId]);
 
   const handleCopy = (text: string, label: string) => {
