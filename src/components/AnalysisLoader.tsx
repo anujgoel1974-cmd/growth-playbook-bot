@@ -40,28 +40,30 @@ export function AnalysisLoader() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const totalDuration = analysisSteps.reduce((sum, step) => sum + step.duration, 0);
-    let elapsed = 0;
-
+    const startTime = Date.now();
+    const estimatedDuration = 90000; // 90 seconds estimated time
+    
     const interval = setInterval(() => {
-      elapsed += 100;
-      const newProgress = Math.min((elapsed / (totalDuration * 10)) * 100, 100);
+      const elapsed = Date.now() - startTime;
+      // Use logarithmic progression to slow down as it approaches 100%
+      // This ensures it never quite reaches 100% until the actual load completes
+      const rawProgress = (elapsed / estimatedDuration) * 100;
+      const newProgress = Math.min(rawProgress * (1 - rawProgress / 200), 95); // Cap at 95%
       setProgress(newProgress);
 
-      // Calculate which step we should be on
-      let cumulativeDuration = 0;
-      for (let i = 0; i < analysisSteps.length; i++) {
-        cumulativeDuration += analysisSteps[i].duration;
-        if ((cumulativeDuration / totalDuration) * 100 > newProgress) {
-          setCurrentStep(i);
-          break;
-        }
+      // Calculate which step we should be on based on progress
+      if (newProgress < 15) {
+        setCurrentStep(0);
+      } else if (newProgress < 35) {
+        setCurrentStep(1);
+      } else if (newProgress < 55) {
+        setCurrentStep(2);
+      } else if (newProgress < 75) {
+        setCurrentStep(3);
+      } else {
+        setCurrentStep(4);
       }
-
-      if (newProgress >= 100) {
-        clearInterval(interval);
-      }
-    }, 100);
+    }, 200);
 
     return () => clearInterval(interval);
   }, []);
