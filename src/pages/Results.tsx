@@ -315,13 +315,48 @@ const Results = () => {
         setAnalysis(prev => {
           if (!prev) return prev;
           const current = prev.adCreatives || [];
-          const changed = latest.some((c, i) => c.imageUrl && (!current[i] || current[i].imageUrl !== c.imageUrl));
+          const changed = current.length !== latest.length || latest.some((c, i) => {
+            const cur = current[i];
+            if (!cur) return true;
+            const headsChanged = (c.headlines || []).join('|') !== (cur.headlines || []).join('|');
+            const descChanged = (c.descriptions || []).join('|') !== (cur.descriptions || []).join('|');
+            const imgChanged = (c.imageUrl || '') !== (cur.imageUrl || '');
+            return headsChanged || descChanged || imgChanged;
+          });
           return changed ? { ...prev, adCreatives: latest } : prev;
         });
       }
     };
     const interval = setInterval(fetchLatest, 4000);
     fetchLatest();
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
+  // Also poll for campaign targeting details in case initial response missed them
+  useEffect(() => {
+    if (!sessionId) return;
+    const fetchTargeting = async () => {
+      const { data, error } = await supabase
+        .from('agent_context')
+        .select('output_data, created_at')
+        .eq('analysis_id', sessionId)
+        .eq('agent_name', 'campaign-targeting')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (!error && data && data.length > 0) {
+        const latestCards = (data[0].output_data as any)?.cards as unknown as InsightCard[] | undefined;
+        if (latestCards && latestCards.length > 0) {
+          setAnalysis(prev => {
+            if (!prev) return prev;
+            const current = prev.campaignTargeting || [];
+            const changed = current.length !== latestCards.length;
+            return changed ? { ...prev, campaignTargeting: latestCards } : prev;
+          });
+        }
+      }
+    };
+    const interval = setInterval(fetchTargeting, 5000);
+    fetchTargeting();
     return () => clearInterval(interval);
   }, [sessionId]);
 
