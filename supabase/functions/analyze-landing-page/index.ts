@@ -453,7 +453,7 @@ For each week, you MUST include a "**Reasoning:**" line explaining WHY these spe
 
 ## COMPETITIVE ANALYSIS
 
-CRITICAL: Identify 3-4 REAL competing brands in the same product category and price range as the analyzed URL.
+CRITICAL: Use your scrape_competitor tool to get REAL competitor data. Identify 3-4 competing brands and scrape their products.
 
 For each competitor, provide:
 
