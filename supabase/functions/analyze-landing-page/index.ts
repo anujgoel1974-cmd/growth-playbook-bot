@@ -116,15 +116,26 @@ serve(async (req) => {
       console.error('Error extracting logo:', error);
     }
 
-    // Helper function to scrape competitor products
+    // Helper function to scrape competitor products (more robust)
     const scrapeCompetitorProducts = async (domain: string, category: string) => {
       try {
+        const categorySlug = (category || 'products').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
         const possibleUrls = [
-          `https://${domain}/collections/${category}`,
-          `https://${domain}/shop/${category}`,
-          `https://${domain}/products/${category}`,
-          `https://${domain}/${category}`,
+          `https://${domain}/collections/${categorySlug}`,
+          `https://${domain}/shop/${categorySlug}`,
+          `https://${domain}/category/${categorySlug}`,
+          `https://${domain}/products/${categorySlug}`,
+          `https://${domain}/${categorySlug}`,
           `https://${domain}`
+        ];
+
+        // Common product href patterns across platforms (Shopify, Magento, custom)
+        const productHrefPatterns = [
+          /<a[^>]*href=["']([^"']*\/products\/[^"']+)["'][^>]*>/gi,
+          /<a[^>]*href=["']([^"']*\/product\/[^"']+)["'][^>]*>/gi,
+          /<a[^>]*href=["']([^"']*\/p\/[^"']+)["'][^>]*>/gi,
+          /<a[^>]*href=["']([^"']*\/item\/[^"']+)["'][^>]*>/gi,
+          /<a[^>]*href=["']([^"']*productId=[^"']+)["'][^>]*>/gi,
         ];
 
         for (const testUrl of possibleUrls) {
@@ -146,55 +157,61 @@ serve(async (req) => {
               productUrl: string;
             }> = [];
 
-            // Extract products using regex patterns
-            const productLinkPattern = /<a[^>]*href=["']([^"']*\/products\/[^"']+)["'][^>]*>/gi;
-            const links = [...html.matchAll(productLinkPattern)];
-            const uniqueLinks = [...new Set(links.map(m => m[1]))].slice(0, 3);
+            // Gather potential product links
+            const linkSet = new Set<string>();
+            for (const pattern of productHrefPatterns) {
+              const matches = [...html.matchAll(pattern)];
+              matches.forEach(m => linkSet.add(m[1]));
+              if (linkSet.size >= 6) break; // don't overfetch
+            }
+            const uniqueLinks = [...linkSet].slice(0, 3);
 
             for (const link of uniqueLinks) {
-              const fullUrl = link.startsWith('http') ? link : `https://${domain}${link}`;
-              
+              const fullUrl = link.startsWith('http') ? link : `https://${domain}${link.startsWith('/') ? '' : '/'}${link}`;
               try {
                 const productResponse = await fetch(fullUrl, {
                   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ProductAnalyzer/1.0)' },
                 });
-                
                 if (!productResponse.ok) continue;
-                
+
                 const productHtml = await productResponse.text();
-                
+
                 // Extract product name
                 let name = 'Product';
-                const titleMatch = productHtml.match(/<title>([^<]+)<\/title>/i);
+                const titleMatch = productHtml.match(/<title>([^<]+)<\/title>/i) || productHtml.match(/<h1[^>]*>([^<]+)<\/h1>/i) || productHtml.match(/itemprop=["']name["'][^>]*content=["']([^"']+)["']/i);
                 if (titleMatch) {
-                  name = titleMatch[1].split('|')[0].trim();
+                  name = (titleMatch[1] || '').split('|')[0].trim();
                 }
-                
+
                 // Extract price
                 let price = '';
                 const pricePatterns = [
-                  /₹\s*[\d,]+(?:\.\d{2})?/,
-                  /\$\s*[\d,]+(?:\.\d{2})?/,
-                  /price["']\s*:\s*["']([^"']+)["']/i
+                  /₹\s*[\d,]+(?:\.\d{2})?/i,
+                  /rs\.?\s*[\d,]+(?:\.\d{2})?/i,
+                  /inr\s*[\d,]+(?:\.\d{2})?/i,
+                  /\$\s*[\d,]+(?:\.\d{2})?/i,
+                  /€\s*[\d,]+(?:\.\d{2})?/i,
+                  /£\s*[\d,]+(?:\.\d{2})?/i,
+                  /itemprop=["']price["'][^>]*content=["']([^"']+)["']/i,
+                  /data-price=["']([^"']+)["']/i
                 ];
                 for (const pattern of pricePatterns) {
                   const match = productHtml.match(pattern);
-                  if (match) {
-                    price = match[0] || match[1];
-                    break;
-                  }
+                  if (match) { price = match[0] || match[1]; break; }
                 }
-                
+
                 // Extract image
                 let imageUrl = '';
-                const imgMatch = productHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
-                if (imgMatch) {
-                  imageUrl = imgMatch[1];
-                  if (!imageUrl.startsWith('http')) {
-                    imageUrl = `https://${domain}${imageUrl}`;
-                  }
+                const ogImg = productHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+                const productImg = productHtml.match(/<img[^>]*class=["'][^"']*(product|primary|main)[^"']*["'][^>]*src=["']([^"']+)["']/i);
+                const anyImg = productHtml.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/i);
+                if (ogImg) imageUrl = ogImg[1];
+                else if (productImg) imageUrl = productImg[2];
+                else if (anyImg) imageUrl = anyImg[1];
+                if (imageUrl && !imageUrl.startsWith('http')) {
+                  imageUrl = `https://${domain}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
                 }
-                
+
                 if (name && price && imageUrl) {
                   products.push({ name, price, imageUrl, productUrl: fullUrl });
                 }
@@ -783,7 +800,8 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         if (currentCompetitor && currentCompetitor.competitorName && currentCompetitor.domain) {
           // Scrape real products from competitor
           console.log(`Scraping products for ${currentCompetitor.competitorName} (${currentCompetitor.domain})...`);
-          const products = await scrapeCompetitorProducts(currentCompetitor.domain, currentCompetitor.category || 'products');
+          const catSlug = (currentCompetitor.category || 'products').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+          const products = await scrapeCompetitorProducts(currentCompetitor.domain, catSlug);
           currentCompetitor.products = products;
           
           // Generate realistic ad copy based on their products (if we have them)
@@ -900,7 +918,7 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
           if (colonIndex > 0) {
             const label = withoutBullet.substring(0, colonIndex).trim().toLowerCase();
             const value = withoutBullet.substring(colonIndex + 1).trim();
-            if (label.includes('domain')) {
+            if (label.includes('domain') || label.includes('website') || label.includes('site') || label.includes('url')) {
               currentCompetitor.domain = value.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
             } else if (label.includes('category')) {
               currentCompetitor.category = value;
