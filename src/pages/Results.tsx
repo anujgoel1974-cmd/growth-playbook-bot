@@ -1000,151 +1000,272 @@ const Results = () => {
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-lg">Customize Ad Copy</CardTitle>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Palette className="h-5 w-5" />
+                            Customize Ad Copy
+                          </CardTitle>
                           <CardDescription>
-                            Adjust messaging tone and style to match your brand
+                            Adjust messaging tone and style to match your brand - see changes in real-time
                           </CardDescription>
                         </div>
                         <Button
-                          variant="ghost"
+                          variant={showFilters ? "secondary" : "outline"}
                           size="sm"
                           onClick={() => setShowFilters(!showFilters)}
+                          className="transition-all"
                         >
-                          {showFilters ? 'Hide Filters' : 'Show Filters'}
+                          {showFilters ? 'Hide Options' : 'Customize Now'}
                         </Button>
                       </div>
                     </CardHeader>
                     
                     {showFilters && (
-                      <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <CardContent className="space-y-6 animate-fade-in">
+                        {/* Interactive Preview Banner */}
+                        <div className="bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-lg p-4 border-2 border-primary/30">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-1">
+                              <Zap className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <p className="text-sm font-semibold">Your Current Selection:</p>
+                              <div className="flex flex-wrap gap-2">
+                                <span className="px-3 py-1 bg-background/80 rounded-full text-xs font-medium border">
+                                  {adFilters.brandVoice.charAt(0).toUpperCase() + adFilters.brandVoice.slice(1)} voice
+                                </span>
+                                <span className="px-3 py-1 bg-background/80 rounded-full text-xs font-medium border">
+                                  {adFilters.emotionalHook.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} hook
+                                </span>
+                                <span className="px-3 py-1 bg-background/80 rounded-full text-xs font-medium border">
+                                  {adFilters.emphasis.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                </span>
+                                <span className="px-3 py-1 bg-background/80 rounded-full text-xs font-medium border">
+                                  {adFilters.length.charAt(0).toUpperCase() + adFilters.length.slice(1)} copy
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {/* Brand Voice */}
-                          <div className="space-y-2">
-                            <Label htmlFor="brandVoice" className="text-sm font-semibold">
+                          <div className="space-y-3 group">
+                            <Label htmlFor="brandVoice" className="text-sm font-semibold flex items-center gap-2">
+                              <MessageCircle className="h-4 w-4 text-primary" />
                               Brand Voice
                             </Label>
                             <Select
                               value={adFilters.brandVoice}
                               onValueChange={(value) => setAdFilters({ ...adFilters, brandVoice: value })}
                             >
-                              <SelectTrigger id="brandVoice">
+                              <SelectTrigger id="brandVoice" className="h-11 transition-all group-hover:border-primary/50">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="professional">Professional</SelectItem>
-                                <SelectItem value="friendly">Friendly</SelectItem>
-                                <SelectItem value="playful">Playful</SelectItem>
-                                <SelectItem value="luxurious">Luxurious</SelectItem>
-                                <SelectItem value="educational">Educational</SelectItem>
-                                <SelectItem value="urgent">Urgent</SelectItem>
+                              <SelectContent className="bg-background">
+                                <SelectItem value="professional" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Briefcase className="h-4 w-4" />
+                                    Professional
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="friendly" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4" />
+                                    Friendly
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="playful" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Zap className="h-4 w-4" />
+                                    Playful
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="luxurious" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Award className="h-4 w-4" />
+                                    Luxurious
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="educational" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Brain className="h-4 w-4" />
+                                    Educational
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="urgent" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <TrendingUp className="h-4 w-4" />
+                                    Urgent
+                                  </div>
+                                </SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">
-                              {adFilters.brandVoice === 'professional' && 'Clear, trustworthy, authoritative'}
-                              {adFilters.brandVoice === 'friendly' && 'Conversational, warm, approachable'}
-                              {adFilters.brandVoice === 'playful' && 'Fun, creative, energetic'}
-                              {adFilters.brandVoice === 'luxurious' && 'Elegant, sophisticated, premium'}
-                              {adFilters.brandVoice === 'educational' && 'Informative, helpful, empowering'}
-                              {adFilters.brandVoice === 'urgent' && 'Action-oriented, time-sensitive'}
-                            </p>
+                            <div className="bg-muted/50 rounded-lg p-3 min-h-[60px] transition-all">
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {adFilters.brandVoice === 'professional' && '💼 Clear, trustworthy, and authoritative messaging that builds credibility'}
+                                {adFilters.brandVoice === 'friendly' && '👋 Conversational, warm, and approachable tone that connects personally'}
+                                {adFilters.brandVoice === 'playful' && '✨ Fun, creative, and energetic copy that stands out and entertains'}
+                                {adFilters.brandVoice === 'luxurious' && '💎 Elegant, sophisticated, and premium language for high-end appeal'}
+                                {adFilters.brandVoice === 'educational' && '📚 Informative, helpful, and empowering content that teaches'}
+                                {adFilters.brandVoice === 'urgent' && '⚡ Action-oriented, time-sensitive messaging that drives immediate response'}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Emotional Hook */}
-                          <div className="space-y-2">
-                            <Label htmlFor="emotionalHook" className="text-sm font-semibold">
+                          <div className="space-y-3 group">
+                            <Label htmlFor="emotionalHook" className="text-sm font-semibold flex items-center gap-2">
+                              <Target className="h-4 w-4 text-primary" />
                               Emotional Hook
                             </Label>
                             <Select
                               value={adFilters.emotionalHook}
                               onValueChange={(value) => setAdFilters({ ...adFilters, emotionalHook: value })}
                             >
-                              <SelectTrigger id="emotionalHook">
+                              <SelectTrigger id="emotionalHook" className="h-11 transition-all group-hover:border-primary/50">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="fomo">FOMO</SelectItem>
-                                <SelectItem value="aspiration">Aspiration</SelectItem>
-                                <SelectItem value="problem-solution">Problem-Solution</SelectItem>
-                                <SelectItem value="social-proof">Social Proof</SelectItem>
-                                <SelectItem value="exclusivity">Exclusivity</SelectItem>
-                                <SelectItem value="value">Value</SelectItem>
+                              <SelectContent className="bg-background">
+                                <SelectItem value="fomo" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    ⏰ FOMO
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="aspiration" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    🎯 Aspiration
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="problem-solution" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    🔧 Problem-Solution
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="social-proof" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    ⭐ Social Proof
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="exclusivity" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    👑 Exclusivity
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="value" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    💰 Value
+                                  </div>
+                                </SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">
-                              {adFilters.emotionalHook === 'fomo' && 'Limited time, don\'t miss out'}
-                              {adFilters.emotionalHook === 'aspiration' && 'Achieve goals, transformation'}
-                              {adFilters.emotionalHook === 'problem-solution' && 'Address pain points'}
-                              {adFilters.emotionalHook === 'social-proof' && 'Testimonials, popularity'}
-                              {adFilters.emotionalHook === 'exclusivity' && 'Limited access, VIP treatment'}
-                              {adFilters.emotionalHook === 'value' && 'Savings, great deal'}
-                            </p>
+                            <div className="bg-muted/50 rounded-lg p-3 min-h-[60px] transition-all">
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {adFilters.emotionalHook === 'fomo' && '⏰ Limited time offers and urgency - "Don\'t miss out on this opportunity"'}
+                                {adFilters.emotionalHook === 'aspiration' && '🎯 Achieve goals and transformation - "Become the best version of yourself"'}
+                                {adFilters.emotionalHook === 'problem-solution' && '🔧 Address pain points directly - "Solve your biggest challenge today"'}
+                                {adFilters.emotionalHook === 'social-proof' && '⭐ Testimonials and popularity - "Join thousands of happy customers"'}
+                                {adFilters.emotionalHook === 'exclusivity' && '👑 Limited access and VIP treatment - "Exclusive access for select members"'}
+                                {adFilters.emotionalHook === 'value' && '💰 Savings and great deals - "Get more for less, unbeatable value"'}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Call to Action */}
-                          <div className="space-y-2">
-                            <Label htmlFor="cta" className="text-sm font-semibold">
+                          <div className="space-y-3 group">
+                            <Label htmlFor="cta" className="text-sm font-semibold flex items-center gap-2">
+                              <Megaphone className="h-4 w-4 text-primary" />
                               Call-to-Action
                             </Label>
                             <Select
                               value={adFilters.cta}
                               onValueChange={(value) => setAdFilters({ ...adFilters, cta: value })}
                             >
-                              <SelectTrigger id="cta">
+                              <SelectTrigger id="cta" className="h-11 transition-all group-hover:border-primary/50">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="shop-now">Shop Now</SelectItem>
-                                <SelectItem value="learn-more">Learn More</SelectItem>
-                                <SelectItem value="get-started">Get Started</SelectItem>
-                                <SelectItem value="try-free">Try Free</SelectItem>
-                                <SelectItem value="book">Book Now</SelectItem>
-                                <SelectItem value="join">Join Us</SelectItem>
-                                <SelectItem value="limited-offer">Limited Offer</SelectItem>
+                              <SelectContent className="bg-background">
+                                <SelectItem value="shop-now" className="cursor-pointer">🛍️ Shop Now</SelectItem>
+                                <SelectItem value="learn-more" className="cursor-pointer">📖 Learn More</SelectItem>
+                                <SelectItem value="get-started" className="cursor-pointer">🚀 Get Started</SelectItem>
+                                <SelectItem value="try-free" className="cursor-pointer">✨ Try Free</SelectItem>
+                                <SelectItem value="book" className="cursor-pointer">📅 Book Now</SelectItem>
+                                <SelectItem value="join" className="cursor-pointer">🤝 Join Us</SelectItem>
+                                <SelectItem value="limited-offer" className="cursor-pointer">⚡ Limited Offer</SelectItem>
                               </SelectContent>
                             </Select>
+                            <div className="bg-muted/50 rounded-lg p-3 min-h-[60px] transition-all">
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {adFilters.cta === 'shop-now' && '🛍️ Direct purchase intent - "Shop Now" drives immediate buying action'}
+                                {adFilters.cta === 'learn-more' && '📖 Information seeking - "Learn More" for education-focused messaging'}
+                                {adFilters.cta === 'get-started' && '🚀 Action-oriented - "Get Started" for onboarding and sign-ups'}
+                                {adFilters.cta === 'try-free' && '✨ Low barrier entry - "Try Free" removes risk for conversions'}
+                                {adFilters.cta === 'book' && '📅 Appointment focused - "Book Now" for service-based offers'}
+                                {adFilters.cta === 'join' && '🤝 Community building - "Join Us" for memberships and groups'}
+                                {adFilters.cta === 'limited-offer' && '⚡ Urgency driven - "Limited Offer" creates scarcity'}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Emphasis */}
-                          <div className="space-y-2">
-                            <Label htmlFor="emphasis" className="text-sm font-semibold">
+                          <div className="space-y-3 group">
+                            <Label htmlFor="emphasis" className="text-sm font-semibold flex items-center gap-2">
+                              <Zap className="h-4 w-4 text-primary" />
                               Content Emphasis
                             </Label>
                             <Select
                               value={adFilters.emphasis}
                               onValueChange={(value) => setAdFilters({ ...adFilters, emphasis: value })}
                             >
-                              <SelectTrigger id="emphasis">
+                              <SelectTrigger id="emphasis" className="h-11 transition-all group-hover:border-primary/50">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="features">Product Features</SelectItem>
-                                <SelectItem value="benefits">Benefits & Results</SelectItem>
-                                <SelectItem value="price">Price/Value</SelectItem>
-                                <SelectItem value="brand-story">Brand Story</SelectItem>
-                                <SelectItem value="sustainability">Sustainability</SelectItem>
-                                <SelectItem value="craftsmanship">Craftsmanship</SelectItem>
+                              <SelectContent className="bg-background">
+                                <SelectItem value="features" className="cursor-pointer">⚙️ Product Features</SelectItem>
+                                <SelectItem value="benefits" className="cursor-pointer">✅ Benefits & Results</SelectItem>
+                                <SelectItem value="price" className="cursor-pointer">💵 Price/Value</SelectItem>
+                                <SelectItem value="brand-story" className="cursor-pointer">📖 Brand Story</SelectItem>
+                                <SelectItem value="sustainability" className="cursor-pointer">🌱 Sustainability</SelectItem>
+                                <SelectItem value="craftsmanship" className="cursor-pointer">🎨 Craftsmanship</SelectItem>
                               </SelectContent>
                             </Select>
+                            <div className="bg-muted/50 rounded-lg p-3 min-h-[60px] transition-all">
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {adFilters.emphasis === 'features' && '⚙️ Focus on product specifications and technical details'}
+                                {adFilters.emphasis === 'benefits' && '✅ Highlight outcomes and customer results'}
+                                {adFilters.emphasis === 'price' && '💵 Emphasize value proposition and savings'}
+                                {adFilters.emphasis === 'brand-story' && '📖 Tell your brand\'s unique narrative and mission'}
+                                {adFilters.emphasis === 'sustainability' && '🌱 Showcase eco-friendly practices and impact'}
+                                {adFilters.emphasis === 'craftsmanship' && '🎨 Celebrate artisan quality and attention to detail'}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Length */}
-                          <div className="space-y-2">
-                            <Label htmlFor="length" className="text-sm font-semibold">
+                          <div className="space-y-3 group">
+                            <Label htmlFor="length" className="text-sm font-semibold flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary" />
                               Copy Length
                             </Label>
                             <Select
                               value={adFilters.length}
                               onValueChange={(value) => setAdFilters({ ...adFilters, length: value })}
                             >
-                              <SelectTrigger id="length">
+                              <SelectTrigger id="length" className="h-11 transition-all group-hover:border-primary/50">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="short">Short & Punchy</SelectItem>
-                                <SelectItem value="balanced">Balanced</SelectItem>
-                                <SelectItem value="detailed">Detailed</SelectItem>
+                              <SelectContent className="bg-background">
+                                <SelectItem value="short" className="cursor-pointer">⚡ Short & Punchy</SelectItem>
+                                <SelectItem value="balanced" className="cursor-pointer">📝 Balanced</SelectItem>
+                                <SelectItem value="detailed" className="cursor-pointer">📚 Detailed</SelectItem>
                               </SelectContent>
                             </Select>
+                            <div className="bg-muted/50 rounded-lg p-3 min-h-[60px] transition-all">
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {adFilters.length === 'short' && '⚡ Concise messaging for quick impact - perfect for mobile'}
+                                {adFilters.length === 'balanced' && '📝 Moderate detail for clarity without overwhelming'}
+                                {adFilters.length === 'detailed' && '📚 Comprehensive information for informed decisions'}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
@@ -1164,32 +1285,45 @@ const Results = () => {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-3 pt-2">
-                          <Button
-                            onClick={handleRegenerateAdCopy}
-                            disabled={isRegenerating}
-                            className="flex-1"
-                          >
-                            {isRegenerating ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Regenerating...
-                              </>
-                            ) : (
-                              <>
-                                <Zap className="h-4 w-4 mr-2" />
-                                Regenerate Ad Copy
-                              </>
-                            )}
-                          </Button>
-                          
-                          {customizedCreatives && (
+                        <div className="space-y-4 pt-4 border-t">
+                          <div className="flex gap-3">
                             <Button
-                              onClick={handleResetToOriginal}
-                              variant="outline"
+                              onClick={handleRegenerateAdCopy}
+                              disabled={isRegenerating}
+                              className="flex-1 h-12 text-base bg-gradient-primary hover:opacity-90 transition-opacity"
+                              size="lg"
                             >
-                              Reset to Original
+                              {isRegenerating ? (
+                                <>
+                                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                  Regenerating with AI...
+                                </>
+                              ) : (
+                                <>
+                                  <Zap className="h-5 w-5 mr-2" />
+                                  Regenerate All Ad Copy
+                                </>
+                              )}
                             </Button>
+                            
+                            {customizedCreatives && (
+                              <Button
+                                onClick={handleResetToOriginal}
+                                variant="outline"
+                                size="lg"
+                                className="h-12"
+                              >
+                                Reset to Original
+                              </Button>
+                            )}
+                          </div>
+                          
+                          {isRegenerating && (
+                            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 animate-fade-in">
+                              <p className="text-sm text-center text-muted-foreground">
+                                ✨ Generating personalized ad copy for all channels...
+                              </p>
+                            </div>
                           )}
                         </div>
                         
