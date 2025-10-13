@@ -397,9 +397,10 @@ const Results = () => {
   
   // Use customized creatives if available, otherwise use original
   const baseCreatives = customizedCreatives || analysis?.adCreatives || [];
-  const filteredCreatives = baseCreatives.filter(creative => 
-    recommendedChannels.has(creative.channelType)
-  );
+  // If no recommended channels are available yet, show all creatives as a sensible fallback
+  const filteredCreatives = recommendedChannels.size > 0
+    ? baseCreatives.filter(creative => recommendedChannels.has(creative.channelType))
+    : baseCreatives;
 
   // Calculate adjusted media plan based on user inputs
   const calculateAdjustedMediaPlan = (): MediaPlanWeek[] | undefined => {
