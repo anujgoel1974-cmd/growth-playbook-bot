@@ -116,6 +116,109 @@ serve(async (req) => {
       console.error('Error extracting logo:', error);
     }
 
+    // Helper function to scrape competitor products
+    const scrapeCompetitorProducts = async (domain: string, category: string) => {
+      try {
+        const possibleUrls = [
+          `https://${domain}/collections/${category}`,
+          `https://${domain}/shop/${category}`,
+          `https://${domain}/products/${category}`,
+          `https://${domain}/${category}`,
+          `https://${domain}`
+        ];
+
+        for (const testUrl of possibleUrls) {
+          try {
+            console.log(`Attempting to scrape: ${testUrl}`);
+            const response = await fetch(testUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; ProductAnalyzer/1.0)',
+              },
+            });
+
+            if (!response.ok) continue;
+
+            const html = await response.text();
+            const products: Array<{
+              name: string;
+              price: string;
+              imageUrl: string;
+              productUrl: string;
+            }> = [];
+
+            // Extract products using regex patterns
+            const productLinkPattern = /<a[^>]*href=["']([^"']*\/products\/[^"']+)["'][^>]*>/gi;
+            const links = [...html.matchAll(productLinkPattern)];
+            const uniqueLinks = [...new Set(links.map(m => m[1]))].slice(0, 3);
+
+            for (const link of uniqueLinks) {
+              const fullUrl = link.startsWith('http') ? link : `https://${domain}${link}`;
+              
+              try {
+                const productResponse = await fetch(fullUrl, {
+                  headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ProductAnalyzer/1.0)' },
+                });
+                
+                if (!productResponse.ok) continue;
+                
+                const productHtml = await productResponse.text();
+                
+                // Extract product name
+                let name = 'Product';
+                const titleMatch = productHtml.match(/<title>([^<]+)<\/title>/i);
+                if (titleMatch) {
+                  name = titleMatch[1].split('|')[0].trim();
+                }
+                
+                // Extract price
+                let price = '';
+                const pricePatterns = [
+                  /₹\s*[\d,]+(?:\.\d{2})?/,
+                  /\$\s*[\d,]+(?:\.\d{2})?/,
+                  /price["']\s*:\s*["']([^"']+)["']/i
+                ];
+                for (const pattern of pricePatterns) {
+                  const match = productHtml.match(pattern);
+                  if (match) {
+                    price = match[0] || match[1];
+                    break;
+                  }
+                }
+                
+                // Extract image
+                let imageUrl = '';
+                const imgMatch = productHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+                if (imgMatch) {
+                  imageUrl = imgMatch[1];
+                  if (!imageUrl.startsWith('http')) {
+                    imageUrl = `https://${domain}${imageUrl}`;
+                  }
+                }
+                
+                if (name && price && imageUrl) {
+                  products.push({ name, price, imageUrl, productUrl: fullUrl });
+                }
+              } catch (err) {
+                console.error('Error fetching product:', err);
+              }
+            }
+
+            if (products.length > 0) {
+              console.log(`Successfully scraped ${products.length} products from ${domain}`);
+              return products;
+            }
+          } catch (err) {
+            console.error(`Error trying ${testUrl}:`, err);
+          }
+        }
+
+        return [];
+      } catch (error) {
+        console.error('Error scraping competitor:', error);
+        return [];
+      }
+    };
+
     // Prepare the prompt for AI
     const systemPrompt = `You are an AI marketing analyst specializing in landing page analysis and ad campaign strategy. Your role is to provide actionable insights that marketing teams can use to create highly targeted campaigns. Focus on delivering practical, data-driven recommendations based on the landing page content. 
 
@@ -252,62 +355,35 @@ For each week, you MUST include a "**Reasoning:**" line explaining WHY these spe
 
 ## COMPETITIVE ANALYSIS
 
-Research and identify 3-5 competitors for this product/service. For each competitor, provide:
+CRITICAL: Identify 3-4 REAL competing brands in the same product category and price range as the analyzed URL.
 
-### Competitor 1: [Brand Name]
-• URL: [competitor product page URL]
-• Price Point: [their pricing]
+For each competitor, provide:
+
+### Competitor 1: [Real Brand Name]
+• Domain: [www.competitorbrand.com] (MUST be a real, established brand website)
+• Category: [product category, e.g., "designer bags", "home decor"]
+• Price Point: [their typical pricing range]
 • Key Strength: [what they do better than the analyzed page]
 • Weakness: [opportunity gap where analyzed page could win]
+• Market Position: [premium/mid-range/budget, established/emerging]
 
-#### Ad Creatives:
-For each competitor, generate 2-3 realistic example ad creatives based on their likely advertising strategy:
-
-**Meta Feed:**
-• Headline: [realistic headline they would use]
-• Description: [realistic ad copy they would use]
-• Image Prompt: [description of the visual/product they would feature]
-
-**Google Display:**
-• Headline: [realistic headline they would use]
-• Description: [realistic ad copy they would use]
-• Image Prompt: [description of the visual/product they would feature]
-
-### Competitor 2: [Brand Name]
-• URL: [competitor product page URL]
-• Price Point: [their pricing]
+### Competitor 2: [Real Brand Name]
+• Domain: [www.competitorbrand.com]
+• Category: [product category]
+• Price Point: [their typical pricing range]
 • Key Strength: [what they do better]
 • Weakness: [opportunity gap]
+• Market Position: [premium/mid-range/budget, established/emerging]
 
-#### Ad Creatives:
-**Meta Feed:**
-• Headline: [realistic headline they would use]
-• Description: [realistic ad copy they would use]
-• Image Prompt: [description of the visual/product they would feature]
-
-**Google Display:**
-• Headline: [realistic headline they would use]
-• Description: [realistic ad copy they would use]
-• Image Prompt: [description of the visual/product they would feature]
-
-### Competitor 3: [Brand Name]
-• URL: [competitor product page URL]
-• Price Point: [their pricing]
+### Competitor 3: [Real Brand Name]
+• Domain: [www.competitorbrand.com]
+• Category: [product category]
+• Price Point: [their typical pricing range]
 • Key Strength: [what they do better]
 • Weakness: [opportunity gap]
+• Market Position: [premium/mid-range/budget, established/emerging]
 
-#### Ad Creatives:
-**Meta Feed:**
-• Headline: [realistic headline they would use]
-• Description: [realistic ad copy they would use]
-• Image Prompt: [description of the visual/product they would feature]
-
-**Google Display:**
-• Headline: [realistic headline they would use]
-• Description: [realistic ad copy they would use]
-• Image Prompt: [description of the visual/product they would feature]
-
-(Include 4-5 competitors if relevant)
+(Include 4th competitor if highly relevant)
 
 ### Your Competitive Advantages
 • Advantage 1: [specific differentiator vs competitors]
@@ -661,21 +737,29 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       return weeks;
     };
 
-    // Parse competitors section
-    const parseCompetitors = (content: string) => {
+    // Parse competitors section and scrape real products
+    const parseCompetitors = async (content: string) => {
       const competitors: Array<{ 
         id: string; 
         competitorName: string; 
-        url: string; 
+        url: string;
+        domain: string;
+        category: string;
         pricePoint: string; 
         keyStrength: string; 
-        weakness: string; 
+        weakness: string;
+        marketPosition: string;
         icon: string;
-        creatives?: Array<{
+        products?: Array<{
+          name: string;
+          price: string;
+          imageUrl: string;
+          productUrl: string;
+        }>;
+        adCopyExamples?: Array<{
           platform: string;
           headline: string;
           description: string;
-          imagePrompt: string;
           imageUrl?: string;
         }>;
       }> = [];
@@ -693,37 +777,78 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
 
       const lines = content.split('\n');
       let currentCompetitor: any = null;
-      let inCreatives = false;
-      let currentCreative: any = null;
 
-      // Helper: finalize current creative
-      const flushCreative = () => {
-        if (currentCompetitor && currentCreative) {
-          currentCompetitor.creatives.push(currentCreative);
-          currentCreative = null;
-        }
-      };
+      // Helper: finalize current competitor and scrape products
+      const flushCompetitor = async () => {
+        if (currentCompetitor && currentCompetitor.competitorName && currentCompetitor.domain) {
+          // Scrape real products from competitor
+          console.log(`Scraping products for ${currentCompetitor.competitorName} (${currentCompetitor.domain})...`);
+          const products = await scrapeCompetitorProducts(currentCompetitor.domain, currentCompetitor.category || 'products');
+          currentCompetitor.products = products;
+          
+          // Generate realistic ad copy based on their products (if we have them)
+          if (products.length > 0 && lovableApiKey) {
+            try {
+              const adCopyPrompt = `Based on this real competitor brand "${currentCompetitor.competitorName}" and their actual product "${products[0].name}" priced at ${products[0].price}, generate 3 realistic ad copy examples they would likely run on different platforms. Keep it concise and authentic to their brand positioning as ${currentCompetitor.marketPosition}.
 
-      // Helper: finalize current competitor
-      const flushCompetitor = () => {
-        flushCreative();
-        if (currentCompetitor && currentCompetitor.competitorName) {
+Format:
+**Platform Name:**
+• Headline: [realistic headline]
+• Description: [realistic description]
+
+Generate for: Meta Feed, Google Search, and Google Display.`;
+
+              const adCopyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${lovableApiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: 'google/gemini-2.5-flash',
+                  messages: [
+                    { role: 'user', content: adCopyPrompt }
+                  ],
+                  max_tokens: 1000,
+                }),
+              });
+
+              if (adCopyResponse.ok) {
+                const adData = await adCopyResponse.json();
+                const adText = adData.choices[0].message.content;
+                
+                // Parse the ad copy from response
+                const adCopyExamples: Array<{ platform: string; headline: string; description: string }> = [];
+                const adLines = adText.split('\n');
+                let currentAd: any = null;
+                
+                for (const line of adLines) {
+                  const trimmed = line.trim();
+                  if (trimmed.startsWith('**') && trimmed.includes(':')) {
+                    if (currentAd) adCopyExamples.push(currentAd);
+                    currentAd = { platform: trimmed.replace(/\*\*/g, '').replace(':', '').trim(), headline: '', description: '' };
+                  } else if (currentAd && trimmed.startsWith('•')) {
+                    const withoutBullet = trimmed.replace(/^•\s*/, '');
+                    if (withoutBullet.toLowerCase().includes('headline:')) {
+                      currentAd.headline = withoutBullet.split(':')[1].trim();
+                    } else if (withoutBullet.toLowerCase().includes('description:')) {
+                      currentAd.description = withoutBullet.split(':')[1].trim();
+                    }
+                  }
+                }
+                if (currentAd) adCopyExamples.push(currentAd);
+                
+                currentCompetitor.adCopyExamples = adCopyExamples;
+              }
+            } catch (error) {
+              console.error('Error generating ad copy:', error);
+            }
+          }
+          
           competitors.push(currentCompetitor);
           console.log('parseCompetitors: pushed competitor', currentCompetitor.competitorName);
         }
         currentCompetitor = null;
-        inCreatives = false;
-      };
-
-      // Helper: detect if the next few lines look like a competitor details block (URL, Price, etc.)
-      const looksLikeCompetitorBlock = (startIndex: number) => {
-        for (let i = startIndex; i < Math.min(lines.length, startIndex + 6); i++) {
-          const t = lines[i].trim().toLowerCase();
-          if (/^[•\-*]\s*url\s*:/.test(t)) return true;
-          if (/^[•\-*]\s*price/.test(t)) return true;
-          if (/^[•\-*]\s*key\s*strength/.test(t)) return true;
-        }
-        return false;
       };
 
       for (let idx = 0; idx < lines.length; idx++) {
@@ -738,7 +863,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
 
         // Detect explicit competitor headers like "### Competitor 2: Brand"
         if (/^#{2,6}\s*competitor\b/i.test(lower) || /^(?:\*\*|__)\s*competitor\b/i.test(lower)) {
-          flushCompetitor();
+          await flushCompetitor();
 
           // Extract competitor name after optional number and delimiter
           let name = 'Unknown Competitor';
@@ -754,113 +879,56 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
             id: `competitor-${competitors.length + 1}`,
             competitorName: name,
             url: '',
+            domain: '',
+            category: '',
             pricePoint: '',
             keyStrength: '',
             weakness: '',
+            marketPosition: '',
             icon: 'building-2',
-            creatives: []
+            products: [],
+            adCopyExamples: []
           };
           console.log('parseCompetitors: started competitor', name);
-          inCreatives = false;
-          currentCreative = null;
           continue;
         }
 
-        // Heuristic: some models emit headers like "### Brand Name" without the word Competitor
-        // Treat as competitor header if it isn't a known non-competitive subsection and the following lines look like details (URL/Price/etc.)
-        if (/^#{3,6}\s+/.test(trimmed) && !/^#{2,6}\s*ad\s*creative/i.test(lower)) {
-          const headerTitle = trimmed.replace(/^#{3,6}\s+/, '').trim();
-          const headerTitleLower = headerTitle.toLowerCase();
-          if (!NON_COMP_SECTION_TITLES.has(headerTitleLower) && looksLikeCompetitorBlock(idx + 1)) {
-            flushCompetitor();
-            currentCompetitor = {
-              id: `competitor-${competitors.length + 1}`,
-              competitorName: headerTitle,
-              url: '',
-              pricePoint: '',
-              keyStrength: '',
-              weakness: '',
-              icon: 'building-2',
-              creatives: []
-            };
-            console.log('parseCompetitors: heuristically started competitor', headerTitle);
-            inCreatives = false;
-            currentCreative = null;
-            continue;
-          }
-        }
-
-        // Enter creatives subsection (support "Ad Creatives", "Ad Examples", etc.)
-        if (currentCompetitor && (/^#{2,6}\s*(ad\s*creative(?:s)?|ad\s*examples)\b/i.test(lower)
-          || /^(?:\*\*|__)\s*(ad\s*creative(?:s)?|ad\s*examples)\s*:?(?:\*\*|__)/i.test(trimmed))) {
-          flushCreative();
-          inCreatives = true;
-          continue;
-        }
-
-        // Creative platform detection inside creatives: support bold, headers, or plain "Meta Feed:" style
-        if (currentCompetitor && inCreatives && (
-          trimmed.startsWith('**') || trimmed.startsWith('__') || /^#{4,6}\s+/.test(trimmed) || /^[A-Za-z][A-Za-z0-9 /+\-&]+:\s*$/.test(trimmed)
-        )) {
-          flushCreative();
-          let platform = 'Unknown Platform';
-          const boldPlat = trimmed.match(/^(?:\*\*|__)\s*(.+?)\s*:?(?:\*\*|__)/);
-          const headerPlat = trimmed.match(/^#{4,6}\s*(.+?)\s*:?\s*$/);
-          const plainPlat = trimmed.match(/^([A-Za-z][A-Za-z0-9 /+\-&]+):\s*$/);
-          if (boldPlat && boldPlat[1]) platform = boldPlat[1].trim();
-          else if (headerPlat && headerPlat[1]) platform = headerPlat[1].trim();
-          else if (plainPlat && plainPlat[1]) platform = plainPlat[1].trim();
-
-          currentCreative = {
-            platform,
-            headline: '',
-            description: '',
-            imagePrompt: ''
-          };
-          continue;
-        }
-
-        // Parse creative bullets
-        if (currentCompetitor && currentCreative && (/^[•\-\*]\s*/.test(trimmed))) {
+        // Parse competitor detail bullets
+        if (currentCompetitor && (/^[•\-\*]\s*/.test(trimmed))) {
           const withoutBullet = trimmed.replace(/^[•\-\*]\s*/, '');
           const colonIndex = withoutBullet.indexOf(':');
           if (colonIndex > 0) {
             const label = withoutBullet.substring(0, colonIndex).trim().toLowerCase();
             const value = withoutBullet.substring(colonIndex + 1).trim();
-            if (label.includes('headline')) currentCreative.headline = value;
-            else if (label.includes('description') || label.includes('cta') || label.includes('primary text')) currentCreative.description = value;
-            else if (label.includes('image')) currentCreative.imagePrompt = value;
+            if (label.includes('domain')) {
+              currentCompetitor.domain = value.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+            } else if (label.includes('category')) {
+              currentCompetitor.category = value;
+            } else if (label.includes('price')) {
+              currentCompetitor.pricePoint = value;
+            } else if (label.includes('strength')) {
+              currentCompetitor.keyStrength = value;
+            } else if (label.includes('weakness')) {
+              currentCompetitor.weakness = value;
+            } else if (label.includes('position')) {
+              currentCompetitor.marketPosition = value;
+            }
           }
           continue;
         }
 
-        // Parse competitor detail bullets (outside creatives)
-        if (currentCompetitor && !inCreatives && (/^[•\-\*]\s*/.test(trimmed))) {
-          const withoutBullet = trimmed.replace(/^[•\-\*]\s*/, '');
-          const colonIndex = withoutBullet.indexOf(':');
-          if (colonIndex > 0) {
-            const label = withoutBullet.substring(0, colonIndex).trim().toLowerCase();
-            const value = withoutBullet.substring(colonIndex + 1).trim();
-            if (label.includes('url')) currentCompetitor.url = value;
-            else if (label.includes('price')) currentCompetitor.pricePoint = value;
-            else if (label.includes('strength')) currentCompetitor.keyStrength = value;
-            else if (label.includes('weakness')) currentCompetitor.weakness = value;
-          }
-          continue;
-        }
-
-        // Any other new top-level header ends the current competitor (but do not end when it's still part of creatives entry label)
+        // Any other new top-level header ends the current competitor
         if (/^#{2,6}\s+/.test(trimmed) && currentCompetitor) {
           const headerTitle = trimmed.replace(/^#{2,6}\s+/, '').trim().toLowerCase();
-          if (!/^ad\s*creative/.test(headerTitle)) {
-            flushCompetitor();
+          if (NON_COMP_SECTION_TITLES.has(headerTitle)) {
+            await flushCompetitor();
           }
           continue;
         }
       }
 
       // Flush any remaining blocks
-      flushCompetitor();
+      await flushCompetitor();
 
       console.log('parseCompetitors: total competitors', competitors.length);
       return competitors;
@@ -1079,70 +1147,11 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       // Parse competitive analysis if exists
       if (caIdx !== -1) {
         const caContent = acIdx !== -1 ? analysisText.slice(caIdx, acIdx).trim() : analysisText.slice(caIdx).trim();
-        const competitors = parseCompetitors(caContent);
+        const competitors = await parseCompetitors(caContent);
         console.log('Competitive Analysis parsing result:', {
           total: competitors.length,
-          items: competitors.map(c => ({ name: c.competitorName, creatives: c.creatives?.length || 0 }))
+          items: competitors.map(c => ({ name: c.competitorName, products: c.products?.length || 0, adCopy: c.adCopyExamples?.length || 0 }))
         });
-        
-        // Generate images for competitor creatives
-        const competitorsWithImages = [];
-        for (const competitor of competitors) {
-          if (competitor.creatives && competitor.creatives.length > 0) {
-            const updatedCreatives = [];
-            for (const creative of competitor.creatives) {
-              try {
-                console.log(`Generating image for ${competitor.competitorName} - ${creative.platform}...`);
-                const imagePrompt = `Create a realistic ${creative.platform} ad creative for a competitor brand. ${creative.imagePrompt}. Professional marketing image, high quality, realistic product photography style.`;
-                
-                const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${lovableApiKey}`,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    model: 'google/gemini-2.5-flash-image-preview',
-                    messages: [
-                      {
-                        role: 'user',
-                        content: imagePrompt
-                      }
-                    ],
-                    modalities: ['image', 'text']
-                  }),
-                });
-                
-                if (imageResponse.ok) {
-                  const imageData = await imageResponse.json();
-                  const generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-                  
-                  if (generatedImage) {
-                    console.log(`Successfully generated image for ${competitor.competitorName} - ${creative.platform}`);
-                    updatedCreatives.push({
-                      ...creative,
-                      imageUrl: generatedImage
-                    });
-                  } else {
-                    updatedCreatives.push(creative);
-                  }
-                } else {
-                  console.error(`Failed to generate image: ${imageResponse.status}`);
-                  updatedCreatives.push(creative);
-                }
-              } catch (error) {
-                console.error(`Error generating competitor creative image:`, error);
-                updatedCreatives.push(creative);
-              }
-            }
-            competitorsWithImages.push({
-              ...competitor,
-              creatives: updatedCreatives
-            });
-          } else {
-            competitorsWithImages.push(competitor);
-          }
-        }
         
         // Parse non-competitor subsections as insights
         const insights = parseSubsections(caContent, false).filter(card => 
@@ -1150,7 +1159,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
         );
         
         competitiveAnalysisData = {
-          competitors: competitorsWithImages,
+          competitors,
           insights
         };
       }

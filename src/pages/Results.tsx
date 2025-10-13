@@ -50,10 +50,26 @@ interface CompetitorCard {
   id: string;
   competitorName: string;
   url: string;
+  domain: string;
+  category: string;
   pricePoint: string;
   keyStrength: string;
   weakness: string;
+  marketPosition: string;
   icon: string;
+  products?: Array<{
+    name: string;
+    price: string;
+    imageUrl: string;
+    productUrl: string;
+  }>;
+  adCopyExamples?: Array<{
+    platform: string;
+    headline: string;
+    description: string;
+    imageUrl?: string;
+  }>;
+  // Legacy field for backward compatibility
   creatives?: Array<{
     platform: string;
     headline: string;
@@ -712,54 +728,99 @@ const Results = () => {
                   {/* Competitors Section */}
                   {analysis.competitiveAnalysis.competitors && analysis.competitiveAnalysis.competitors.length > 0 && (
                     <div className="space-y-4">
-                      <h3 className="text-2xl font-bold text-center mb-6">Top Competitors</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <h3 className="text-2xl font-bold text-center mb-6">Real Competitor Brands & Products</h3>
+                      <p className="text-muted-foreground text-center mb-8 text-sm">
+                        Actual competing brands with their live products scraped from their websites
+                      </p>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                         {analysis.competitiveAnalysis.competitors.map((competitor) => {
                           const IconComponent = iconMap[competitor.icon] || Building2;
                           
                           return (
-                            <Card key={competitor.id} className="shadow-card hover:shadow-card-hover transition-all group border-2 border-border">
+                            <Card key={competitor.id} className="shadow-card hover:shadow-card-hover transition-all group border-2 border-border overflow-hidden">
                               <CardHeader className="pb-3 bg-gradient-to-br from-muted/30 to-muted/10">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
                                       <IconComponent className="h-5 w-5" />
                                     </div>
-                                    <CardTitle className="text-lg">{competitor.competitorName}</CardTitle>
+                                    <div>
+                                      <CardTitle className="text-lg">{competitor.competitorName}</CardTitle>
+                                      {competitor.domain && (
+                                        <CardDescription className="text-xs mt-1">
+                                          <a 
+                                            href={`https://${competitor.domain}`} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 hover:underline text-primary"
+                                          >
+                                            {competitor.domain} <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        </CardDescription>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                                {competitor.url && (
-                                  <CardDescription className="flex items-center gap-1 text-xs mt-2">
-                                    <a 
-                                      href={competitor.url} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-1 hover:underline text-primary"
-                                    >
-                                      Visit page <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                  </CardDescription>
-                                )}
                               </CardHeader>
-                              <CardContent className="space-y-3">
-                                {competitor.pricePoint && (
-                                  <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-200 dark:border-blue-800">
-                                    <div className="font-semibold text-sm mb-1">Price Point</div>
-                                    <div className="text-xs text-muted-foreground">{competitor.pricePoint}</div>
+                              <CardContent className="space-y-4 pt-4">
+                                {/* Real Products */}
+                                {competitor.products && competitor.products.length > 0 && (
+                                  <div className="space-y-3">
+                                    <div className="text-sm font-semibold">Actual Products:</div>
+                                    <div className="space-y-2">
+                                      {competitor.products.slice(0, 2).map((product, idx) => (
+                                        <a 
+                                          key={idx}
+                                          href={product.productUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-border"
+                                        >
+                                          {product.imageUrl && (
+                                            <img 
+                                              src={product.imageUrl} 
+                                              alt={product.name}
+                                              className="w-16 h-16 object-cover rounded"
+                                            />
+                                          )}
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-medium truncate">{product.name}</div>
+                                            <div className="text-xs text-primary font-semibold mt-1">{product.price}</div>
+                                          </div>
+                                          <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                        </a>
+                                      ))}
+                                    </div>
                                   </div>
                                 )}
-                                {competitor.keyStrength && (
-                                  <div className="p-3 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-800">
-                                    <div className="font-semibold text-sm mb-1">Key Strength</div>
-                                    <div className="text-xs text-muted-foreground">{competitor.keyStrength}</div>
-                                  </div>
-                                )}
-                                {competitor.weakness && (
-                                  <div className="p-3 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-200 dark:border-amber-800">
-                                    <div className="font-semibold text-sm mb-1">Weakness / Opportunity</div>
-                                    <div className="text-xs text-muted-foreground">{competitor.weakness}</div>
-                                  </div>
-                                )}
+                                
+                                {/* Competitor Details */}
+                                <div className="space-y-2 pt-2 border-t border-border">
+                                  {competitor.marketPosition && (
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-200 dark:border-purple-800">
+                                      <div className="font-semibold text-xs mb-0.5">Market Position</div>
+                                      <div className="text-xs text-muted-foreground">{competitor.marketPosition}</div>
+                                    </div>
+                                  )}
+                                  {competitor.pricePoint && (
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-200 dark:border-blue-800">
+                                      <div className="font-semibold text-xs mb-0.5">Price Point</div>
+                                      <div className="text-xs text-muted-foreground">{competitor.pricePoint}</div>
+                                    </div>
+                                  )}
+                                  {competitor.keyStrength && (
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-800">
+                                      <div className="font-semibold text-xs mb-0.5">Key Strength</div>
+                                      <div className="text-xs text-muted-foreground">{competitor.keyStrength}</div>
+                                    </div>
+                                  )}
+                                  {competitor.weakness && (
+                                    <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-200 dark:border-amber-800">
+                                      <div className="font-semibold text-xs mb-0.5">Weakness / Opportunity</div>
+                                      <div className="text-xs text-muted-foreground">{competitor.weakness}</div>
+                                    </div>
+                                  )}
+                                </div>
                               </CardContent>
                             </Card>
                           );
@@ -768,51 +829,50 @@ const Results = () => {
                     </div>
                   )}
 
-                  {/* Competitor Ad Creatives Section */}
-                  {analysis.competitiveAnalysis.competitors.some(c => c.creatives && c.creatives.length > 0) && (
+                  {/* Competitor Ad Copy Examples Section */}
+                  {analysis.competitiveAnalysis.competitors.some(c => c.adCopyExamples && c.adCopyExamples.length > 0) && (
                     <div className="space-y-6 mt-12">
-                      <h3 className="text-2xl font-bold text-center mb-6">Competitor Ad Examples</h3>
+                      <h3 className="text-2xl font-bold text-center mb-6">Realistic Ad Copy Examples</h3>
                       <p className="text-muted-foreground text-center mb-8">
-                        Realistic examples of what competitor ads might look like based on their strategy
+                        AI-generated ad copy based on each competitor's real products and marketing style
                       </p>
                       
                       {analysis.competitiveAnalysis.competitors.map((competitor) => {
-                        if (!competitor.creatives || competitor.creatives.length === 0) return null;
+                        if (!competitor.adCopyExamples || competitor.adCopyExamples.length === 0) return null;
                         
                         return (
                           <div key={competitor.id} className="space-y-4">
                             <h4 className="text-xl font-bold flex items-center gap-2">
                               {competitor.competitorName}
                               <span className="text-sm font-normal text-muted-foreground">
-                                ({competitor.creatives.length} example{competitor.creatives.length > 1 ? 's' : ''})
+                                ({competitor.adCopyExamples.length} example{competitor.adCopyExamples.length > 1 ? 's' : ''})
                               </span>
                             </h4>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                              {competitor.creatives.map((creative, idx) => (
-                                <Card key={`${competitor.id}-creative-${idx}`} className="shadow-card overflow-hidden">
+                              {competitor.adCopyExamples.map((adCopy, idx) => (
+                                <Card key={`${competitor.id}-ad-${idx}`} className="shadow-card overflow-hidden">
                                   <CardHeader className="pb-3 bg-gradient-to-br from-muted/30 to-muted/10">
-                                    <CardTitle className="text-sm">{creative.platform}</CardTitle>
+                                    <CardTitle className="text-sm">{adCopy.platform}</CardTitle>
+                                    <CardDescription className="text-xs">Based on real product data</CardDescription>
                                   </CardHeader>
-                                  <CardContent className="p-0">
-                                    {creative.imageUrl && (
-                                      <div className="relative w-full aspect-square">
+                                  <CardContent className="p-4 space-y-3">
+                                    {competitor.products && competitor.products[0] && (
+                                      <div className="relative w-full aspect-square mb-3 rounded-lg overflow-hidden">
                                         <img 
-                                          src={creative.imageUrl} 
-                                          alt={`${competitor.competitorName} - ${creative.platform}`}
+                                          src={competitor.products[0].imageUrl} 
+                                          alt={`${competitor.competitorName} product`}
                                           className="w-full h-full object-cover"
                                         />
                                       </div>
                                     )}
-                                    <div className="p-4 space-y-3">
-                                      <div>
-                                        <div className="text-xs font-semibold text-muted-foreground mb-1">Headline</div>
-                                        <div className="text-sm font-medium">{creative.headline}</div>
-                                      </div>
-                                      <div>
-                                        <div className="text-xs font-semibold text-muted-foreground mb-1">Description</div>
-                                        <div className="text-xs text-muted-foreground">{creative.description}</div>
-                                      </div>
+                                    <div>
+                                      <div className="text-xs font-semibold text-muted-foreground mb-1">Headline</div>
+                                      <div className="text-sm font-medium">{adCopy.headline}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-xs font-semibold text-muted-foreground mb-1">Description</div>
+                                      <div className="text-xs text-muted-foreground">{adCopy.description}</div>
                                     </div>
                                   </CardContent>
                                 </Card>
