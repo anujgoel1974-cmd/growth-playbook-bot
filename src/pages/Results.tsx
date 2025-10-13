@@ -311,7 +311,7 @@ const Results = () => {
         .order('created_at', { ascending: false })
         .limit(1);
       if (!error && data && data.length > 0) {
-        const latest = data[0].output_data as AdCreative[];
+        const latest = data[0].output_data as unknown as AdCreative[];
         setAnalysis(prev => {
           if (!prev) return prev;
           const current = prev.adCreatives || [];
