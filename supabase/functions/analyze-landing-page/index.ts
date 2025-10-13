@@ -1416,13 +1416,24 @@ For each Image Prompt, synthesize insights from the customer profile to create v
 
       const response = await callAI(systemPrompt, userPrompt, lovableApiKey);
       
+      // Log the raw response for debugging
+      console.log('🔍 Raw AI Response (first 500 chars):', response.substring(0, 500));
+      console.log('🔍 Raw AI Response (last 500 chars):', response.substring(Math.max(0, response.length - 500)));
+      
       // Parse ad creatives
       const lower = response.toLowerCase();
       const acIdx = lower.indexOf('## ad creative');
+      console.log('📍 Found "## ad creative" at index:', acIdx);
+      
       const acContent = acIdx !== -1 ? response.slice(acIdx).trim() : response;
+      console.log('📝 Content to parse (first 1000 chars):', acContent.substring(0, 1000));
+      
       const parsedCreatives = parseAdCreatives(acContent);
       
       console.log(`📊 Parsed ${parsedCreatives.length} ad creatives`);
+      parsedCreatives.forEach((c, i) => {
+        console.log(`  [${i}] ${c.channel} - ${c.placement}: ${c.headlines.length} headlines, ${c.descriptions.length} descriptions`);
+      });
       
       // Generate images
       const creativesWithImages = await generateAdImages(parsedCreatives, lovableApiKey, productImageUrl, logoUrl);
