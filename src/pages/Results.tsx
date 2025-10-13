@@ -564,7 +564,7 @@ const Results = () => {
               ))}
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap break-words leading-relaxed">
               {card.content}
             </div>
           )}

@@ -870,16 +870,29 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
             const value = withoutBullet.substring(colonIndex + 1).trim();
             const lowerLabel = label.toLowerCase();
             
-            if (lowerLabel.includes('headline') || lowerLabel.includes('primary text') || 
-                lowerLabel.includes('pin title') || lowerLabel.includes('hook') || 
-                lowerLabel.includes('main message') || lowerLabel.includes('video title') || 
-                lowerLabel.includes('thumbnail text') || lowerLabel.includes('text overlay')) {
+            // More flexible headline matching - handles "Headline", "Headline 1", "Headlines", "H1", etc.
+            if (lowerLabel.includes('headline') || 
+                lowerLabel.includes('primary') ||
+                lowerLabel.match(/^h\d+$/) ||  // Matches "H1", "H2", etc.
+                lowerLabel.includes('title') ||
+                lowerLabel.includes('hook') ||
+                lowerLabel.includes('main message') ||
+                lowerLabel.includes('video title') ||
+                lowerLabel.includes('thumbnail text') ||
+                lowerLabel.includes('text overlay') ||
+                lowerLabel.includes('pin title')) {
+              console.log(`✓ Matched headline label: "${label}" -> "${value}"`);
               currentCreative.headlines.push(value);
-            } else if (lowerLabel.includes('description') || lowerLabel.includes('pin description') || 
+            } else if (lowerLabel.includes('description') || 
+                       lowerLabel.includes('pin description') ||
                        lowerLabel.includes('cta')) {
+              console.log(`✓ Matched description label: "${label}" -> "${value}"`);
               currentCreative.descriptions.push(value);
             } else if (lowerLabel.includes('image prompt')) {
+              console.log(`✓ Matched image prompt: "${label}"`);
               currentCreative.imagePrompt = value;
+            } else {
+              console.log(`⚠ Unmatched label: "${label}"`);
             }
           }
         }
@@ -887,6 +900,18 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
 
       if (currentCreative && currentCreative.channel) {
         creatives.push(currentCreative);
+      }
+
+      // Add validation and fallbacks if needed
+      for (const creative of creatives) {
+        if (creative.headlines.length === 0) {
+          console.warn(`⚠ No headlines parsed for ${creative.channel} - ${creative.placement}. Adding fallback.`);
+          creative.headlines.push('Quality Product Available Now');
+        }
+        if (creative.descriptions.length === 0) {
+          console.warn(`⚠ No descriptions parsed for ${creative.channel} - ${creative.placement}. Adding fallback.`);
+          creative.descriptions.push('Discover our premium collection today.');
+        }
       }
 
       return creatives;
@@ -1263,6 +1288,7 @@ ${pageContent}`;
 
     // AGENT 4: Creative Generation Agent
     const runCreativeGenerationAgent = async (
+      analysisId: string,
       customerInsight: any,
       competitive: any,
       targeting: any,
@@ -1274,23 +1300,49 @@ ${pageContent}`;
       console.log('📥 Using competitive data:', !!competitive);
       console.log('📥 Using targeting data:', !!targeting);
       
+      // Helper function to extract clean text from cards
+      const extractCardContent = (cards: any[], keyword: string): string => {
+        const card = cards?.find((c: any) => c.title.toLowerCase().includes(keyword));
+        if (!card) return 'Not available';
+        
+        if (card.subItems && card.subItems.length > 0) {
+          return card.subItems.map((item: any) => `${item.label}: ${item.value}`).join(', ');
+        }
+        return card.content || 'Not available';
+      };
+
+      const demographics = extractCardContent(customerInsight?.cards || [], 'demographic');
+      const psychographics = extractCardContent(customerInsight?.cards || [], 'psychographic');
+      const painPoints = extractCardContent(customerInsight?.cards || [], 'pain');
+      const decisionTriggers = extractCardContent(customerInsight?.cards || [], 'trigger');
+      const communicationStyle = extractCardContent(customerInsight?.cards || [], 'communication');
+      
+      const advantages = competitive?.insights?.find((i: any) => i.title.toLowerCase().includes('advantage'))?.subItems
+        ?.map((item: any) => `${item.label}: ${item.value}`).join(', ') || 'Not available';
+      
+      const marketPosition = competitive?.competitors?.map((c: any) => `${c.competitorName}: ${c.marketPosition}`).join(', ') || 'Not available';
+      
+      const channelStrategies = targeting?.cards?.map((ch: any) => 
+        `- ${ch.title}: ${ch.subItems?.map((item: any) => `${item.label}: ${item.value}`).join(', ')}`
+      ).join('\n') || 'Not available';
+      
       const systemPrompt = `You are an expert ad copywriter. Generate platform-specific ad creatives that directly leverage customer insights, competitive advantages, and channel strategies.`;
       
       const userPrompt = `Generate platform-specific ad creatives using these insights:
 
 CUSTOMER PROFILE:
-- Demographics: ${JSON.stringify(customerInsight?.cards?.find((c: any) => c.title.toLowerCase().includes('demographic'))?.subItems || 'Not available')}
-- Psychographics: ${JSON.stringify(customerInsight?.cards?.find((c: any) => c.title.toLowerCase().includes('psychographic'))?.subItems || 'Not available')}
-- Pain Points: ${JSON.stringify(customerInsight?.cards?.find((c: any) => c.title.toLowerCase().includes('pain'))?.subItems || 'Not available')}
-- Decision Triggers: ${JSON.stringify(customerInsight?.cards?.find((c: any) => c.title.toLowerCase().includes('trigger'))?.subItems || 'Not available')}
-- Communication Style: ${JSON.stringify(customerInsight?.cards?.find((c: any) => c.title.toLowerCase().includes('communication'))?.subItems || 'Not available')}
+Demographics: ${demographics}
+Psychographics: ${psychographics}
+Pain Points: ${painPoints}
+Decision Triggers: ${decisionTriggers}
+Communication Style: ${communicationStyle}
 
 COMPETITIVE POSITIONING:
-- Our Advantages: ${JSON.stringify(competitive?.insights?.find((i: any) => i.title.toLowerCase().includes('advantage'))?.subItems || 'Not available')}
-- Market Position: ${competitive?.competitors?.map((c: any) => `${c.competitorName}: ${c.marketPosition}`).join(', ') || 'Not available'}
+Our Advantages: ${advantages}
+Market Position: ${marketPosition}
 
 CHANNEL STRATEGIES:
-${targeting?.cards?.map((ch: any) => `- ${ch.title}: ${ch.subItems?.map((item: any) => `${item.label}: ${item.value}`).join(', ')}`).join('\n') || 'Not available'}
+${channelStrategies}
 
 Create ad copy for each relevant channel that:
 1. Addresses the specific pain points identified
@@ -1301,7 +1353,23 @@ Create ad copy for each relevant channel that:
 
 ## AD CREATIVE
 
-For each relevant advertising channel, create MULTIPLE placement-specific ad variations optimized for that platform's exact specifications.
+CRITICAL FORMATTING RULES (FOLLOW EXACTLY):
+1. Each platform MUST start with "### [Platform Name] - [Placement]" (e.g., "### Google Search Ads - Search Placement")
+2. Each field MUST use bullet format: "• [Field Name]: [Value]"
+3. Field names MUST match EXACTLY as shown below (use "Headline 1", NOT "Headlines" or "Headline")
+4. Do NOT add extra text before/after the value
+5. Do NOT use variations or plurals in field names
+
+EXAMPLE (follow this format exactly):
+### Google Search Ads - Search Placement
+• Headline 1: Premium Leather Messenger Bag
+• Headline 2: Professional Work Bag for Men
+• Headline 3: 15" Laptop Compartment
+• Description 1: Full-grain leather messenger bag with organized interior. Perfect for professionals who value quality.
+• Description 2: Durable construction meets timeless style. Free shipping on orders over $100.
+• Image Prompt (1:1 Square): Professional dark brown leather messenger bag on white background, studio lighting
+
+For each relevant advertising channel, create MULTIPLE placement-specific ad variations optimized for that platform's exact specifications:
 
 ### Google Search Ads - Search Placement
 • Headline 1: [30 chars max]
@@ -1312,36 +1380,36 @@ For each relevant advertising channel, create MULTIPLE placement-specific ad var
 • Image Prompt (1:1 Square): [For Display Network - clean product shot, professional lighting]
 
 ### Google Display Ads - Display Placement
-• Headline: [25 chars max, concise value prop]
-• Description: [90 chars max]
+• Headline 1: [25 chars max, concise value prop]
+• Description 1: [90 chars max]
 • Image Prompt (1.91:1 Horizontal): [Banner style - product + benefit text overlay]
 
 ### Meta Ads - Feed Placement
-• Primary Text: [125 chars - hook + value prop]
-• Headline: [40 chars - benefit-driven CTA]
-• Description: [30 chars - supporting detail]
+• Headline 1: [125 chars - hook + value prop]
+• Headline 2: [40 chars - benefit-driven CTA]
+• Description 1: [30 chars - supporting detail]
 • Image Prompt (1:1 Square): [Lifestyle imagery with product, authentic feel, mobile-optimized]
 
 ### Meta Ads - Story Placement
-• Text Overlay: [15 chars max - ultra-short hook]
-• CTA: [10 chars - "Shop Now", "Learn More"]
+• Headline 1: [15 chars max - ultra-short hook]
+• Description 1: [10 chars - "Shop Now", "Learn More"]
 • Image Prompt (9:16 Vertical): [Full-screen immersive, product hero shot with minimal text space]
 
 ### Pinterest Ads - Pin Placement
-• Pin Title: [100 chars - aspirational + keyword-rich]
-• Pin Description: [500 chars - storytelling with benefits]
+• Headline 1: [100 chars - aspirational + keyword-rich]
+• Description 1: [500 chars - storytelling with benefits]
 • Image Prompt (2:3 Vertical): [Visually striking, bright colors, flat lay or styled, Pinterest aesthetic]
 
 ### TikTok Ads - In-Feed Placement
-• Hook Text: [15 chars - first 3 seconds overlay]
-• Main Message: [30 chars - mid-video overlay]
-• CTA: [20 chars - end screen]
+• Headline 1: [15 chars - first 3 seconds overlay]
+• Headline 2: [30 chars - mid-video overlay]
+• Description 1: [20 chars - end screen]
 • Image Prompt (9:16 Vertical): [Dynamic, youth-oriented, mobile-first, bold colors, text overlay space]
 
 ### YouTube Ads - Video Placement
-• Video Title: [100 chars - curiosity-driven]
-• Thumbnail Text: [5-7 words - bold statement]
-• Description: [100 chars - above fold]
+• Headline 1: [100 chars - curiosity-driven]
+• Headline 2: [5-7 words - bold statement]
+• Description 1: [100 chars - above fold]
 • Image Prompt (16:9 Horizontal): [Attention-grabbing thumbnail, expressive faces OR dramatic product shot, high contrast]
 
 For each Image Prompt, synthesize insights from the customer profile to create visuals that resonate with the target audience.`;
@@ -1353,6 +1421,8 @@ For each Image Prompt, synthesize insights from the customer profile to create v
       const acIdx = lower.indexOf('## ad creative');
       const acContent = acIdx !== -1 ? response.slice(acIdx).trim() : response;
       const parsedCreatives = parseAdCreatives(acContent);
+      
+      console.log(`📊 Parsed ${parsedCreatives.length} ad creatives`);
       
       // Generate images
       const creativesWithImages = await generateAdImages(parsedCreatives, lovableApiKey, productImageUrl, logoUrl);
@@ -1389,6 +1459,7 @@ For each Image Prompt, synthesize insights from the customer profile to create v
     // PHASE 4: Run Creative Generation (needs ALL prior outputs)
     console.log('🎨 Phase 4: Running Creative Generation...');
     const creativesData = await runCreativeGenerationAgent(
+      analysisId,
       customerInsightData,
       competitiveData,
       targetingData,
