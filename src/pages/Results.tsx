@@ -198,9 +198,21 @@ const Results = () => {
         setError(null);
 
         console.log('Calling analyze-landing-page function...');
-        const { data, error } = await supabase.functions.invoke('analyze-landing-page', {
+        
+        // Create a timeout promise for 3 minutes
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Analysis timed out after 3 minutes. The page may have too many competitors to analyze.')), 180000);
+        });
+        
+        // Race between the function call and timeout
+        const functionPromise = supabase.functions.invoke('analyze-landing-page', {
           body: { url }
         });
+        
+        const { data, error } = await Promise.race([
+          functionPromise,
+          timeoutPromise
+        ]) as any;
 
         if (error) {
           console.error('Function error:', error);

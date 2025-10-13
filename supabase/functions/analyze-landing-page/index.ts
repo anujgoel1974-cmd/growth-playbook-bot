@@ -116,16 +116,35 @@ serve(async (req) => {
       console.error('Error extracting logo:', error);
     }
 
-    // Helper function to scrape competitor products (more robust)
+    // Helper function to fetch with timeout
+    const fetchWithTimeout = async (url: string, timeout = 5000, options: RequestInit = {}) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error(`Request timeout after ${timeout}ms`);
+        }
+        throw error;
+      }
+    };
+
+    // Helper function to scrape competitor products (optimized with timeouts and limits)
     const scrapeCompetitorProducts = async (domain: string, category: string) => {
       try {
         const categorySlug = (category || 'products').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+        // Reduced from 6 to 3 most common URL patterns for faster execution
         const possibleUrls = [
           `https://${domain}/collections/${categorySlug}`,
           `https://${domain}/shop/${categorySlug}`,
-          `https://${domain}/category/${categorySlug}`,
-          `https://${domain}/products/${categorySlug}`,
-          `https://${domain}/${categorySlug}`,
           `https://${domain}`
         ];
 
@@ -141,7 +160,8 @@ serve(async (req) => {
         for (const testUrl of possibleUrls) {
           try {
             console.log(`Attempting to scrape: ${testUrl}`);
-            const response = await fetch(testUrl, {
+            // Use fetchWithTimeout with 5 second timeout
+            const response = await fetchWithTimeout(testUrl, 5000, {
               headers: {
                 'User-Agent': 'Mozilla/5.0 (compatible; ProductAnalyzer/1.0)',
               },
@@ -160,16 +180,17 @@ serve(async (req) => {
             // Gather potential product links
             const linkSet = new Set<string>();
             for (const pattern of productHrefPatterns) {
-              const matches = [...html.matchAll(pattern)];
+            const matches = [...html.matchAll(pattern)];
               matches.forEach(m => linkSet.add(m[1]));
-              if (linkSet.size >= 6) break; // don't overfetch
+              if (linkSet.size >= 4) break; // Reduced from 6 to 4
             }
-            const uniqueLinks = [...linkSet].slice(0, 3);
+            const uniqueLinks = [...linkSet].slice(0, 2); // Reduced from 3 to 2 products per competitor
 
             for (const link of uniqueLinks) {
               const fullUrl = link.startsWith('http') ? link : `https://${domain}${link.startsWith('/') ? '' : '/'}${link}`;
               try {
-                const productResponse = await fetch(fullUrl, {
+                // Use fetchWithTimeout for product pages too
+                const productResponse = await fetchWithTimeout(fullUrl, 5000, {
                   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ProductAnalyzer/1.0)' },
                 });
                 if (!productResponse.ok) continue;
@@ -215,6 +236,11 @@ serve(async (req) => {
                 if (name && price && imageUrl) {
                   products.push({ name, price, imageUrl, productUrl: fullUrl });
                 }
+                
+                // Early exit if we have 2 products (faster completion)
+                if (products.length >= 2) {
+                  break;
+                }
               } catch (err) {
                 console.error('Error fetching product:', err);
               }
@@ -226,6 +252,8 @@ serve(async (req) => {
             }
           } catch (err) {
             console.error(`Error trying ${testUrl}:`, err);
+            // Continue to next URL even on timeout
+            continue;
           }
         }
 
@@ -754,7 +782,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       return weeks;
     };
 
-    // Parse competitors section and scrape real products
+    // Parse competitors section and scrape real products (optimized with parallel scraping)
     const parseCompetitors = async (content: string) => {
       const competitors: Array<{ 
         id: string; 
@@ -795,76 +823,11 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
       const lines = content.split('\n');
       let currentCompetitor: any = null;
 
-      // Helper: finalize current competitor and scrape products
-      const flushCompetitor = async () => {
+      // Helper: finalize current competitor (WITHOUT scraping - we'll do that in parallel later)
+      const flushCompetitor = () => {
         if (currentCompetitor && currentCompetitor.competitorName && currentCompetitor.domain) {
-          // Scrape real products from competitor
-          console.log(`Scraping products for ${currentCompetitor.competitorName} (${currentCompetitor.domain})...`);
-          const catSlug = (currentCompetitor.category || 'products').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
-          const products = await scrapeCompetitorProducts(currentCompetitor.domain, catSlug);
-          currentCompetitor.products = products;
-          
-          // Generate realistic ad copy based on their products (if we have them)
-          if (products.length > 0 && lovableApiKey) {
-            try {
-              const adCopyPrompt = `Based on this real competitor brand "${currentCompetitor.competitorName}" and their actual product "${products[0].name}" priced at ${products[0].price}, generate 3 realistic ad copy examples they would likely run on different platforms. Keep it concise and authentic to their brand positioning as ${currentCompetitor.marketPosition}.
-
-Format:
-**Platform Name:**
-• Headline: [realistic headline]
-• Description: [realistic description]
-
-Generate for: Meta Feed, Google Search, and Google Display.`;
-
-              const adCopyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${lovableApiKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  model: 'google/gemini-2.5-flash',
-                  messages: [
-                    { role: 'user', content: adCopyPrompt }
-                  ],
-                  max_tokens: 1000,
-                }),
-              });
-
-              if (adCopyResponse.ok) {
-                const adData = await adCopyResponse.json();
-                const adText = adData.choices[0].message.content;
-                
-                // Parse the ad copy from response
-                const adCopyExamples: Array<{ platform: string; headline: string; description: string }> = [];
-                const adLines = adText.split('\n');
-                let currentAd: any = null;
-                
-                for (const line of adLines) {
-                  const trimmed = line.trim();
-                  if (trimmed.startsWith('**') && trimmed.includes(':')) {
-                    if (currentAd) adCopyExamples.push(currentAd);
-                    currentAd = { platform: trimmed.replace(/\*\*/g, '').replace(':', '').trim(), headline: '', description: '' };
-                  } else if (currentAd && trimmed.startsWith('•')) {
-                    const withoutBullet = trimmed.replace(/^•\s*/, '');
-                    if (withoutBullet.toLowerCase().includes('headline:')) {
-                      currentAd.headline = withoutBullet.split(':')[1].trim();
-                    } else if (withoutBullet.toLowerCase().includes('description:')) {
-                      currentAd.description = withoutBullet.split(':')[1].trim();
-                    }
-                  }
-                }
-                if (currentAd) adCopyExamples.push(currentAd);
-                
-                currentCompetitor.adCopyExamples = adCopyExamples;
-              }
-            } catch (error) {
-              console.error('Error generating ad copy:', error);
-            }
-          }
-          
           competitors.push(currentCompetitor);
-          console.log('parseCompetitors: pushed competitor', currentCompetitor.competitorName);
+          console.log('parseCompetitors: queued competitor', currentCompetitor.competitorName);
         }
         currentCompetitor = null;
       };
@@ -939,16 +902,113 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
         if (/^#{2,6}\s+/.test(trimmed) && currentCompetitor) {
           const headerTitle = trimmed.replace(/^#{2,6}\s+/, '').trim().toLowerCase();
           if (NON_COMP_SECTION_TITLES.has(headerTitle)) {
-            await flushCompetitor();
+            flushCompetitor();
           }
           continue;
         }
       }
 
-      // Flush any remaining blocks
-      await flushCompetitor();
+      // Flush any remaining competitor data
+      flushCompetitor();
 
       console.log('parseCompetitors: total competitors', competitors.length);
+      
+      // OPTIMIZATION: Now scrape all competitors in PARALLEL instead of sequentially
+      if (competitors.length > 0) {
+        console.log('Starting parallel scraping for all competitors...');
+        
+        const scrapingPromises = competitors.map(async (comp, index) => {
+          console.log(`parseCompetitors: started competitor ${comp.competitorName}`);
+          const catSlug = (comp.category || 'products').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+          
+          try {
+            // Scrape products
+            const products = await scrapeCompetitorProducts(comp.domain, catSlug);
+            comp.products = products;
+            
+            // Generate ad copy if we have products
+            if (products.length > 0 && lovableApiKey) {
+              try {
+                const adCopyPrompt = `Based on this real competitor brand "${comp.competitorName}" and their actual product "${products[0].name}" priced at ${products[0].price}, generate 3 realistic ad copy examples they would likely run on different platforms. Keep it concise and authentic to their brand positioning as ${comp.marketPosition}.
+
+Format:
+**Platform Name:**
+• Headline: [realistic headline]
+• Description: [realistic description]
+
+Generate for: Meta Feed, Google Search, and Google Display.`;
+
+                const adCopyResponse = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', 10000, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${lovableApiKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    model: 'google/gemini-2.5-flash',
+                    messages: [
+                      { role: 'user', content: adCopyPrompt }
+                    ],
+                    max_tokens: 1000,
+                  }),
+                });
+
+                if (adCopyResponse.ok) {
+                  const adData = await adCopyResponse.json();
+                  const adText = adData.choices[0].message.content;
+                  
+                  // Parse the ad copy from response
+                  const adCopyExamples: Array<{ platform: string; headline: string; description: string }> = [];
+                  const adLines = adText.split('\n');
+                  let currentAd: any = null;
+                  
+                  for (const line of adLines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('**') && trimmed.includes(':')) {
+                      if (currentAd) adCopyExamples.push(currentAd);
+                      currentAd = { platform: trimmed.replace(/\*\*/g, '').replace(':', '').trim(), headline: '', description: '' };
+                    } else if (currentAd && trimmed.startsWith('•')) {
+                      const withoutBullet = trimmed.replace(/^•\s*/, '');
+                      if (withoutBullet.toLowerCase().includes('headline:')) {
+                        currentAd.headline = withoutBullet.split(':')[1].trim();
+                      } else if (withoutBullet.toLowerCase().includes('description:')) {
+                        currentAd.description = withoutBullet.split(':')[1].trim();
+                      }
+                    }
+                  }
+                  if (currentAd) adCopyExamples.push(currentAd);
+                  
+                  comp.adCopyExamples = adCopyExamples;
+                }
+              } catch (error) {
+                console.error(`Error generating ad copy for ${comp.competitorName}:`, error);
+              }
+            }
+            
+            console.log(`parseCompetitors: pushed competitor ${comp.competitorName}`);
+            return { success: true, competitor: comp };
+          } catch (error) {
+            console.error(`Error scraping competitor ${comp.competitorName}:`, error);
+            // Return competitor with empty products on error (graceful degradation)
+            comp.products = [];
+            comp.adCopyExamples = [];
+            return { success: false, competitor: comp };
+          }
+        });
+        
+        // Wait for all scraping to complete (or fail)
+        const results = await Promise.allSettled(scrapingPromises);
+        
+        // Log results
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        console.log(`Competitive Analysis parsing result: {
+  total: ${competitors.length},
+  items: [
+    ${competitors.map(c => `{ name: "${c.competitorName}", products: ${c.products?.length || 0}, adCopy: ${c.adCopyExamples?.length || 0} }`).join(',\n    ')}
+  ]
+}`);
+      }
+      
       return competitors;
     };
 
