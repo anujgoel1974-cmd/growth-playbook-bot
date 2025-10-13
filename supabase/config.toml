@@ -3,6 +3,12 @@ project_id = "pgaaycstrvjylnamngew"
 [functions.analyze-landing-page]
 verify_jwt = false
 
+[functions.orchestrator-agent]
+verify_jwt = false
+
+[functions.research-agent]
+verify_jwt = false
+
 [functions.extract-sitemap]
 verify_jwt = false
 

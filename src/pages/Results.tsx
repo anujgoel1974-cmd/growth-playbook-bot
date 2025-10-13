@@ -182,6 +182,19 @@ const Results = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sectionProgress, setSectionProgress] = useState<Record<string, number>>({
+    customer_insight: 0,
+    campaign_targeting: 0,
+    media_plan: 0,
+    competitive_analysis: 0,
+    ad_creative: 0
+  });
+  const [activeAgents, setActiveAgents] = useState<Array<{
+    name: string;
+    status: string;
+    progress: number;
+  }>>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<{
     campaign: MediaPlanWeek['channels'][0];
@@ -214,7 +227,7 @@ const Results = () => {
         setIsLoading(true);
         setError(null);
 
-        console.log('Calling analyze-landing-page function...');
+        console.log('Calling orchestrator-agent function...');
         
         // Create a timeout promise for 3 minutes
         const timeoutPromise = new Promise((_, reject) => {
@@ -222,7 +235,7 @@ const Results = () => {
         });
         
         // Race between the function call and timeout
-        const functionPromise = supabase.functions.invoke('analyze-landing-page', {
+        const functionPromise = supabase.functions.invoke('orchestrator-agent', {
           body: { url }
         });
         
@@ -241,6 +254,12 @@ const Results = () => {
         }
 
         console.log('Analysis successful:', data);
+        
+        // Store session ID for real-time updates
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+        }
+        
         setAnalysis(data.analysis);
       } catch (err) {
         console.error('Error analyzing URL:', err);
@@ -257,6 +276,98 @@ const Results = () => {
 
     analyzeUrl();
   }, [url, navigate, toast]);
+
+  // Real-time subscription for progressive updates
+  useEffect(() => {
+    if (!sessionId) return;
+
+    console.log('[Results] Setting up real-time subscription for session:', sessionId);
+
+    const channel = supabase
+      .channel(`analysis-progress-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'analysis_progress',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('[Results] Progress update received:', payload);
+          const { section_name, progress_percentage, status, data: sectionData } = payload.new;
+          
+          // Update progress
+          setSectionProgress(prev => ({
+            ...prev,
+            [section_name]: progress_percentage
+          }));
+          
+          // Update agent activity
+          if (status === 'enhancing') {
+            setActiveAgents(prev => {
+              const agentName = `Research Agent`;
+              const exists = prev.find(a => a.name === agentName);
+              if (!exists) {
+                return [...prev, {
+                  name: agentName,
+                  status: 'Enriching competitive data',
+                  progress: progress_percentage
+                }];
+              }
+              return prev.map(a => 
+                a.name === agentName 
+                  ? { ...a, progress: progress_percentage }
+                  : a
+              );
+            });
+          }
+          
+          // Remove agent when complete
+          if (status === 'completed') {
+            setActiveAgents(prev => prev.filter(a => !a.name.includes('Research Agent')));
+          }
+          
+          // If section completed, update analysis state progressively
+          if (status === 'completed' && sectionData) {
+            setAnalysis(prev => {
+              if (!prev) return prev;
+              
+              // Merge new section data into existing analysis
+              if (section_name === 'customer_insight' && sectionData.cards) {
+                return { ...prev, customerInsight: sectionData.cards };
+              }
+              if (section_name === 'campaign_targeting' && sectionData.cards) {
+                return { ...prev, campaignTargeting: sectionData.cards };
+              }
+              if (section_name === 'media_plan' && sectionData.weeks) {
+                return { ...prev, mediaPlan: sectionData.weeks };
+              }
+              if (section_name === 'competitive_analysis') {
+                return { 
+                  ...prev, 
+                  competitiveAnalysis: {
+                    competitors: sectionData.competitors || prev.competitiveAnalysis?.competitors || [],
+                    insights: sectionData.insights || prev.competitiveAnalysis?.insights || []
+                  }
+                };
+              }
+              if (section_name === 'ad_creative' && sectionData.creatives) {
+                return { ...prev, adCreatives: sectionData.creatives };
+              }
+              
+              return prev;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[Results] Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -555,6 +666,37 @@ const Results = () => {
           </div>
         </div>
 
+        {/* Agent Activity Panel */}
+        {activeAgents.length > 0 && (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-sm font-medium">
+                <Sparkles className="mr-2 h-4 w-4 animate-pulse text-primary" />
+                🤖 Active Agents: {activeAgents.length}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {activeAgents.map(agent => (
+                <div key={agent.name} className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{agent.name}</p>
+                    <p className="text-xs text-muted-foreground">{agent.status}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${agent.progress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-8">{agent.progress}%</span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {isLoading ? (
           <AnalysisLoader />
         ) : error ? (
@@ -567,11 +709,51 @@ const Results = () => {
         ) : (
           <Tabs defaultValue="insight" className="w-full">
             <TabsList className="grid w-full max-w-5xl mx-auto grid-cols-5 mb-8">
-              <TabsTrigger value="insight">Customer Insight</TabsTrigger>
-              <TabsTrigger value="competitive">Competitive Analysis</TabsTrigger>
-              <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
-              <TabsTrigger value="adcreative">Ad Creative</TabsTrigger>
-              <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
+              <TabsTrigger value="insight" className="relative">
+                Customer Insight
+                {sectionProgress.customer_insight < 100 && sectionProgress.customer_insight > 0 && (
+                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                )}
+                {sectionProgress.customer_insight === 100 && (
+                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="competitive" className="relative">
+                Competitive Analysis
+                {sectionProgress.competitive_analysis < 100 && sectionProgress.competitive_analysis > 0 && (
+                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                )}
+                {sectionProgress.competitive_analysis === 100 && (
+                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="targeting" className="relative">
+                Campaign Targeting
+                {sectionProgress.campaign_targeting < 100 && sectionProgress.campaign_targeting > 0 && (
+                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                )}
+                {sectionProgress.campaign_targeting === 100 && (
+                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="adcreative" className="relative">
+                Ad Creative
+                {sectionProgress.ad_creative < 100 && sectionProgress.ad_creative > 0 && (
+                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                )}
+                {sectionProgress.ad_creative === 100 && (
+                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="mediaplan" className="relative">
+                Media Plan
+                {sectionProgress.media_plan < 100 && sectionProgress.media_plan > 0 && (
+                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                )}
+                {sectionProgress.media_plan === 100 && (
+                  <CheckCircle className="ml-2 h-3 w-3 text-green-500" />
+                )}
+              </TabsTrigger>
             </TabsList>
 
             {/* Customer Insight Tab */}
