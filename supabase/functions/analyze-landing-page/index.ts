@@ -921,24 +921,60 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
       return creatives;
     };
 
-    // Generate images for ad creatives using Gemini with product image as base
+    // Upload base64 image to Supabase Storage
+    const uploadImageToStorage = async (
+      base64Image: string,
+      filename: string
+    ): Promise<string | null> => {
+      try {
+        const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+        const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        
+        // Convert base64 to blob
+        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        
+        // Upload to storage
+        const uploadResponse = await fetch(
+          `${SUPABASE_URL}/storage/v1/object/ad-creatives/${filename}`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'image/png',
+            },
+            body: buffer
+          }
+        );
+        
+        if (uploadResponse.ok) {
+          // Return public URL
+          return `${SUPABASE_URL}/storage/v1/object/public/ad-creatives/${filename}`;
+        } else {
+          const errorText = await uploadResponse.text();
+          console.error(`Failed to upload image: ${errorText}`);
+          return null;
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        return null;
+      }
+    };
+
+    // Generate images for ad creatives using Gemini
     const generateAdImages = async (
       creatives: Array<any>,
       apiKey: string,
-      baseProductImageUrl: string,
-      brandLogoUrl: string
+      analysisId: string
     ): Promise<Array<any>> => {
       const updatedCreatives: Array<any> = [];
       
       console.log(`🖼️ Starting image generation for ${creatives.length} creatives`);
-      console.log(`📷 Base product image: ${baseProductImageUrl ? 'Available' : 'Not available'}`);
       
       for (const creative of creatives) {
         if (creative.imagePrompt && creative.imagePrompt.trim().length > 0) {
           try {
             console.log(`🎨 Generating image for ${creative.channel} - ${creative.placement}...`);
-            console.log(`   Prompt length: ${creative.imagePrompt.length} chars`);
-            console.log(`   Aspect ratio: ${creative.imageAspectRatio}`);
             
             // Enhanced prompt with aspect ratio instructions
             const aspectRatioMap: Record<string, string> = {
@@ -949,18 +985,9 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
               '1.91:1': 'horizontal 1.91:1 banner format for display ads'
             };
             const aspectInstruction = aspectRatioMap[creative.imageAspectRatio || '1:1'];
+            const enhancedPrompt = `${aspectInstruction}. Ultra high resolution. ${creative.imagePrompt}`;
             
-            const enhancedPrompt = `Generate in ${aspectInstruction}. ${creative.imagePrompt}`;
-            
-            // Simplified message - just text prompt, no image editing for now
-            const messageContent: any[] = [
-              {
-                type: 'text',
-                text: enhancedPrompt
-              }
-            ];
-            
-            console.log(`   Calling Lovable AI with prompt: ${enhancedPrompt.substring(0, 100)}...`);
+            console.log(`   Prompt: ${enhancedPrompt.substring(0, 100)}...`);
             
             const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
               method: 'POST',
@@ -970,34 +997,37 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
               },
               body: JSON.stringify({
                 model: 'google/gemini-2.5-flash-image-preview',
-                messages: [
-                  {
-                    role: 'user',
-                    content: messageContent
-                  }
-                ],
+                messages: [{
+                  role: 'user',
+                  content: [{ type: 'text', text: enhancedPrompt }]
+                }],
                 modalities: ['image', 'text']
               }),
             });
             
             if (imageResponse.ok) {
               const imageData = await imageResponse.json();
-              const generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+              const generatedBase64 = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
               
-              if (generatedImage) {
-                console.log(`✅ Successfully generated image for ${creative.channel}`);
-                updatedCreatives.push({
-                  ...creative,
-                  imageUrl: generatedImage,
-                  logoUrl: brandLogoUrl
-                });
+              if (generatedBase64) {
+                // Upload to storage
+                const filename = `${analysisId}/${creative.channelType}-${creative.placement.replace(/\s+/g, '-')}-${Date.now()}.png`;
+                const publicUrl = await uploadImageToStorage(generatedBase64, filename);
+                
+                if (publicUrl) {
+                  console.log(`✅ Image generated and stored for ${creative.channel}`);
+                  updatedCreatives.push({ ...creative, imageUrl: publicUrl });
+                } else {
+                  console.warn(`⚠ Image generated but upload failed for ${creative.channel}`);
+                  updatedCreatives.push(creative);
+                }
               } else {
-                console.log(`⚠ No image in response for ${creative.channel}. Response structure:`, JSON.stringify(imageData).substring(0, 200));
+                console.warn(`⚠ No image in AI response for ${creative.channel}`);
                 updatedCreatives.push(creative);
               }
             } else {
               const errorText = await imageResponse.text();
-              console.error(`❌ Failed to generate image for ${creative.channel}: ${imageResponse.status} - ${errorText}`);
+              console.error(`❌ AI generation failed for ${creative.channel}: ${imageResponse.status} - ${errorText}`);
               updatedCreatives.push(creative);
             }
           } catch (error) {
@@ -1438,7 +1468,7 @@ For each Image Prompt, synthesize insights from the customer profile to create v
       });
       
       // Generate images
-      const creativesWithImages = await generateAdImages(parsedCreatives, lovableApiKey, productImageUrl, logoUrl);
+      const creativesWithImages = await generateAdImages(parsedCreatives, lovableApiKey, analysisId);
       
       await storeAgentOutput(analysisId, 'ad-creative', creativesWithImages);
       console.log('✓ [Creative Generation Agent] Complete');
