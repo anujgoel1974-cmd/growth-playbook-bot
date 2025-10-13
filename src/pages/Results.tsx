@@ -181,6 +181,22 @@ const Results = () => {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // PHASE 5: Agent Progress Tracking
+  const [agentProgress, setAgentProgress] = useState<{
+    'customer-insight': 'pending' | 'running' | 'complete',
+    'competitive-analysis': 'pending' | 'running' | 'complete',
+    'campaign-targeting': 'pending' | 'running' | 'complete',
+    'media-plan': 'pending' | 'running' | 'complete',
+    'ad-creative': 'pending' | 'running' | 'complete'
+  }>({
+    'customer-insight': 'pending',
+    'competitive-analysis': 'pending',
+    'campaign-targeting': 'pending',
+    'media-plan': 'pending',
+    'ad-creative': 'pending'
+  });
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<{
     campaign: MediaPlanWeek['channels'][0];
     weekNumber: number;
@@ -240,6 +256,7 @@ const Results = () => {
 
         console.log('Analysis successful:', data);
         setAnalysis(data.analysis);
+        setSessionId(data.analysisId || null);
       } catch (err) {
         console.error('Error analyzing URL:', err);
         setError(err instanceof Error ? err.message : 'Failed to analyze URL');
@@ -255,6 +272,32 @@ const Results = () => {
 
     analyzeUrl();
   }, [url, navigate, toast]);
+
+  // PHASE 5: Subscribe to agent_context realtime updates
+  useEffect(() => {
+    if (!sessionId) return;
+    
+    console.log('Subscribing to agent progress for session:', sessionId);
+    
+    const channel = supabase
+      .channel('agent-progress')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'agent_context',
+        filter: `analysis_id=eq.${sessionId}`
+      }, (payload: any) => {
+        const agentName = payload.new.agent_name;
+        console.log(`Agent complete: ${agentName}`);
+        setAgentProgress(prev => ({ ...prev, [agentName]: 'complete' }));
+      })
+      .subscribe();
+
+    return () => { 
+      console.log('Unsubscribing from agent progress');
+      supabase.removeChannel(channel); 
+    };
+  }, [sessionId]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -553,9 +596,95 @@ const Results = () => {
           </div>
         </div>
 
-        {isLoading ? (
+      {isLoading ? (
+        <>
           <AnalysisLoader />
-        ) : error ? (
+          
+          {/* PHASE 5: Agent Progress UI */}
+          <Card className="mt-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary animate-pulse" />
+                🤖 Multi-Agent Analysis in Progress
+              </CardTitle>
+              <CardDescription>
+                Multiple AI agents are working together to analyze your landing page
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Customer Insight Agent */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                <Users className={`h-5 w-5 ${agentProgress['customer-insight'] === 'complete' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Customer Insight Agent</p>
+                  <p className="text-xs text-muted-foreground">Analyzing target personas, demographics, and pain points</p>
+                </div>
+                {agentProgress['customer-insight'] === 'complete' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                )}
+              </div>
+
+              {/* Competitive Analysis Agent */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                <Building2 className={`h-5 w-5 ${agentProgress['competitive-analysis'] === 'complete' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Competitive Analysis Agent</p>
+                  <p className="text-xs text-muted-foreground">Identifying competitors and scraping their products</p>
+                </div>
+                {agentProgress['competitive-analysis'] === 'complete' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                )}
+              </div>
+
+              {/* Campaign Targeting Agent */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                <Target className={`h-5 w-5 ${agentProgress['campaign-targeting'] === 'complete' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Campaign Targeting Agent</p>
+                  <p className="text-xs text-muted-foreground">Creating channel-specific strategies based on insights</p>
+                </div>
+                {agentProgress['campaign-targeting'] === 'complete' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                )}
+              </div>
+
+              {/* Media Plan Agent */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                <DollarSign className={`h-5 w-5 ${agentProgress['media-plan'] === 'complete' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Media Plan Agent</p>
+                  <p className="text-xs text-muted-foreground">Allocating budgets across channels and weeks</p>
+                </div>
+                {agentProgress['media-plan'] === 'complete' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                )}
+              </div>
+
+              {/* Creative Generation Agent */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                <Palette className={`h-5 w-5 ${agentProgress['ad-creative'] === 'complete' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Creative Generation Agent</p>
+                  <p className="text-xs text-muted-foreground">Generating platform-specific ad copy and images</p>
+                </div>
+                {agentProgress['ad-creative'] === 'complete' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : error ? (
           <Card className="shadow-card">
             <CardContent className="py-12 text-center">
               <p className="text-destructive mb-4">Error: {error}</p>
