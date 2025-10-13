@@ -13,8 +13,10 @@ import {
   Users, Brain, Zap, MessageCircle, TrendingUp,
   Target, UsersRound, Search, Palette, DollarSign, Megaphone, FileText,
   Share2, Image, Music, Video, Briefcase, Hash, Building2, Shield, 
-  AlertCircle, CheckCircle, Award, ExternalLink
+  AlertCircle, CheckCircle, Award, ExternalLink, Sparkles, Heart, 
+  MousePointerClick, Focus, Type, Info
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePDF } from "@/utils/pdfExport";
@@ -999,11 +1001,30 @@ const Results = () => {
                   <Card className="shadow-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg">Customize Ad Copy</CardTitle>
-                          <CardDescription>
-                            Adjust messaging tone and style to match your brand
-                          </CardDescription>
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-primary" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-lg">Customize Ad Copy</CardTitle>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="text-sm">
+                                      Fine-tune your ad messaging without re-analyzing your landing page. 
+                                      Select filters to adjust tone, emotion, and style across all ad creatives. 
+                                      Perfect for testing different messaging angles quickly.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <CardDescription>
+                              Adjust messaging tone and style to match your brand
+                            </CardDescription>
+                          </div>
                         </div>
                         <Button
                           variant="ghost"
@@ -1017,17 +1038,20 @@ const Results = () => {
                     
                     {showFilters && (
                       <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           {/* Brand Voice */}
-                          <div className="space-y-2">
-                            <Label htmlFor="brandVoice" className="text-sm font-semibold">
-                              Brand Voice
-                            </Label>
+                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
+                            <div className="flex items-center gap-2">
+                              <Palette className="h-4 w-4 text-primary" />
+                              <Label htmlFor="brandVoice" className="text-sm font-semibold">
+                                Brand Voice
+                              </Label>
+                            </div>
                             <Select
                               value={adFilters.brandVoice}
                               onValueChange={(value) => setAdFilters({ ...adFilters, brandVoice: value })}
                             >
-                              <SelectTrigger id="brandVoice">
+                              <SelectTrigger id="brandVoice" className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1039,26 +1063,29 @@ const Results = () => {
                                 <SelectItem value="urgent">Urgent</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">
-                              {adFilters.brandVoice === 'professional' && 'Clear, trustworthy, authoritative'}
-                              {adFilters.brandVoice === 'friendly' && 'Conversational, warm, approachable'}
-                              {adFilters.brandVoice === 'playful' && 'Fun, creative, energetic'}
-                              {adFilters.brandVoice === 'luxurious' && 'Elegant, sophisticated, premium'}
-                              {adFilters.brandVoice === 'educational' && 'Informative, helpful, empowering'}
-                              {adFilters.brandVoice === 'urgent' && 'Action-oriented, time-sensitive'}
+                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                              {adFilters.brandVoice === 'professional' && '💼 Clear, trustworthy, authoritative'}
+                              {adFilters.brandVoice === 'friendly' && '😊 Conversational, warm, approachable'}
+                              {adFilters.brandVoice === 'playful' && '🎉 Fun, creative, energetic'}
+                              {adFilters.brandVoice === 'luxurious' && '✨ Elegant, sophisticated, premium'}
+                              {adFilters.brandVoice === 'educational' && '📚 Informative, helpful, empowering'}
+                              {adFilters.brandVoice === 'urgent' && '⚡ Action-oriented, time-sensitive'}
                             </p>
                           </div>
 
                           {/* Emotional Hook */}
-                          <div className="space-y-2">
-                            <Label htmlFor="emotionalHook" className="text-sm font-semibold">
-                              Emotional Hook
-                            </Label>
+                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
+                            <div className="flex items-center gap-2">
+                              <Heart className="h-4 w-4 text-primary" />
+                              <Label htmlFor="emotionalHook" className="text-sm font-semibold">
+                                Emotional Hook
+                              </Label>
+                            </div>
                             <Select
                               value={adFilters.emotionalHook}
                               onValueChange={(value) => setAdFilters({ ...adFilters, emotionalHook: value })}
                             >
-                              <SelectTrigger id="emotionalHook">
+                              <SelectTrigger id="emotionalHook" className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1070,26 +1097,29 @@ const Results = () => {
                                 <SelectItem value="value">Value</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">
-                              {adFilters.emotionalHook === 'fomo' && 'Limited time, don\'t miss out'}
-                              {adFilters.emotionalHook === 'aspiration' && 'Achieve goals, transformation'}
-                              {adFilters.emotionalHook === 'problem-solution' && 'Address pain points'}
-                              {adFilters.emotionalHook === 'social-proof' && 'Testimonials, popularity'}
-                              {adFilters.emotionalHook === 'exclusivity' && 'Limited access, VIP treatment'}
-                              {adFilters.emotionalHook === 'value' && 'Savings, great deal'}
+                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                              {adFilters.emotionalHook === 'fomo' && '⏰ Limited time, don\'t miss out'}
+                              {adFilters.emotionalHook === 'aspiration' && '🎯 Achieve goals, transformation'}
+                              {adFilters.emotionalHook === 'problem-solution' && '🔧 Address pain points'}
+                              {adFilters.emotionalHook === 'social-proof' && '⭐ Testimonials, popularity'}
+                              {adFilters.emotionalHook === 'exclusivity' && '👑 Limited access, VIP treatment'}
+                              {adFilters.emotionalHook === 'value' && '💰 Savings, great deal'}
                             </p>
                           </div>
 
                           {/* Call to Action */}
-                          <div className="space-y-2">
-                            <Label htmlFor="cta" className="text-sm font-semibold">
-                              Call-to-Action
-                            </Label>
+                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
+                            <div className="flex items-center gap-2">
+                              <MousePointerClick className="h-4 w-4 text-primary" />
+                              <Label htmlFor="cta" className="text-sm font-semibold">
+                                Call-to-Action
+                              </Label>
+                            </div>
                             <Select
                               value={adFilters.cta}
                               onValueChange={(value) => setAdFilters({ ...adFilters, cta: value })}
                             >
-                              <SelectTrigger id="cta">
+                              <SelectTrigger id="cta" className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1102,18 +1132,24 @@ const Results = () => {
                                 <SelectItem value="limited-offer">Limited Offer</SelectItem>
                               </SelectContent>
                             </Select>
+                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                              Primary action you want users to take
+                            </p>
                           </div>
 
                           {/* Emphasis */}
-                          <div className="space-y-2">
-                            <Label htmlFor="emphasis" className="text-sm font-semibold">
-                              Content Emphasis
-                            </Label>
+                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50">
+                            <div className="flex items-center gap-2">
+                              <Focus className="h-4 w-4 text-primary" />
+                              <Label htmlFor="emphasis" className="text-sm font-semibold">
+                                Content Emphasis
+                              </Label>
+                            </div>
                             <Select
                               value={adFilters.emphasis}
                               onValueChange={(value) => setAdFilters({ ...adFilters, emphasis: value })}
                             >
-                              <SelectTrigger id="emphasis">
+                              <SelectTrigger id="emphasis" className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1125,18 +1161,24 @@ const Results = () => {
                                 <SelectItem value="craftsmanship">Craftsmanship</SelectItem>
                               </SelectContent>
                             </Select>
+                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                              What aspect to highlight in your messaging
+                            </p>
                           </div>
 
                           {/* Length */}
-                          <div className="space-y-2">
-                            <Label htmlFor="length" className="text-sm font-semibold">
-                              Copy Length
-                            </Label>
+                          <div className="space-y-3 p-4 rounded-lg border border-border bg-card/50 md:col-span-2">
+                            <div className="flex items-center gap-2">
+                              <Type className="h-4 w-4 text-primary" />
+                              <Label htmlFor="length" className="text-sm font-semibold">
+                                Copy Length
+                              </Label>
+                            </div>
                             <Select
                               value={adFilters.length}
                               onValueChange={(value) => setAdFilters({ ...adFilters, length: value })}
                             >
-                              <SelectTrigger id="length">
+                              <SelectTrigger id="length" className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1145,6 +1187,9 @@ const Results = () => {
                                 <SelectItem value="detailed">Detailed</SelectItem>
                               </SelectContent>
                             </Select>
+                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                              Adjust verbosity to match your audience preferences
+                            </p>
                           </div>
                         </div>
 
