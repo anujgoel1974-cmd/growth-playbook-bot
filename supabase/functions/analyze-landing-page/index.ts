@@ -863,12 +863,16 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
           };
         } else if (currentCreative && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
           const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
-          const colonIndex = withoutBullet.indexOf(':');
+          
+          // Find the LAST colon to handle labels like "Image Prompt (1:1 Square): value"
+          const colonIndex = withoutBullet.lastIndexOf(':');
           
           if (colonIndex > 0) {
             const label = withoutBullet.substring(0, colonIndex).trim();
             const value = withoutBullet.substring(colonIndex + 1).trim();
             const lowerLabel = label.toLowerCase();
+            
+            console.log(`🔍 Parsing line - Label: "${label}" | Value: "${value}"`);
             
             // More flexible headline matching - handles "Headline", "Headline 1", "Headlines", "H1", etc.
             if (lowerLabel.includes('headline') || 
@@ -889,7 +893,7 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
               console.log(`✓ Matched description label: "${label}" -> "${value}"`);
               currentCreative.descriptions.push(value);
             } else if (lowerLabel.includes('image prompt')) {
-              console.log(`✓ Matched image prompt: "${label}"`);
+              console.log(`✓ Matched image prompt: "${label}" -> "${value}"`);
               currentCreative.imagePrompt = value;
             } else {
               console.log(`⚠ Unmatched label: "${label}"`);
@@ -926,10 +930,15 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
     ): Promise<Array<any>> => {
       const updatedCreatives: Array<any> = [];
       
+      console.log(`🖼️ Starting image generation for ${creatives.length} creatives`);
+      console.log(`📷 Base product image: ${baseProductImageUrl ? 'Available' : 'Not available'}`);
+      
       for (const creative of creatives) {
-        if (creative.imagePrompt) {
+        if (creative.imagePrompt && creative.imagePrompt.trim().length > 0) {
           try {
-            console.log(`Generating image for ${creative.channel}...`);
+            console.log(`🎨 Generating image for ${creative.channel} - ${creative.placement}...`);
+            console.log(`   Prompt length: ${creative.imagePrompt.length} chars`);
+            console.log(`   Aspect ratio: ${creative.imageAspectRatio}`);
             
             // Enhanced prompt with aspect ratio instructions
             const aspectRatioMap: Record<string, string> = {
@@ -941,9 +950,9 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
             };
             const aspectInstruction = aspectRatioMap[creative.imageAspectRatio || '1:1'];
             
-            const enhancedPrompt = `CRITICAL: Generate in ${aspectInstruction}. You MUST keep the main product from the base image EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact. DO NOT modify, alter, or reimagine the product itself in any way. ONLY add creative background elements, lighting effects, lifestyle context, or platform-specific styling AROUND the product to make it suitable for ${creative.channel} ${creative.placement} advertising. The product is the hero and must remain perfectly preserved. ${creative.imagePrompt}`;
+            const enhancedPrompt = `Generate in ${aspectInstruction}. ${creative.imagePrompt}`;
             
-            // Build message content with product image if available
+            // Simplified message - just text prompt, no image editing for now
             const messageContent: any[] = [
               {
                 type: 'text',
@@ -951,15 +960,7 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
               }
             ];
             
-            // Add product image as base for editing/composition
-            if (baseProductImageUrl) {
-              messageContent.push({
-                type: 'image_url',
-                image_url: {
-                  url: baseProductImageUrl
-                }
-              });
-            }
+            console.log(`   Calling Lovable AI with prompt: ${enhancedPrompt.substring(0, 100)}...`);
             
             const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
               method: 'POST',
@@ -984,18 +985,19 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
               const generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
               
               if (generatedImage) {
-                console.log(`Successfully generated image for ${creative.channel}`);
+                console.log(`✅ Successfully generated image for ${creative.channel}`);
                 updatedCreatives.push({
                   ...creative,
                   imageUrl: generatedImage,
                   logoUrl: brandLogoUrl
                 });
               } else {
-                console.log(`No image in response for ${creative.channel}`);
+                console.log(`⚠ No image in response for ${creative.channel}. Response structure:`, JSON.stringify(imageData).substring(0, 200));
                 updatedCreatives.push(creative);
               }
             } else {
-              console.error(`Failed to generate image for ${creative.channel}: ${imageResponse.status}`);
+              const errorText = await imageResponse.text();
+              console.error(`❌ Failed to generate image for ${creative.channel}: ${imageResponse.status} - ${errorText}`);
               updatedCreatives.push(creative);
             }
           } catch (error) {
