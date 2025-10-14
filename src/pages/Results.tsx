@@ -214,17 +214,17 @@ const Results = () => {
         setError(null);
 
         // If session ID is provided, load from saved analysis
-        if (sessionId) {
+        if (sessionId && sessionId !== 'null') {
           console.log('Loading saved analysis...');
           const { data: savedData, error: savedError } = await supabase
             .from("saved_analyses")
             .select("*")
-            .eq("session_id", sessionId)
+            .eq("id", sessionId)
             .single();
 
-          if (savedError) throw savedError;
-          
-          if (savedData) {
+          if (savedError) {
+            console.error('Error loading saved analysis:', savedError);
+          } else if (savedData) {
             // Update accessed_at timestamp
             await supabase
               .from("saved_analyses")
