@@ -1226,30 +1226,46 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
     // Analyze trends in parallel with main analysis parsing
     const analyzeTrends = async (productContext: string, productName: string, category: string) => {
       try {
+        const currentDate = new Date().toISOString().split('T')[0];
         const trendPrompt = `You are a trend analyst specializing in identifying relevant marketing opportunities.
 
-Analyze current and upcoming trends (past 7 days and next 30 days) that align with this product:
+Today's date: ${currentDate}
+
+Analyze current and upcoming trends (past 7 days and next 60 days) that align with this product:
 
 Product: ${productName}
 Category: ${category}
 Context: ${productContext.substring(0, 2000)}
 
-Identify 5-7 trends including:
+Identify 6-8 SPECIFIC, DATE-BASED trends including:
+
+**MUST INCLUDE (with exact dates or date ranges):**
+1. Major festivals and holidays (e.g., Diwali, Dhanteras, Christmas, Eid, Holi, Hanukkah, etc.) - specify exact dates
+2. Fashion weeks and industry events (e.g., Lakme Fashion Week, India Fashion Week, Milan Fashion Week) - specify exact dates
+3. Seasonal transitions (e.g., "Winter collection launch season Oct 15-Nov 15", "Summer sale period May 1-June 15")
+4. Cultural shopping seasons (e.g., Wedding season in India: Nov-Feb, Festive shopping: Oct-Dec)
+
+**ALSO CONSIDER:**
 - Recent viral moments or news (past 7 days)
-- Upcoming holidays, events, or cultural moments (next 30 days)
-- Seasonal patterns relevant to this product
 - Social media trends aligned with product positioning
+- Regional events relevant to the product's market
 
 For each trend, provide:
 
-## [Trend Headline]
-**Timeframe:** [Past Week / Next Month / Ongoing]
-**Category:** [Cultural / Seasonal / News / Holiday / Social Media]
-**Overview:** [2-3 sentences explaining the trend and why it matters]
-**Product Alignment:** [2-3 sentences on how this product can leverage this trend in marketing campaigns. Be specific about angles, messaging, or creative approaches]
+## [Trend Headline - MUST include specific dates or date ranges]
+**Timeframe:** [Past Week / Specific dates like "Nov 1-5, 2025" or "Diwali: Nov 12, 2025" / Ongoing through specific date]
+**Category:** [Cultural / Seasonal / News / Holiday / Fashion Event / Social Media]
+**Overview:** [2-3 sentences explaining the trend/event, its cultural/market significance, and the SPECIFIC DATES. Be concrete and factual about timing]
+**Product Alignment:** [2-3 sentences on how this product can leverage this trend in marketing campaigns. Be specific about angles, messaging, or creative approaches. Mention optimal timing for campaign launches relative to the event dates]
 **Relevance Score:** [1-10]
 
-Focus on actionable, specific trends that a marketing team can immediately use for campaign ideation.`;
+CRITICAL RULES:
+- Be deterministic and calendar-specific. Use ACTUAL dates and event names.
+- For festivals, include the exact date (e.g., "Diwali: November 12, 2025")
+- For seasons, specify date ranges (e.g., "Winter Launch Season: October 15 - November 30")
+- For fashion events, include city and dates (e.g., "Lakme Fashion Week Mumbai: March 13-17")
+- Focus on actionable, time-bound opportunities that marketers can plan campaigns around.
+- If you don't know exact dates, specify the typical timeframe (e.g., "Typically held in late March")`;
 
         const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
