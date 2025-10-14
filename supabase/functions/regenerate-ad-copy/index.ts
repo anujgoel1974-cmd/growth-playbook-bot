@@ -49,13 +49,17 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log(`Regenerating ad copy with filters:`, filters);
+    console.log(`Regenerating ad copy and images with filters:`, filters);
     console.log(`Channels to regenerate: ${channelsToRegenerate ? channelsToRegenerate.join(', ') : 'all'}`);
 
     // Filter creatives to regenerate
     const creativesToRegenerate = channelsToRegenerate 
       ? adCreatives.filter(c => channelsToRegenerate.includes(c.channelType))
       : adCreatives;
+
+    // Extract product image and logo from first creative (they're the same across all)
+    const productImageUrl = adCreatives[0]?.imageUrl || '';
+    const logoUrl = adCreatives[0]?.logoUrl || '';
 
     // Build system prompt based on filters
     const systemPrompt = `You are an expert ad copywriter specializing in digital advertising. Your task is to regenerate ad copy with specific style parameters while maintaining platform constraints.
@@ -104,7 +108,105 @@ LENGTH PREFERENCES:
 CRITICAL PLATFORM CONSTRAINTS:
 You MUST maintain the exact same structure and character limits for each platform. Return the EXACT number of headlines and descriptions as the original.`;
 
-    // Generate new copy for each creative
+    // Helper function to generate style-aware image prompts
+    const enhanceImagePrompt = (originalPrompt: string, creative: AdCreative): string => {
+      const voiceDescriptors: Record<string, string> = {
+        professional: 'clean, corporate, professional lighting, business-appropriate setting',
+        friendly: 'warm lighting, approachable atmosphere, inviting composition',
+        playful: 'vibrant colors, dynamic composition, fun and energetic mood',
+        luxurious: 'premium aesthetic, sophisticated lighting, elegant background',
+        educational: 'clear, informative layout, well-lit, instructional feel',
+        urgent: 'bold, attention-grabbing, high contrast, dynamic energy'
+      };
+
+      const emotionalDescriptors: Record<string, string> = {
+        'fomo': 'limited-time visual cues, urgency indicators, countdown elements',
+        'aspiration': 'aspirational lifestyle imagery, success-oriented visuals, achievement mood',
+        'problem-solution': 'before-after contrast, solution-focused imagery, relief visualization',
+        'social-proof': 'crowd appeal, testimonial feel, trust-building elements',
+        'exclusivity': 'VIP aesthetic, premium exclusivity, select membership feel',
+        'value': 'value proposition highlighted, deal-oriented visuals, savings emphasis'
+      };
+
+      const voiceStyle = voiceDescriptors[filters.brandVoice] || '';
+      const emotionalStyle = emotionalDescriptors[filters.emotionalHook] || '';
+
+      return `${originalPrompt}. Style: ${voiceStyle}, ${emotionalStyle}. Platform: ${creative.channel}`;
+    };
+
+    // Helper function to generate ad images
+    const generateAdImage = async (creative: AdCreative, apiKey: string): Promise<string | undefined> => {
+      try {
+        console.log(`Regenerating image for ${creative.channel}...`);
+        
+        const aspectRatioMap: Record<string, string> = {
+          '1:1': 'square 1:1 format, centered composition',
+          '9:16': 'vertical 9:16 format for mobile stories, full-screen immersive',
+          '2:3': 'vertical 2:3 Pinterest-optimized format',
+          '16:9': 'horizontal 16:9 landscape format for YouTube thumbnails',
+          '1.91:1': 'horizontal 1.91:1 banner format for display ads'
+        };
+        const aspectInstruction = aspectRatioMap[creative.imageAspectRatio || '1:1'];
+        
+        // Enhance the image prompt with filter-based styling
+        const enhancedImagePrompt = enhanceImagePrompt(creative.imagePrompt, creative);
+        
+        const fullPrompt = `CRITICAL: Generate in ${aspectInstruction}. You MUST keep the main product from the base image EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact. DO NOT modify, alter, or reimagine the product itself in any way. ONLY add creative background elements, lighting effects, lifestyle context, or platform-specific styling AROUND the product to make it suitable for ${creative.channel} ${creative.placement} advertising. ${enhancedImagePrompt}`;
+        
+        const messageContent: any[] = [
+          {
+            type: 'text',
+            text: fullPrompt
+          }
+        ];
+        
+        // Add product image as base if available
+        if (productImageUrl) {
+          messageContent.push({
+            type: 'image_url',
+            image_url: {
+              url: productImageUrl
+            }
+          });
+        }
+        
+        const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash-image-preview',
+            messages: [
+              {
+                role: 'user',
+                content: messageContent
+              }
+            ],
+            modalities: ['image', 'text']
+          }),
+        });
+        
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json();
+          const generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          
+          if (generatedImage) {
+            console.log(`Successfully regenerated image for ${creative.channel}`);
+            return generatedImage;
+          }
+        } else {
+          console.error(`Failed to regenerate image for ${creative.channel}: ${imageResponse.status}`);
+        }
+      } catch (error) {
+        console.error(`Error regenerating image for ${creative.channel}:`, error);
+      }
+      
+      return undefined;
+    };
+
+    // Generate new copy and images for each creative
     const regeneratedCreatives = await Promise.all(
       creativesToRegenerate.map(async (creative) => {
         try {
@@ -184,12 +286,17 @@ Return ONLY a JSON object in this exact format (no markdown, no code blocks, no 
             throw new Error(`Description count mismatch: expected ${creative.descriptions.length}, got ${parsedContent.descriptions.length}`);
           }
 
-          console.log(`Successfully regenerated ${creative.channel}`);
+          console.log(`Successfully regenerated copy for ${creative.channel}`);
+          
+          // Regenerate image with new style-aware prompt
+          const newImageUrl = await generateAdImage(creative, LOVABLE_API_KEY);
           
           return {
             ...creative,
             headlines: parsedContent.headlines,
             descriptions: parsedContent.descriptions,
+            imageUrl: newImageUrl || creative.imageUrl, // Keep original if regeneration fails
+            logoUrl: logoUrl || creative.logoUrl
           };
         } catch (error) {
           console.error(`Error regenerating ${creative.channel}:`, error);

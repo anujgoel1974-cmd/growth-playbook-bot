@@ -327,7 +327,7 @@ const Results = () => {
     if (!analysis?.adCreatives || !url) return;
     
     setIsRegenerating(true);
-    sonnerToast.loading("Regenerating ad copy with your preferences...", { id: "regenerate-ads" });
+    sonnerToast.loading("Regenerating ad copy and images with your preferences...", { id: "regenerate-ads" });
 
     try {
       // Extract brand info from URL and analysis
@@ -350,7 +350,7 @@ const Results = () => {
       
       if (data.success) {
         setCustomizedCreatives(data.adCreatives);
-        sonnerToast.success(`Successfully regenerated ${data.regeneratedCount} ad creatives!`, { id: "regenerate-ads" });
+        sonnerToast.success(`Successfully regenerated ${data.regeneratedCount} ad creatives with new images!`, { id: "regenerate-ads" });
       } else {
         throw new Error(data.error || 'Failed to regenerate ad copy');
       }
@@ -1002,10 +1002,10 @@ const Results = () => {
                         <div>
                           <CardTitle className="text-lg flex items-center gap-2">
                             <Palette className="h-5 w-5" />
-                            Customize Ad Copy
+                            Customize Ad Copy & Images
                           </CardTitle>
                           <CardDescription>
-                            Adjust messaging tone and style to match your brand - see changes in real-time
+                            Adjust messaging tone, style, and visual elements to match your brand - see changes in real-time
                           </CardDescription>
                         </div>
                         <Button
