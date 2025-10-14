@@ -999,7 +999,7 @@ const Results = () => {
                   <Card className="shadow-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex-1">
                           <CardTitle className="text-lg flex items-center gap-2">
                             <Palette className="h-5 w-5" />
                             Customize Ad Copy & Images
@@ -1007,6 +1007,28 @@ const Results = () => {
                           <CardDescription>
                             Adjust messaging tone, style, and visual elements to match your brand - see changes in real-time
                           </CardDescription>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                              <span className="opacity-70">Voice:</span>
+                              <span className="capitalize">{adFilters.brandVoice}</span>
+                            </div>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                              <span className="opacity-70">Hook:</span>
+                              <span className="capitalize">{adFilters.emotionalHook.replace('-', ' ')}</span>
+                            </div>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                              <span className="opacity-70">CTA:</span>
+                              <span className="capitalize">{adFilters.cta.replace('-', ' ')}</span>
+                            </div>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                              <span className="opacity-70">Focus:</span>
+                              <span className="capitalize">{adFilters.emphasis.replace('-', ' ')}</span>
+                            </div>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                              <span className="opacity-70">Length:</span>
+                              <span className="capitalize">{adFilters.length}</span>
+                            </div>
+                          </div>
                         </div>
                         <Button
                           variant={showFilters ? "secondary" : "outline"}
