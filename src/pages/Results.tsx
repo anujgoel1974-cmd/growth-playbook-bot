@@ -336,7 +336,7 @@ const Results = () => {
     };
 
     analyzeUrl();
-  }, [url, navigate, toast, sessionId]);
+  }, [url, sessionId]); // Removed navigate and toast from dependencies to prevent re-renders
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
