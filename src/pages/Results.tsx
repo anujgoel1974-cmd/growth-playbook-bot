@@ -657,10 +657,10 @@ const Results = () => {
             <TabsList className="grid w-full max-w-6xl mx-auto grid-cols-6 mb-8">
               <TabsTrigger value="insight">Customer Insight</TabsTrigger>
               <TabsTrigger value="competitive">Competitive Analysis</TabsTrigger>
+              <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
               <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
               <TabsTrigger value="adcreative">Ad Creative</TabsTrigger>
               <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
-              <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
             </TabsList>
 
             {/* Customer Insight Tab */}
@@ -1071,6 +1071,71 @@ const Results = () => {
                 <Card className="shadow-card">
                   <CardContent className="py-12 text-center text-muted-foreground">
                     No competitive analysis data available
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Trend Analysis Tab */}
+            <TabsContent value="trends" className="animate-fade-in">
+              {analysis?.trendAnalysis && analysis.trendAnalysis.length > 0 ? (
+                <div className="space-y-8">
+                  {/* Header Section */}
+                  <Card className="shadow-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="h-6 w-6 text-primary" />
+                        <div>
+                          <CardTitle className="text-2xl">Trend Analysis</CardTitle>
+                          <CardDescription className="text-base mt-1">
+                            Current and upcoming trends aligned with your product positioning
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+
+                  {/* Filter Tabs */}
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant={trendFilter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTrendFilter('all')}
+                    >
+                      All Trends
+                    </Button>
+                    <Button
+                      variant={trendFilter === 'past' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTrendFilter('past')}
+                    >
+                      <Clock className="h-3 w-3 mr-1" />
+                      Recent
+                    </Button>
+                    <Button
+                      variant={trendFilter === 'upcoming' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTrendFilter('upcoming')}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Upcoming
+                    </Button>
+                  </div>
+
+                  {/* Trend Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {analysis.trendAnalysis
+                      .filter(trend => trendFilter === 'all' || trend.timeframe === trendFilter)
+                      .map((trend) => (
+                        <TrendCard key={trend.id} trend={trend} />
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <Card className="shadow-card">
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No trend analysis data available</p>
                   </CardContent>
                 </Card>
               )}
@@ -1520,70 +1585,6 @@ const Results = () => {
               )}
             </TabsContent>
 
-            {/* Trend Analysis Tab */}
-            <TabsContent value="trends" className="animate-fade-in">
-              {analysis?.trendAnalysis && analysis.trendAnalysis.length > 0 ? (
-                <div className="space-y-8">
-                  {/* Header Section */}
-                  <Card className="shadow-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <TrendingUp className="h-6 w-6 text-primary" />
-                        <div>
-                          <CardTitle className="text-2xl">Trend Analysis</CardTitle>
-                          <CardDescription className="text-base mt-1">
-                            Current and upcoming trends aligned with your product positioning
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-
-                  {/* Filter Tabs */}
-                  <div className="flex gap-2 flex-wrap">
-                    <Button
-                      variant={trendFilter === 'all' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTrendFilter('all')}
-                    >
-                      All Trends
-                    </Button>
-                    <Button
-                      variant={trendFilter === 'past' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTrendFilter('past')}
-                    >
-                      <Clock className="h-3 w-3 mr-1" />
-                      Recent
-                    </Button>
-                    <Button
-                      variant={trendFilter === 'upcoming' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTrendFilter('upcoming')}
-                    >
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      Upcoming
-                    </Button>
-                  </div>
-
-                  {/* Trend Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {analysis.trendAnalysis
-                      .filter(trend => trendFilter === 'all' || trend.timeframe === trendFilter)
-                      .map((trend) => (
-                        <TrendCard key={trend.id} trend={trend} />
-                      ))}
-                  </div>
-                </div>
-              ) : (
-                <Card className="shadow-card">
-                  <CardContent className="py-12 text-center text-muted-foreground">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No trend analysis data available</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
           </Tabs>
         )}
 
