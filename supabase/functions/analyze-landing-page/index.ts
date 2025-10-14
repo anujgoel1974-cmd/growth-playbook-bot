@@ -22,13 +22,13 @@ async function storeAgentOutput(
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/agent_context`, {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/agent_context?on_conflict=analysis_id,agent_name`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_SERVICE_ROLE_KEY!,
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
       body: JSON.stringify({
         analysis_id: analysisId,
@@ -38,9 +38,28 @@ async function storeAgentOutput(
     });
     
     if (!response.ok) {
-      console.error(`Failed to store ${agentName} output:`, await response.text());
+      const errText = await response.text();
+      console.error(`Failed to upsert ${agentName} output (will try update):`, errText);
+      // Fallback: update existing row to ensure latest payload is available to the UI
+      const patchRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/agent_context?analysis_id=eq.${analysisId}&agent_name=eq.${agentName}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ output_data: outputData })
+        }
+      );
+      if (!patchRes.ok) {
+        console.error(`Failed to update ${agentName} output:`, await patchRes.text());
+      } else {
+        console.log(`✓ Updated ${agentName} output for analysis ${analysisId}`);
+      }
     } else {
-      console.log(`✓ Stored ${agentName} output for analysis ${analysisId}`);
+      console.log(`✓ Upserted ${agentName} output for analysis ${analysisId}`);
     }
   } catch (error) {
     console.error(`Error storing ${agentName} output:`, error);

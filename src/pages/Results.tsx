@@ -344,15 +344,28 @@ const Results = () => {
         .order('created_at', { ascending: false })
         .limit(1);
       if (!error && data && data.length > 0) {
-        const latestCards = (data[0].output_data as any)?.cards as unknown as InsightCard[] | undefined;
-        if (latestCards && latestCards.length > 0) {
-          setAnalysis(prev => {
-            if (!prev) return prev;
-            const current = prev.campaignTargeting || [];
+        const output = data[0].output_data as any;
+        const latestCards = output?.cards as InsightCard[] | undefined;
+        const rawText = output?.rawText as string | undefined;
+        setAnalysis(prev => {
+          if (!prev) return prev;
+          const current = prev.campaignTargeting || [];
+          if (latestCards && latestCards.length > 0) {
             const changed = current.length !== latestCards.length;
             return changed ? { ...prev, campaignTargeting: latestCards } : prev;
-          });
-        }
+          }
+          // Fallback: if parsing produced no cards, show raw text so users still see targeting settings
+          if (rawText && rawText.trim().length > 0 && current.length === 0) {
+            const fallbackCard: InsightCard = {
+              id: 'campaign-targeting-raw',
+              title: 'Campaign Targeting',
+              content: rawText,
+              icon: 'target',
+            };
+            return { ...prev, campaignTargeting: [fallbackCard] };
+          }
+          return prev;
+        });
       }
     };
     const interval = setInterval(fetchTargeting, 5000);
