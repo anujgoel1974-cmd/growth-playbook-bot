@@ -176,6 +176,7 @@ const Results = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const url = searchParams.get("url");
+  const sessionId = searchParams.get("session");
   
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
@@ -212,6 +213,30 @@ const Results = () => {
         setIsLoading(true);
         setError(null);
 
+        // If session ID is provided, load from saved analysis
+        if (sessionId) {
+          console.log('Loading saved analysis...');
+          const { data: savedData, error: savedError } = await supabase
+            .from("saved_analyses")
+            .select("*")
+            .eq("session_id", sessionId)
+            .single();
+
+          if (savedError) throw savedError;
+          
+          if (savedData) {
+            // Update accessed_at timestamp
+            await supabase
+              .from("saved_analyses")
+              .update({ accessed_at: new Date().toISOString() })
+              .eq("id", savedData.id);
+            
+            setAnalysis(savedData.analysis_data as unknown as AnalysisData);
+            setIsLoading(false);
+            return;
+          }
+        }
+
         console.log('Calling analyze-landing-page function...');
         
         // Create a timeout promise for 5 minutes (extended to allow competitive analysis)
@@ -240,6 +265,50 @@ const Results = () => {
 
         console.log('Analysis successful:', data);
         setAnalysis(data.analysis);
+
+        // Auto-save analysis to history
+        if (data.analysis && data.sessionId) {
+          try {
+            // Extract metadata from analysis
+            const productName = data.analysis.customerInsight?.find((card: any) => 
+              card.title?.toLowerCase().includes('product') || card.title?.toLowerCase().includes('value')
+            )?.content?.split('\n')?.[0] || null;
+
+            const channels = [
+              ...new Set([
+                ...(data.analysis.adCreatives || []).map((ad: any) => ad.channel),
+                ...(data.analysis.mediaPlan || []).flatMap((week: any) => 
+                  week.channels.map((ch: any) => ch.name)
+                ),
+              ])
+            ].filter(Boolean);
+
+            const thumbnailUrl = data.analysis.adCreatives?.[0]?.imageUrl || null;
+
+            await supabase.from("saved_analyses").upsert({
+              session_id: data.sessionId,
+              url: url,
+              title: productName ? `${productName} Campaign Analysis` : null,
+              thumbnail_url: thumbnailUrl,
+              analysis_data: data.analysis,
+              product_name: productName,
+              channels: channels.length > 0 ? channels : null,
+            }, {
+              onConflict: 'session_id'
+            });
+
+            sonnerToast.success("Analysis saved to history", {
+              description: "You can view this analysis anytime from your history.",
+              action: {
+                label: "View History",
+                onClick: () => navigate("/history"),
+              },
+            });
+          } catch (saveError) {
+            console.error('Failed to save analysis:', saveError);
+            // Don't show error to user, just log it
+          }
+        }
       } catch (err) {
         console.error('Error analyzing URL:', err);
         setError(err instanceof Error ? err.message : 'Failed to analyze URL');
@@ -254,7 +323,7 @@ const Results = () => {
     };
 
     analyzeUrl();
-  }, [url, navigate, toast]);
+  }, [url, navigate, toast, sessionId]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -539,14 +608,22 @@ const Results = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            New Analysis
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/")}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              New Analysis
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/history")}
+            >
+              View History
+            </Button>
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Analyzing:</span>
             <span className="font-medium truncate max-w-md">{url}</span>

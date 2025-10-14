@@ -81,8 +81,20 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
+      {/* Navigation */}
+      <div className="container mx-auto px-4 pt-6">
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/history")}
+          >
+            View History
+          </Button>
+        </div>
+      </div>
+
       {/* Hero Section */}
-      <div className="container mx-auto px-4 pt-20 pb-16">
+      <div className="container mx-auto px-4 pt-12 pb-16">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           {/* Headline */}
           <div className="space-y-4 animate-fade-in">

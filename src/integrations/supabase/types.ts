@@ -14,7 +14,154 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agent_context: {
+        Row: {
+          agent_name: string
+          analysis_id: string
+          created_at: string | null
+          id: string
+          output_data: Json
+        }
+        Insert: {
+          agent_name: string
+          analysis_id: string
+          created_at?: string | null
+          id?: string
+          output_data: Json
+        }
+        Update: {
+          agent_name?: string
+          analysis_id?: string
+          created_at?: string | null
+          id?: string
+          output_data?: Json
+        }
+        Relationships: []
+      }
+      analysis_progress: {
+        Row: {
+          completed_at: string | null
+          data: Json | null
+          id: string
+          progress_percentage: number | null
+          section_name: string
+          session_id: string | null
+          started_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          data?: Json | null
+          id?: string
+          progress_percentage?: number | null
+          section_name: string
+          session_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          data?: Json | null
+          id?: string
+          progress_percentage?: number | null
+          section_name?: string
+          session_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_progress_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analysis_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error: string | null
+          id: string
+          status: string | null
+          url: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          status?: string | null
+          url: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          status?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      saved_analyses: {
+        Row: {
+          accessed_at: string | null
+          analysis_data: Json
+          brand_name: string | null
+          channels: string[] | null
+          created_at: string | null
+          id: string
+          is_favorite: boolean | null
+          product_name: string | null
+          session_id: string | null
+          thumbnail_url: string | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          accessed_at?: string | null
+          analysis_data: Json
+          brand_name?: string | null
+          channels?: string[] | null
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          product_name?: string | null
+          session_id?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          accessed_at?: string | null
+          analysis_data?: Json
+          brand_name?: string | null
+          channels?: string[] | null
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          product_name?: string | null
+          session_id?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_analyses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "analysis_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
