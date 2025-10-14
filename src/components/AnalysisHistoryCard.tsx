@@ -29,6 +29,7 @@ const channelColors: Record<string, string> = {
 };
 
 export const AnalysisHistoryCard = ({
+  id,
   sessionId,
   title,
   url,
@@ -43,7 +44,7 @@ export const AnalysisHistoryCard = ({
   const navigate = useNavigate();
 
   const handleView = () => {
-    navigate(`/results?url=${encodeURIComponent(url)}&session=${sessionId}`);
+    navigate(`/results?url=${encodeURIComponent(url)}&session=${id}`);
   };
 
   return (
