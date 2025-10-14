@@ -259,11 +259,19 @@ const Results = () => {
         setSessionId(data.analysisId || null);
       } catch (err) {
         console.error('Error analyzing URL:', err);
-        setError(err instanceof Error ? err.message : 'Failed to analyze URL');
+        const rawMsg = err instanceof Error ? err.message : String(err);
+        const isCredits = /402|payment required|credits/i.test(rawMsg);
+        const isRateLimit = /429|rate limit/i.test(rawMsg);
+        const friendly = isCredits
+          ? 'AI usage credits exhausted. Please add credits in Settings -> Workspace -> Usage, then try again.'
+          : isRateLimit
+          ? 'Rate limit reached. Please wait a moment and try again.'
+          : (rawMsg || 'Failed to analyze URL');
+        setError(friendly);
         toast({
-          title: "Analysis Failed",
-          description: err instanceof Error ? err.message : 'Failed to analyze URL',
-          variant: "destructive",
+          title: isCredits ? 'Out of AI Credits' : isRateLimit ? 'Rate Limited' : 'Analysis Failed',
+          description: friendly,
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -804,6 +812,11 @@ const Results = () => {
                 <Card className="shadow-card">
                   <CardContent className="py-12 text-center text-muted-foreground">
                     No campaign targeting data available
+                    {error && /credits|payment required|402|429|rate limit/i.test(error) && (
+                      <p className="text-xs mt-2">
+                        Tip: AI usage is currently unavailable (credits or rate limits). Add credits in Settings &gt; Workspace &gt; Usage, then retry.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -1605,6 +1618,11 @@ const Results = () => {
                   <CardContent className="py-12 text-center text-muted-foreground">
                     <Megaphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No ad creatives available</p>
+                    {error && /credits|payment required|402|429|rate limit/i.test(error) && (
+                      <p className="text-xs mt-2">
+                        Tip: AI usage is currently unavailable (credits or rate limits). Add credits in Settings &gt; Workspace &gt; Usage, then retry.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )}
