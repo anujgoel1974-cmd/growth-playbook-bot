@@ -1472,19 +1472,25 @@ For each Image Prompt, synthesize insights from the customer profile to create v
       // Immediately store text-only creatives and kick off image generation in background
       await storeAgentOutput(analysisId, 'ad-creative', parsedCreatives);
 
-      try {
-        // Generate images in background (fire-and-forget)
-        setTimeout(async () => {
-          try {
-            const withImages = await generateAdImages(parsedCreatives, lovableApiKey, analysisId);
-            await storeAgentOutput(analysisId, 'ad-creative', withImages);
-            console.log('✓ [Creative Generation Agent] Images generated and stored');
-          } catch (e) {
-            console.error('Background image generation failed:', e);
-          }
-        }, 0);
-      } catch (bgErr) {
-        console.error('Background image generation scheduling failed:', bgErr);
+      // Use EdgeRuntime.waitUntil for proper background task handling
+      const imageGenerationTask = (async () => {
+        try {
+          console.log('🎨 Starting background image generation...');
+          const withImages = await generateAdImages(parsedCreatives, lovableApiKey, analysisId);
+          await storeAgentOutput(analysisId, 'ad-creative', withImages);
+          console.log('✅ [Creative Generation Agent] Images generated and stored');
+        } catch (e) {
+          console.error('❌ Background image generation failed:', e);
+        }
+      })();
+
+      // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
+      if (typeof EdgeRuntime !== 'undefined') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(imageGenerationTask);
+      } else {
+        // Fallback for local testing
+        await imageGenerationTask;
       }
 
       console.log('✓ [Creative Generation Agent] Complete (background image gen running)');
