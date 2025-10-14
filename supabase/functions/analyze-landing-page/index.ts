@@ -3,133 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-authorization, X-Client-Info, X-Supabase-Authorization',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Max-Age': '86400',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// ===============================
-// PHASE 2: Helper Functions
-// ===============================
-
-// Helper: Store agent output in Supabase
-async function storeAgentOutput(
-  analysisId: string,
-  agentName: string,
-  outputData: any
-) {
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/agent_context?on_conflict=analysis_id,agent_name`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=minimal'
-      },
-      body: JSON.stringify({
-        analysis_id: analysisId,
-        agent_name: agentName,
-        output_data: outputData
-      })
-    });
-    
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Failed to upsert ${agentName} output (will try update):`, errText);
-      // Fallback: update existing row to ensure latest payload is available to the UI
-      const patchRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/agent_context?analysis_id=eq.${analysisId}&agent_name=eq.${agentName}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ output_data: outputData })
-        }
-      );
-      if (!patchRes.ok) {
-        console.error(`Failed to update ${agentName} output:`, await patchRes.text());
-      } else {
-        console.log(`✓ Updated ${agentName} output for analysis ${analysisId}`);
-      }
-    } else {
-      console.log(`✓ Upserted ${agentName} output for analysis ${analysisId}`);
-    }
-  } catch (error) {
-    console.error(`Error storing ${agentName} output:`, error);
-  }
-}
-
-// Helper: Retrieve agent output from Supabase
-async function getAgentOutput(
-  analysisId: string,
-  agentName: string
-): Promise<any> {
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  
-  try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/agent_context?analysis_id=eq.${analysisId}&agent_name=eq.${agentName}&select=output_data`,
-      {
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY!,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      }
-    );
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.length > 0) {
-        console.log(`✓ Retrieved ${agentName} output for analysis ${analysisId}`);
-        return data[0].output_data;
-      }
-    }
-    console.log(`No ${agentName} output found for analysis ${analysisId}`);
-    return null;
-  } catch (error) {
-    console.error(`Error retrieving ${agentName} output:`, error);
-    return null;
-  }
-}
-
-// Helper: Call Lovable AI
-async function callAI(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 6000,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`AI API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  if (!data.choices?.[0]?.message?.content) {
-    throw new Error('Invalid AI response structure');
-  }
-  
-  return data.choices[0].message.content;
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -138,18 +13,16 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { url } = body || {};
-
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
+    const { url } = await req.json();
     console.log('Analyzing URL:', url);
 
     if (!url) {
       throw new Error('URL is required');
+    }
+
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     // Fetch the landing page content
@@ -391,6 +264,321 @@ serve(async (req) => {
       }
     };
 
+    // Prepare the prompt for AI
+    const systemPrompt = `You are an AI marketing analyst specializing in landing page analysis and ad campaign strategy. Your role is to provide actionable insights that marketing teams can use to create highly targeted campaigns. Focus on delivering practical, data-driven recommendations based on the landing page content. 
+
+CRITICAL FORMATTING RULES:
+- Use ### for subsection headers (e.g., "### Target Personas", "### Demographics")
+- Keep each subsection concise with 3-5 bullet points maximum
+- Use bullet points (•) for all lists
+- Focus on actionable, specific insights
+- Avoid verbose paragraphs
+- YOU MUST INCLUDE ALL FIVE MAIN SECTIONS: Customer Insight, Campaign Targeting, Media Plan, Competitive Analysis, AND Ad Creative`;
+    
+    const userPrompt = `Analyze this landing page and provide comprehensive insights for marketing campaigns.
+
+IMPORTANT: You MUST provide ALL FIVE sections below. Do not skip any section.
+
+Structure your response EXACTLY as shown:
+
+## CUSTOMER INSIGHT
+
+### Target Personas
+• Persona 1: [Name/description]
+• Persona 2: [Name/description]
+• Persona 3: [Name/description]
+
+### Demographics
+• Age: [age range]
+• Gender: [gender split]
+• Income: [income range]
+• Location: [geographic focus]
+
+### Psychographics
+• Values: [core values]
+• Interests: [key interests]
+• Lifestyle: [lifestyle traits]
+• Aspirations: [goals/desires]
+
+### Pain Points
+• Pain 1: [specific problem]
+• Pain 2: [specific problem]
+• Pain 3: [specific problem]
+
+### Decision Triggers
+• Trigger 1: [what makes them buy]
+• Trigger 2: [what makes them buy]
+• Trigger 3: [what makes them buy]
+
+### Communication Style
+• Tone: [messaging tone]
+• Language: [vocabulary style]
+• Approach: [communication strategy]
+
+## CAMPAIGN TARGETING
+
+### Google Ads
+• Keywords: [top search terms]
+• Audience: [targeting parameters]
+• Campaign Type: [search/display/shopping]
+• Budget: [recommended allocation]
+
+### Meta Ads
+• Platforms: [Facebook/Instagram focus]
+• Audience: [detailed targeting]
+• Creative: [ad format recommendations]
+• Budget: [recommended allocation]
+
+### Pinterest Ads
+• Visual Strategy: [pin style recommendations]
+• Audience: [interest targeting]
+• Campaign Focus: [awareness/consideration]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
+
+### TikTok Ads
+• Content Style: [video approach]
+• Audience: [demographic targeting]
+• Creative: [ad format]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
+
+### YouTube Ads
+• Video Strategy: [content approach]
+• Audience: [targeting parameters]
+• Ad Format: [skippable/non-skippable]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
+
+### LinkedIn Ads
+• Targeting: [job titles/industries]
+• Content: [messaging approach]
+• Campaign: [sponsored content/InMail]
+• Budget: [recommended allocation]
+(Only include if relevant to product)
+
+Landing page content:
+${pageContent}
+
+CRITICAL: Use the bullet format shown above with labels followed by colons (e.g., "• Age: 25-45"). Keep each point concise.
+
+## MEDIA PLAN
+
+CRITICAL: You MUST include this section with a 4-6 week breakdown.
+
+Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Use this EXACT format:
+
+### Week 1
+• Google - PMax: $40 (40%)
+• Google - Search: $10 (10%)
+• Meta - Advantage+: $40 (40%)
+• Meta - Retargeting: $10 (10%)
+**Reasoning:** Initial discovery phase focusing on broad reach through PMax and Advantage+ to identify high-intent audiences. Small search budget for brand protection. Testing messaging with visual platforms ideal for this product category.
+
+### Week 2
+• Google - PMax: $35 (35%)
+• Google - Search: $25 (25%)
+• Meta - Advantage+: $35 (35%)
+• Pinterest - Consideration: $5 (5%)
+**Reasoning:** Scaling search as brand awareness grows and search volume increases. Testing Pinterest for visual product discovery given the product's visual appeal and target demographic.
+
+### Week 3
+• Google - PMax: $30 (30%)
+• Google - Search: $25 (25%)
+• Meta - Advantage+: $35 (35%)
+• Pinterest - Consideration: $10 (10%)
+**Reasoning:** Data-driven optimization phase. Scaling Pinterest based on early results from Week 2. Maintaining search presence for growing brand queries.
+
+### Week 4
+• Google - PMax: $30 (30%)
+• Google - Search: $20 (20%)
+• Meta - Advantage+: $35 (35%)
+• Meta - Retargeting: $15 (15%)
+**Reasoning:** Increasing retargeting budget as pixel matures and cart abandonment data accumulates. For high-ticket items, retargeting becomes crucial in Week 4+ as consideration time is longer.
+
+For each week, you MUST include a "**Reasoning:**" line explaining WHY these specific channels and allocations make sense for THIS product based on the landing page content (target audience, price point, product category, visual appeal, etc.). Continue with Weeks 5-6 if needed.
+
+## COMPETITIVE ANALYSIS
+
+CRITICAL: Identify 3-4 REAL competing brands in the same product category and price range as the analyzed URL.
+
+For each competitor, provide:
+
+### Competitor 1: [Real Brand Name]
+• Domain: [www.competitorbrand.com] (MUST be a real, established brand website)
+• Category: [product category, e.g., "designer bags", "home decor"]
+• Price Point: [their typical pricing range]
+• Key Strength: [what they do better than the analyzed page]
+• Weakness: [opportunity gap where analyzed page could win]
+• Market Position: [premium/mid-range/budget, established/emerging]
+
+### Competitor 2: [Real Brand Name]
+• Domain: [www.competitorbrand.com]
+• Category: [product category]
+• Price Point: [their typical pricing range]
+• Key Strength: [what they do better]
+• Weakness: [opportunity gap]
+• Market Position: [premium/mid-range/budget, established/emerging]
+
+### Competitor 3: [Real Brand Name]
+• Domain: [www.competitorbrand.com]
+• Category: [product category]
+• Price Point: [their typical pricing range]
+• Key Strength: [what they do better]
+• Weakness: [opportunity gap]
+• Market Position: [premium/mid-range/budget, established/emerging]
+
+(Include 4th competitor if highly relevant)
+
+### Your Competitive Advantages
+• Advantage 1: [specific differentiator vs competitors]
+• Advantage 2: [specific differentiator vs competitors]
+• Advantage 3: [specific differentiator vs competitors]
+
+### Areas for Improvement
+• Gap 1: [what competitors do better]
+• Gap 2: [what competitors do better]
+• Gap 3: [what competitors do better]
+
+### Market Positioning Strategy
+• Current Position: [where you stand in the market]
+• Recommended Position: [strategic positioning recommendation]
+• Messaging Angle: [unique angle to emphasize]
+
+### Pricing Analysis
+• Your Price: [analyzed page pricing]
+• Market Average: [competitive average]
+• Strategy: [pricing strategy recommendation]
+• Justification: [how to justify your price point]
+
+### Feature Differentiation
+• Unique Features: [features you have that competitors don't]
+• Missing Features: [features competitors offer that you lack]
+• Features to Highlight: [competitive advantages to emphasize in marketing]
+
+### Trust & Credibility Comparison
+• Your Trust Signals: [reviews, testimonials, badges on analyzed page]
+• Competitor Trust Signals: [what competitors use]
+• Recommendations: [how to improve trust signals]
+
+## AD CREATIVE
+
+For each relevant advertising channel, create MULTIPLE placement-specific ad variations optimized for that platform's exact specifications.
+
+### Google Search Ads - Search Placement
+• Headline 1: [30 chars max]
+• Headline 2: [30 chars max]
+• Headline 3: [30 chars max]
+• Description 1: [90 chars max]
+• Description 2: [90 chars max]
+• Image Prompt (1:1 Square): [For Display Network - clean product shot, professional lighting]
+
+### Google Display Ads - Display Placement
+• Headline: [25 chars max, concise value prop]
+• Description: [90 chars max]
+• Image Prompt (1.91:1 Horizontal): [Banner style - product + benefit text overlay]
+
+### Meta Ads - Feed Placement
+• Primary Text: [125 chars - hook + value prop]
+• Headline: [40 chars - benefit-driven CTA]
+• Description: [30 chars - supporting detail]
+• Image Prompt (1:1 Square): [Lifestyle imagery with product, authentic feel, mobile-optimized]
+
+### Meta Ads - Story Placement
+• Text Overlay: [15 chars max - ultra-short hook]
+• CTA: [10 chars - "Shop Now", "Learn More"]
+• Image Prompt (9:16 Vertical): [Full-screen immersive, product hero shot with minimal text space]
+
+### Pinterest Ads - Pin Placement
+• Pin Title: [100 chars - aspirational + keyword-rich]
+• Pin Description: [500 chars - storytelling with benefits]
+• Image Prompt (2:3 Vertical): [Visually striking, bright colors, flat lay or styled, Pinterest aesthetic]
+
+### TikTok Ads - In-Feed Placement
+• Hook Text: [15 chars - first 3 seconds overlay]
+• Main Message: [30 chars - mid-video overlay]
+• CTA: [20 chars - end screen]
+• Image Prompt (9:16 Vertical): [Dynamic, youth-oriented, mobile-first, bold colors, text overlay space]
+
+### YouTube Ads - Video Placement
+• Video Title: [100 chars - curiosity-driven]
+• Thumbnail Text: [5-7 words - bold statement]
+• Description: [100 chars - above fold]
+• Image Prompt (16:9 Horizontal): [Attention-grabbing thumbnail, expressive faces OR dramatic product shot, high contrast]
+
+For each Image Prompt, synthesize insights from:
+- Customer Demographics and Psychographics (age, lifestyle, values)
+- Pain Points and Decision Triggers (emotions to evoke)
+- Competitive Advantages (unique features to highlight)
+- Brand colors and style extracted from the landing page
+Include specific details about composition, lighting, mood, color palette, and platform-specific best practices.
+
+Landing page content:
+${pageContent}
+
+REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media Plan, Competitive Analysis, AND Ad Creative).`;
+
+    console.log('Calling Lovable AI...');
+    const openAIResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 6000,
+      }),
+    });
+
+    if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
+      console.error('Lovable AI error:', openAIResponse.status, errorText);
+      throw new Error(`Lovable AI error: ${openAIResponse.status}`);
+    }
+
+    const openAIData = await openAIResponse.json();
+    console.log('Lovable AI response received');
+    console.log('Response structure:', JSON.stringify({
+      hasChoices: !!openAIData.choices,
+      choicesLength: openAIData.choices?.length,
+      hasMessage: !!openAIData.choices?.[0]?.message,
+      hasContent: !!openAIData.choices?.[0]?.message?.content
+    }));
+    
+    if (!openAIData.choices || !openAIData.choices[0] || !openAIData.choices[0].message) {
+      console.error('Invalid Lovable AI response structure:', JSON.stringify(openAIData, null, 2));
+      // Fallback: return a friendly placeholder instead of erroring
+      const structuredData = {
+        customerInsight: { full: { title: 'Customer Insight', content: 'No insights generated due to an upstream AI response format issue. Please try again.' } },
+        campaignTargeting: { full: { title: 'Campaign Targeting', content: 'No insights generated due to an upstream AI response format issue. Please try again.' } }
+      };
+      return new Response(
+        JSON.stringify({ success: true, analysis: structuredData, url }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const analysisText = openAIData.choices[0].message.content;
+    console.log('Content length:', analysisText?.length || 0);
+    console.log('Content preview (first 1000 chars):', analysisText?.substring(0, 1000) || 'EMPTY');
+    
+    if (!analysisText || analysisText.trim() === '') {
+      console.warn('Lovable AI returned empty content; using fallback.');
+      const structuredData = {
+        customerInsight: { full: { title: 'Customer Insight', content: 'No insights generated. Please try again shortly.' } },
+        campaignTargeting: { full: { title: 'Campaign Targeting', content: 'No insights generated. Please try again shortly.' } }
+      };
+      return new Response(
+        JSON.stringify({ success: true, analysis: structuredData, url }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Helper function to map subsection titles to icons and channels
     const getIconForSection = (title: string): string => {
       const lowerTitle = title.toLowerCase();
@@ -656,7 +844,7 @@ serve(async (req) => {
 
         // Detect explicit competitor headers like "### Competitor 2: Brand"
         if (/^#{2,6}\s*competitor\b/i.test(lower) || /^(?:\*\*|__)\s*competitor\b/i.test(lower)) {
-          flushCompetitor();
+          await flushCompetitor();
 
           // Extract competitor name after optional number and delimiter
           let name = 'Unknown Competitor';
@@ -886,40 +1074,23 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
           };
         } else if (currentCreative && (trimmed.startsWith('•') || trimmed.startsWith('-'))) {
           const withoutBullet = trimmed.replace(/^[•\-]\s*/, '');
-          
-          // Find the LAST colon to handle labels like "Image Prompt (1:1 Square): value"
-          const colonIndex = withoutBullet.lastIndexOf(':');
+          const colonIndex = withoutBullet.indexOf(':');
           
           if (colonIndex > 0) {
             const label = withoutBullet.substring(0, colonIndex).trim();
             const value = withoutBullet.substring(colonIndex + 1).trim();
             const lowerLabel = label.toLowerCase();
             
-            console.log(`🔍 Parsing line - Label: "${label}" | Value: "${value}"`);
-            
-            // More flexible headline matching - handles "Headline", "Headline 1", "Headlines", "H1", etc.
-            if (lowerLabel.includes('headline') || 
-                lowerLabel.includes('primary') ||
-                lowerLabel.match(/^h\d+$/) ||  // Matches "H1", "H2", etc.
-                lowerLabel.includes('title') ||
-                lowerLabel.includes('hook') ||
-                lowerLabel.includes('main message') ||
-                lowerLabel.includes('video title') ||
-                lowerLabel.includes('thumbnail text') ||
-                lowerLabel.includes('text overlay') ||
-                lowerLabel.includes('pin title')) {
-              console.log(`✓ Matched headline label: "${label}" -> "${value}"`);
+            if (lowerLabel.includes('headline') || lowerLabel.includes('primary text') || 
+                lowerLabel.includes('pin title') || lowerLabel.includes('hook') || 
+                lowerLabel.includes('main message') || lowerLabel.includes('video title') || 
+                lowerLabel.includes('thumbnail text') || lowerLabel.includes('text overlay')) {
               currentCreative.headlines.push(value);
-            } else if (lowerLabel.includes('description') || 
-                       lowerLabel.includes('pin description') ||
+            } else if (lowerLabel.includes('description') || lowerLabel.includes('pin description') || 
                        lowerLabel.includes('cta')) {
-              console.log(`✓ Matched description label: "${label}" -> "${value}"`);
               currentCreative.descriptions.push(value);
             } else if (lowerLabel.includes('image prompt')) {
-              console.log(`✓ Matched image prompt: "${label}" -> "${value}"`);
               currentCreative.imagePrompt = value;
-            } else {
-              console.log(`⚠ Unmatched label: "${label}"`);
             }
           }
         }
@@ -929,75 +1100,22 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
         creatives.push(currentCreative);
       }
 
-      // Add validation and fallbacks if needed
-      for (const creative of creatives) {
-        if (creative.headlines.length === 0) {
-          console.warn(`⚠ No headlines parsed for ${creative.channel} - ${creative.placement}. Adding fallback.`);
-          creative.headlines.push('Quality Product Available Now');
-        }
-        if (creative.descriptions.length === 0) {
-          console.warn(`⚠ No descriptions parsed for ${creative.channel} - ${creative.placement}. Adding fallback.`);
-          creative.descriptions.push('Discover our premium collection today.');
-        }
-      }
-
       return creatives;
     };
 
-    // Upload base64 image to Supabase Storage
-    const uploadImageToStorage = async (
-      base64Image: string,
-      filename: string
-    ): Promise<string | null> => {
-      try {
-        const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-        const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-        
-        // Convert base64 to blob
-        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-        
-        // Upload to storage
-        const uploadResponse = await fetch(
-          `${SUPABASE_URL}/storage/v1/object/ad-creatives/${filename}`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              'Content-Type': 'image/png',
-            },
-            body: buffer
-          }
-        );
-        
-        if (uploadResponse.ok) {
-          // Return public URL
-          return `${SUPABASE_URL}/storage/v1/object/public/ad-creatives/${filename}`;
-        } else {
-          const errorText = await uploadResponse.text();
-          console.error(`Failed to upload image: ${errorText}`);
-          return null;
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        return null;
-      }
-    };
-
-    // Generate images for ad creatives using Gemini
+    // Generate images for ad creatives using Gemini with product image as base
     const generateAdImages = async (
       creatives: Array<any>,
       apiKey: string,
-      analysisId: string
+      baseProductImageUrl: string,
+      brandLogoUrl: string
     ): Promise<Array<any>> => {
       const updatedCreatives: Array<any> = [];
       
-      console.log(`🖼️ Starting image generation for ${creatives.length} creatives`);
-      
       for (const creative of creatives) {
-        if (creative.imagePrompt && creative.imagePrompt.trim().length > 0) {
+        if (creative.imagePrompt) {
           try {
-            console.log(`🎨 Generating image for ${creative.channel} - ${creative.placement}...`);
+            console.log(`Generating image for ${creative.channel}...`);
             
             // Enhanced prompt with aspect ratio instructions
             const aspectRatioMap: Record<string, string> = {
@@ -1008,9 +1126,26 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
               '1.91:1': 'horizontal 1.91:1 banner format for display ads'
             };
             const aspectInstruction = aspectRatioMap[creative.imageAspectRatio || '1:1'];
-            const enhancedPrompt = `${aspectInstruction}. Ultra high resolution. ${creative.imagePrompt}`;
             
-            console.log(`   Prompt: ${enhancedPrompt.substring(0, 100)}...`);
+            const enhancedPrompt = `CRITICAL: Generate in ${aspectInstruction}. You MUST keep the main product from the base image EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact. DO NOT modify, alter, or reimagine the product itself in any way. ONLY add creative background elements, lighting effects, lifestyle context, or platform-specific styling AROUND the product to make it suitable for ${creative.channel} ${creative.placement} advertising. The product is the hero and must remain perfectly preserved. ${creative.imagePrompt}`;
+            
+            // Build message content with product image if available
+            const messageContent: any[] = [
+              {
+                type: 'text',
+                text: enhancedPrompt
+              }
+            ];
+            
+            // Add product image as base for editing/composition
+            if (baseProductImageUrl) {
+              messageContent.push({
+                type: 'image_url',
+                image_url: {
+                  url: baseProductImageUrl
+                }
+              });
+            }
             
             const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
               method: 'POST',
@@ -1020,37 +1155,33 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
               },
               body: JSON.stringify({
                 model: 'google/gemini-2.5-flash-image-preview',
-                messages: [{
-                  role: 'user',
-                  content: [{ type: 'text', text: enhancedPrompt }]
-                }],
+                messages: [
+                  {
+                    role: 'user',
+                    content: messageContent
+                  }
+                ],
                 modalities: ['image', 'text']
               }),
             });
             
             if (imageResponse.ok) {
               const imageData = await imageResponse.json();
-              const generatedBase64 = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+              const generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
               
-              if (generatedBase64) {
-                // Upload to storage
-                const filename = `${analysisId}/${creative.channelType}-${creative.placement.replace(/\s+/g, '-')}-${Date.now()}.png`;
-                const publicUrl = await uploadImageToStorage(generatedBase64, filename);
-                
-                if (publicUrl) {
-                  console.log(`✅ Image generated and stored for ${creative.channel}`);
-                  updatedCreatives.push({ ...creative, imageUrl: publicUrl });
-                } else {
-                  console.warn(`⚠ Image generated but upload failed for ${creative.channel}`);
-                  updatedCreatives.push(creative);
-                }
+              if (generatedImage) {
+                console.log(`Successfully generated image for ${creative.channel}`);
+                updatedCreatives.push({
+                  ...creative,
+                  imageUrl: generatedImage,
+                  logoUrl: brandLogoUrl
+                });
               } else {
-                console.warn(`⚠ No image in AI response for ${creative.channel}`);
+                console.log(`No image in response for ${creative.channel}`);
                 updatedCreatives.push(creative);
               }
             } else {
-              const errorText = await imageResponse.text();
-              console.error(`❌ AI generation failed for ${creative.channel}: ${imageResponse.status} - ${errorText}`);
+              console.error(`Failed to generate image for ${creative.channel}: ${imageResponse.status}`);
               updatedCreatives.push(creative);
             }
           } catch (error) {
@@ -1065,520 +1196,90 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
       return updatedCreatives;
     };
 
-    // ===============================
-    // PHASE 3 & 4: Agent Functions + Orchestration
-    // ===============================
+    // Structure the markdown response into sections
+    const lower = analysisText.toLowerCase();
+    const ciIdx = lower.indexOf('## customer insight');
+    const ctIdx = lower.indexOf('## campaign targeting');
+    const mpIdx = lower.indexOf('## media plan');
+    const caIdx = lower.indexOf('## competitive analysis');
+    const acIdx = lower.indexOf('## ad creative');
 
-    // Generate analysis ID for this agentic flow
-    const analysisId = crypto.randomUUID();
-    console.log('🎯 Starting agentic analysis:', analysisId);
+    let customerInsightCards: Array<{ id: string; title: string; content: string; icon: string; subItems?: Array<{ label: string; value: string }> }> = [];
+    let campaignTargetingCards: Array<{ id: string; title: string; content: string; icon: string; channel?: string; subItems?: Array<{ label: string; value: string }> }> = [];
+    let mediaPlanWeeks: Array<{ weekNumber: number; channels: Array<{ name: string; campaignType: string; budget: number; percentage: number }> }> = [];
+    let competitiveAnalysisData: { competitors: any[]; insights: any[] } | undefined = undefined;
+    let adCreatives: Array<any> = [];
 
-    // AGENT 1: Customer Insight Agent
-    const runCustomerInsightAgent = async (pageContent: string) => {
-      console.log('🤖 [Customer Insight Agent] Starting...');
+    if (ciIdx !== -1 && ctIdx !== -1) {
+      const ciContent = analysisText.slice(ciIdx, ctIdx).trim();
+      const ctContent = mpIdx !== -1 ? analysisText.slice(ctIdx, mpIdx).trim() : analysisText.slice(ctIdx).trim();
+      customerInsightCards = parseSubsections(ciContent, false);
+      campaignTargetingCards = parseSubsections(ctContent, true);
       
-      const systemPrompt = `You are a customer insight specialist. Your role is to analyze landing pages and extract ONLY customer insights. Focus on delivering practical, data-driven insights about the target audience.`;
+      // Parse media plan if exists
+      if (mpIdx !== -1) {
+        const mpContent = caIdx !== -1 ? analysisText.slice(mpIdx, caIdx).trim() : analysisText.slice(mpIdx).trim();
+        mediaPlanWeeks = parseMediaPlan(mpContent);
+      }
       
-      const userPrompt = `Analyze this landing page and provide ONLY customer insights. Use ### for subsection headers.
-
-Structure your response EXACTLY as shown:
-
-## CUSTOMER INSIGHT
-
-### Target Personas
-• Persona 1: [Name/description]
-• Persona 2: [Name/description]
-• Persona 3: [Name/description]
-
-### Demographics
-• Age: [age range]
-• Gender: [gender split]
-• Income: [income range]
-• Location: [geographic focus]
-
-### Psychographics
-• Values: [core values]
-• Interests: [key interests]
-• Lifestyle: [lifestyle traits]
-• Aspirations: [goals/desires]
-
-### Pain Points
-• Pain 1: [specific problem]
-• Pain 2: [specific problem]
-• Pain 3: [specific problem]
-
-### Decision Triggers
-• Trigger 1: [what makes them buy]
-• Trigger 2: [what makes them buy]
-• Trigger 3: [what makes them buy]
-
-### Communication Style
-• Tone: [messaging tone]
-• Language: [vocabulary style]
-• Approach: [communication strategy]
-
-Landing page content:
-${pageContent}`;
-
-      const response = await callAI(systemPrompt, userPrompt, lovableApiKey);
-      
-      // Parse the response
-      const lower = response.toLowerCase();
-      const ciIdx = lower.indexOf('## customer insight');
-      const ciContent = ciIdx !== -1 ? response.slice(ciIdx).trim() : response;
-      const insightCards = parseSubsections(ciContent, false);
-      
-      const insightData = {
-        rawText: response,
-        cards: insightCards
-      };
-      
-      await storeAgentOutput(analysisId, 'customer-insight', insightData);
-      console.log('✓ [Customer Insight Agent] Complete');
-      
-      return insightData;
-    };
-
-    // AGENT 2: Competitive Analysis Agent
-    const runCompetitiveAnalysisAgent = async (pageContent: string) => {
-      console.log('🤖 [Competitive Analysis Agent] Starting...');
-      
-      const systemPrompt = `You are a competitive intelligence analyst. Your role is to identify real competing brands and analyze their market positioning.`;
-      
-      const userPrompt = `Identify 3-4 REAL competing brands in the same product category and price range as the analyzed URL. For each competitor, provide their domain, category, price point, key strength, weakness, and market position.
-
-Structure your response EXACTLY as shown:
-
-## COMPETITIVE ANALYSIS
-
-### Competitor 1: [Real Brand Name]
-• Domain: [www.competitorbrand.com] (MUST be a real, established brand website)
-• Category: [product category]
-• Price Point: [their typical pricing range]
-• Key Strength: [what they do better]
-• Weakness: [opportunity gap]
-• Market Position: [premium/mid-range/budget, established/emerging]
-
-### Competitor 2: [Real Brand Name]
-• Domain: [www.competitorbrand.com]
-• Category: [product category]
-• Price Point: [their typical pricing range]
-• Key Strength: [what they do better]
-• Weakness: [opportunity gap]
-• Market Position: [premium/mid-range/budget, established/emerging]
-
-### Competitor 3: [Real Brand Name]
-• Domain: [www.competitorbrand.com]
-• Category: [product category]
-• Price Point: [their typical pricing range]
-• Key Strength: [what they do better]
-• Weakness: [opportunity gap]
-• Market Position: [premium/mid-range/budget, established/emerging]
-
-### Your Competitive Advantages
-• Advantage 1: [specific differentiator]
-• Advantage 2: [specific differentiator]
-• Advantage 3: [specific differentiator]
-
-### Areas for Improvement
-• Gap 1: [what competitors do better]
-• Gap 2: [what competitors do better]
-
-Landing page content:
-${pageContent}`;
-
-      const response = await callAI(systemPrompt, userPrompt, lovableApiKey);
-      
-      // Parse competitors
-      const lower = response.toLowerCase();
-      const caIdx = lower.indexOf('## competitive analysis');
-      const caContent = caIdx !== -1 ? response.slice(caIdx).trim() : response;
-      const competitors = await parseCompetitors(caContent);
-      
-      // Parse non-competitor insights
-      const insights = parseSubsections(caContent, false).filter(card => 
-        !card.title.toLowerCase().includes('competitor')
-      );
-      
-      const competitiveData = {
-        rawText: response,
-        competitors,
-        insights
-      };
-      
-      await storeAgentOutput(analysisId, 'competitive-analysis', competitiveData);
-      console.log('✓ [Competitive Analysis Agent] Complete');
-      
-      return competitiveData;
-    };
-
-    // AGENT 3: Campaign Targeting Agent
-    const runCampaignTargetingAgent = async (
-      pageContent: string,
-      customerInsight: any,
-      competitive: any
-    ) => {
-      console.log('🤖 [Campaign Targeting Agent] Starting...');
-      console.log('📥 Using customer insight data:', !!customerInsight);
-      console.log('📥 Using competitive data:', !!competitive);
-      
-      const systemPrompt = `You are a campaign strategist. Create channel-specific campaign strategies based on customer insights and competitive analysis provided.`;
-      
-      const userPrompt = `Given these customer insights and competitive analysis, create targeting strategies for relevant advertising channels.
-
-CUSTOMER INSIGHTS:
-${JSON.stringify(customerInsight, null, 2)}
-
-COMPETITIVE ANALYSIS:
-${JSON.stringify(competitive, null, 2)}
-
-Structure your response EXACTLY as shown:
-
-## CAMPAIGN TARGETING
-
-### Google Ads
-• Keywords: [top search terms based on pain points]
-• Audience: [targeting parameters based on demographics]
-• Campaign Type: [search/display/shopping]
-• Budget: [recommended allocation]
-
-### Meta Ads
-• Platforms: [Facebook/Instagram focus]
-• Audience: [detailed targeting based on psychographics]
-• Creative: [ad format recommendations]
-• Budget: [recommended allocation]
-
-### Pinterest Ads
-• Visual Strategy: [pin style recommendations]
-• Audience: [interest targeting]
-• Campaign Focus: [awareness/consideration]
-• Budget: [recommended allocation]
-(Only include if relevant to product)
-
-### TikTok Ads
-• Content Style: [video approach]
-• Audience: [demographic targeting]
-• Creative: [ad format]
-• Budget: [recommended allocation]
-(Only include if relevant to product)
-
-### YouTube Ads
-• Video Strategy: [content approach]
-• Audience: [targeting parameters]
-• Ad Format: [skippable/non-skippable]
-• Budget: [recommended allocation]
-(Only include if relevant to product)
-
-Make sure to directly reference the customer insights (demographics, psychographics, pain points) and competitive advantages in your strategy recommendations.
-
-Landing page content:
-${pageContent}`;
-
-      const response = await callAI(systemPrompt, userPrompt, lovableApiKey);
-      
-      // Parse targeting
-      const lower = response.toLowerCase();
-      const ctIdx = lower.indexOf('## campaign targeting');
-      const ctContent = ctIdx !== -1 ? response.slice(ctIdx).trim() : response;
-      const targetingCards = parseSubsections(ctContent, true);
-      
-      const targetingData = {
-        rawText: response,
-        cards: targetingCards
-      };
-      
-      await storeAgentOutput(analysisId, 'campaign-targeting', targetingData);
-      console.log('✓ [Campaign Targeting Agent] Complete');
-      
-      return targetingData;
-    };
-
-    // Media Plan Agent (simplified - can be enhanced later)
-    const runMediaPlanAgent = async (pageContent: string) => {
-      console.log('💰 [Media Plan Agent] Starting...');
-      
-      const systemPrompt = `You are a media planning specialist. Create a 4-6 week media plan with budget allocations.`;
-      
-      const userPrompt = `Provide a 4-6 week media plan with $100 weekly budget optimized for ROAS. Use this EXACT format:
-
-## MEDIA PLAN
-
-### Week 1
-• Google - PMax: $40 (40%)
-• Google - Search: $10 (10%)
-• Meta - Advantage+: $40 (40%)
-• Meta - Retargeting: $10 (10%)
-**Reasoning:** [Explain why these channels and allocations for THIS product]
-
-### Week 2
-• Google - PMax: $35 (35%)
-• Google - Search: $25 (25%)
-• Meta - Advantage+: $35 (35%)
-• Pinterest - Consideration: $5 (5%)
-**Reasoning:** [Explain strategy]
-
-Continue with Weeks 3-6 as needed.
-
-Landing page content:
-${pageContent}`;
-
-      const response = await callAI(systemPrompt, userPrompt, lovableApiKey);
-      
-      // Parse media plan
-      const lower = response.toLowerCase();
-      const mpIdx = lower.indexOf('## media plan');
-      const mpContent = mpIdx !== -1 ? response.slice(mpIdx).trim() : response;
-      const mediaPlanWeeks = parseMediaPlan(mpContent);
-      
-      const mediaPlanData = {
-        rawText: response,
-        weeks: mediaPlanWeeks
-      };
-      
-      await storeAgentOutput(analysisId, 'media-plan', mediaPlanData);
-      console.log('✓ [Media Plan Agent] Complete');
-      
-      return mediaPlanData;
-    };
-
-    // AGENT 4: Creative Generation Agent
-    const runCreativeGenerationAgent = async (
-      analysisId: string,
-      customerInsight: any,
-      competitive: any,
-      targeting: any,
-      productImageUrl: string,
-      logoUrl: string
-    ) => {
-      console.log('🎨 [Creative Generation Agent] Starting...');
-      console.log('📥 Using customer insight data:', !!customerInsight);
-      console.log('📥 Using competitive data:', !!competitive);
-      console.log('📥 Using targeting data:', !!targeting);
-      
-      // Helper function to extract clean text from cards
-      const extractCardContent = (cards: any[], keyword: string): string => {
-        const card = cards?.find((c: any) => c.title.toLowerCase().includes(keyword));
-        if (!card) return 'Not available';
+      // Parse competitive analysis if exists
+      if (caIdx !== -1) {
+        const caContent = acIdx !== -1 ? analysisText.slice(caIdx, acIdx).trim() : analysisText.slice(caIdx).trim();
+        const competitors = await parseCompetitors(caContent);
+        console.log('Competitive Analysis parsing result:', {
+          total: competitors.length,
+          items: competitors.map(c => ({ name: c.competitorName, products: c.products?.length || 0, adCopy: c.adCopyExamples?.length || 0 }))
+        });
         
-        if (card.subItems && card.subItems.length > 0) {
-          return card.subItems.map((item: any) => `${item.label}: ${item.value}`).join(', ');
-        }
-        return card.content || 'Not available';
-      };
-
-      const demographics = extractCardContent(customerInsight?.cards || [], 'demographic');
-      const psychographics = extractCardContent(customerInsight?.cards || [], 'psychographic');
-      const painPoints = extractCardContent(customerInsight?.cards || [], 'pain');
-      const decisionTriggers = extractCardContent(customerInsight?.cards || [], 'trigger');
-      const communicationStyle = extractCardContent(customerInsight?.cards || [], 'communication');
-      
-      const advantages = competitive?.insights?.find((i: any) => i.title.toLowerCase().includes('advantage'))?.subItems
-        ?.map((item: any) => `${item.label}: ${item.value}`).join(', ') || 'Not available';
-      
-      const marketPosition = competitive?.competitors?.map((c: any) => `${c.competitorName}: ${c.marketPosition}`).join(', ') || 'Not available';
-      
-      const channelStrategies = targeting?.cards?.map((ch: any) => 
-        `- ${ch.title}: ${ch.subItems?.map((item: any) => `${item.label}: ${item.value}`).join(', ')}`
-      ).join('\n') || 'Not available';
-      
-      const systemPrompt = `You are an expert ad copywriter. Generate platform-specific ad creatives that directly leverage customer insights, competitive advantages, and channel strategies.`;
-      
-      const userPrompt = `Generate platform-specific ad creatives using these insights:
-
-CUSTOMER PROFILE:
-Demographics: ${demographics}
-Psychographics: ${psychographics}
-Pain Points: ${painPoints}
-Decision Triggers: ${decisionTriggers}
-Communication Style: ${communicationStyle}
-
-COMPETITIVE POSITIONING:
-Our Advantages: ${advantages}
-Market Position: ${marketPosition}
-
-CHANNEL STRATEGIES:
-${channelStrategies}
-
-Create ad copy for each relevant channel that:
-1. Addresses the specific pain points identified
-2. Emphasizes our competitive advantages
-3. Uses the decision triggers
-4. Follows the channel-specific strategy
-5. Matches the communication style
-
-## AD CREATIVE
-
-CRITICAL FORMATTING RULES (FOLLOW EXACTLY):
-1. Each platform MUST start with "### [Platform Name] - [Placement]" (e.g., "### Google Search Ads - Search Placement")
-2. Each field MUST use bullet format: "• [Field Name]: [Value]"
-3. Field names MUST match EXACTLY as shown below (use "Headline 1", NOT "Headlines" or "Headline")
-4. Do NOT add extra text before/after the value
-5. Do NOT use variations or plurals in field names
-
-EXAMPLE (follow this format exactly):
-### Google Search Ads - Search Placement
-• Headline 1: Premium Leather Messenger Bag
-• Headline 2: Professional Work Bag for Men
-• Headline 3: 15" Laptop Compartment
-• Description 1: Full-grain leather messenger bag with organized interior. Perfect for professionals who value quality.
-• Description 2: Durable construction meets timeless style. Free shipping on orders over $100.
-• Image Prompt (1:1 Square): Professional dark brown leather messenger bag on white background, studio lighting
-
-For each relevant advertising channel, create MULTIPLE placement-specific ad variations optimized for that platform's exact specifications:
-
-### Google Search Ads - Search Placement
-• Headline 1: [30 chars max]
-• Headline 2: [30 chars max]
-• Headline 3: [30 chars max]
-• Description 1: [90 chars max]
-• Description 2: [90 chars max]
-• Image Prompt (1:1 Square): [For Display Network - clean product shot, professional lighting]
-
-### Google Display Ads - Display Placement
-• Headline 1: [25 chars max, concise value prop]
-• Description 1: [90 chars max]
-• Image Prompt (1.91:1 Horizontal): [Banner style - product + benefit text overlay]
-
-### Meta Ads - Feed Placement
-• Headline 1: [125 chars - hook + value prop]
-• Headline 2: [40 chars - benefit-driven CTA]
-• Description 1: [30 chars - supporting detail]
-• Image Prompt (1:1 Square): [Lifestyle imagery with product, authentic feel, mobile-optimized]
-
-### Meta Ads - Story Placement
-• Headline 1: [15 chars max - ultra-short hook]
-• Description 1: [10 chars - "Shop Now", "Learn More"]
-• Image Prompt (9:16 Vertical): [Full-screen immersive, product hero shot with minimal text space]
-
-### Pinterest Ads - Pin Placement
-• Headline 1: [100 chars - aspirational + keyword-rich]
-• Description 1: [500 chars - storytelling with benefits]
-• Image Prompt (2:3 Vertical): [Visually striking, bright colors, flat lay or styled, Pinterest aesthetic]
-
-### TikTok Ads - In-Feed Placement
-• Headline 1: [15 chars - first 3 seconds overlay]
-• Headline 2: [30 chars - mid-video overlay]
-• Description 1: [20 chars - end screen]
-• Image Prompt (9:16 Vertical): [Dynamic, youth-oriented, mobile-first, bold colors, text overlay space]
-
-### YouTube Ads - Video Placement
-• Headline 1: [100 chars - curiosity-driven]
-• Headline 2: [5-7 words - bold statement]
-• Description 1: [100 chars - above fold]
-• Image Prompt (16:9 Horizontal): [Attention-grabbing thumbnail, expressive faces OR dramatic product shot, high contrast]
-
-For each Image Prompt, synthesize insights from the customer profile to create visuals that resonate with the target audience.`;
-
-      const response = await callAI(systemPrompt, userPrompt, lovableApiKey);
-      
-      // Log the raw response for debugging
-      console.log('🔍 Raw AI Response (first 500 chars):', response.substring(0, 500));
-      console.log('🔍 Raw AI Response (last 500 chars):', response.substring(Math.max(0, response.length - 500)));
-      
-      // Parse ad creatives
-      const lower = response.toLowerCase();
-      const acIdx = lower.indexOf('## ad creative');
-      console.log('📍 Found "## ad creative" at index:', acIdx);
-      
-      const acContent = acIdx !== -1 ? response.slice(acIdx).trim() : response;
-      console.log('📝 Content to parse (first 1000 chars):', acContent.substring(0, 1000));
-      
-      const parsedCreatives = parseAdCreatives(acContent);
-      
-      console.log(`📊 Parsed ${parsedCreatives.length} ad creatives`);
-      parsedCreatives.forEach((c, i) => {
-        console.log(`  [${i}] ${c.channel} - ${c.placement}: ${c.headlines.length} headlines, ${c.descriptions.length} descriptions`);
-      });
-      
-      // Immediately store text-only creatives and kick off image generation in background
-      await storeAgentOutput(analysisId, 'ad-creative', parsedCreatives);
-
-      // Use EdgeRuntime.waitUntil for proper background task handling
-      const imageGenerationTask = (async () => {
-        try {
-          console.log('🎨 Starting background image generation...');
-          const withImages = await generateAdImages(parsedCreatives, lovableApiKey, analysisId);
-          await storeAgentOutput(analysisId, 'ad-creative', withImages);
-          console.log('✅ [Creative Generation Agent] Images generated and stored');
-        } catch (e) {
-          console.error('❌ Background image generation failed:', e);
-        }
-      })();
-
-      // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
-      if (typeof EdgeRuntime !== 'undefined') {
-        // @ts-ignore
-        EdgeRuntime.waitUntil(imageGenerationTask);
-      } else {
-        // Fallback for local testing
-        await imageGenerationTask;
+        // Parse non-competitor subsections as insights
+        const insights = parseSubsections(caContent, false).filter(card => 
+          !card.title.toLowerCase().includes('competitor')
+        );
+        
+        competitiveAnalysisData = {
+          competitors,
+          insights
+        };
       }
 
-      console.log('✓ [Creative Generation Agent] Complete (background image gen running)');
-      return parsedCreatives;
+    // Parse ad creative if exists
+    if (acIdx !== -1) {
+      const acContent = analysisText.slice(acIdx).trim();
+      const parsedCreatives = parseAdCreatives(acContent);
+      adCreatives = await generateAdImages(parsedCreatives, lovableApiKey, productImageUrl, logoUrl);
+    }
+    } else {
+      customerInsightCards = parseSubsections(analysisText, false);
+    }
+
+    const structuredData = {
+      customerInsight: customerInsightCards,
+      campaignTargeting: campaignTargetingCards,
+      mediaPlan: mediaPlanWeeks,
+      competitiveAnalysis: competitiveAnalysisData,
+      adCreatives: adCreatives.length > 0 ? adCreatives : undefined
     };
-
-    // ===============================
-    // ORCHESTRATION: Run agents in sequence
-    // ===============================
-
-    // PHASE 1: Run Customer Insight & Competitive Analysis in PARALLEL
-    console.log('📊 Phase 1: Running Customer Insight & Competitive Analysis in parallel...');
-    const [customerInsightData, competitiveData] = await Promise.all([
-      runCustomerInsightAgent(pageContent),
-      runCompetitiveAnalysisAgent(pageContent)
-    ]);
-
-    // PHASE 2: Run Campaign Targeting (needs outputs from Phase 1)
-    console.log('🎯 Phase 2: Running Campaign Targeting...');
-    const targetingData = await runCampaignTargetingAgent(
-      pageContent,
-      customerInsightData,
-      competitiveData
-    );
-
-    // PHASE 3: Run Media Plan (can run independently)
-    console.log('💰 Phase 3: Running Media Plan...');
-    const mediaPlanData = await runMediaPlanAgent(pageContent);
-
-    // PHASE 4: Run Creative Generation (needs ALL prior outputs)
-    console.log('🎨 Phase 4: Running Creative Generation...');
-    const creativesData = await runCreativeGenerationAgent(
-      analysisId,
-      customerInsightData,
-      competitiveData,
-      targetingData,
-      productImageUrl,
-      logoUrl
-    );
-
-    // Convert agent outputs to frontend format
-    const analysis = {
-      customerInsight: customerInsightData.cards,
-      campaignTargeting: targetingData.cards,
-      mediaPlan: mediaPlanData.weeks,
-      competitiveAnalysis: {
-        competitors: competitiveData.competitors,
-        insights: competitiveData.insights
-      },
-      adCreatives: creativesData
-    };
-
-    console.log('✅ Agentic analysis complete:', analysisId);
+    
     console.log('Structured response ready:', {
-      customerInsightCards: analysis.customerInsight.length,
-      campaignTargetingCards: analysis.campaignTargeting.length,
-      mediaPlanWeeks: analysis.mediaPlan.length,
-      competitiveAnalysis: { 
-        competitors: analysis.competitiveAnalysis.competitors.length, 
-        insights: analysis.competitiveAnalysis.insights.length 
-      },
-      adCreatives: analysis.adCreatives.length
+      customerInsightCards: customerInsightCards.length,
+      campaignTargetingCards: campaignTargetingCards.length,
+      mediaPlanWeeks: mediaPlanWeeks.length,
+      competitiveAnalysis: competitiveAnalysisData ? {
+        competitors: competitiveAnalysisData.competitors.length,
+        insights: competitiveAnalysisData.insights.length
+      } : 'not included',
+      adCreatives: adCreatives.length
     });
 
     return new Response(
-      JSON.stringify({ success: true, analysis, url, analysisId }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: true, 
+        analysis: structuredData,
+        url: url 
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
 
   } catch (error) {
@@ -1586,11 +1287,11 @@ For each Image Prompt, synthesize insights from the customer profile to create v
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
