@@ -120,24 +120,11 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { url, action, creatives, analysisId } = body || {};
+    const { url } = body || {};
 
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!lovableApiKey) {
       throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
-    // Deterministic fallback: direct image generation via single API call
-    if (action === 'generate-images') {
-      if (!analysisId || !Array.isArray(creatives)) {
-        throw new Error('analysisId and creatives are required for generate-images');
-      }
-      const withImages = await generateAdImages(creatives, lovableApiKey, analysisId);
-      await storeAgentOutput(analysisId, 'ad-creative', withImages);
-      return new Response(
-        JSON.stringify({ success: true, adCreatives: withImages, analysisId }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     console.log('Analyzing URL:', url);
