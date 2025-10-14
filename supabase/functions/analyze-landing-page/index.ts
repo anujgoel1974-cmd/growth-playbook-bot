@@ -317,44 +317,51 @@ Structure your response EXACTLY as shown:
 
 ## CAMPAIGN TARGETING
 
-### Google Ads
-• Keywords: [top search terms]
-• Audience: [targeting parameters]
-• Campaign Type: [search/display/shopping]
-• Budget: [recommended allocation]
+### Google Ads - Search & Display
+• Primary Keywords: [5-7 high-intent search terms, organized by intent stage]
+• Secondary Keywords: [5-7 supporting/long-tail terms]
+• Negative Keywords: [terms to exclude to improve quality]
+• Audience Segments: [detailed targeting parameters - demographics, interests, behaviors]
+• Campaign Types: [recommended campaign structure - search/display/shopping/performance max]
+• Ad Formats: [specific ad types to prioritize]
 
-### Meta Ads
-• Platforms: [Facebook/Instagram focus]
-• Audience: [detailed targeting]
-• Creative: [ad format recommendations]
-• Budget: [recommended allocation]
+### Meta Ads - Facebook & Instagram
+• Core Audiences: [detailed interest-based targeting with specific categories]
+• Custom Audiences: [retargeting strategies - website visitors, engagement, lookalikes]
+• Placement Strategy: [Facebook feed/stories, Instagram feed/reels/stories]
+• Ad Formats: [single image, carousel, video, collection - with reasoning]
+• Creative Themes: [visual and messaging direction]
 
 ### Pinterest Ads
-• Visual Strategy: [pin style recommendations]
-• Audience: [interest targeting]
-• Campaign Focus: [awareness/consideration]
-• Budget: [recommended allocation]
+• Primary Interests: [top interest categories for targeting]
+• Keyword Targeting: [Pinterest-specific search terms]
+• Visual Strategy: [pin style, composition, and aesthetic recommendations]
+• Campaign Objectives: [awareness/consideration/conversion focus]
+• Pin Types: [standard, video, carousel, idea pins]
 (Only include if relevant to product)
 
 ### TikTok Ads
-• Content Style: [video approach]
-• Audience: [demographic targeting]
-• Creative: [ad format]
-• Budget: [recommended allocation]
+• Target Demographics: [age, gender, location with TikTok-specific insights]
+• Interest Categories: [content interests and behaviors]
+• Content Strategy: [video style, trends, challenges to leverage]
+• Ad Formats: [in-feed, spark ads, branded effects]
+• Creative Hooks: [attention-grabbing tactics for first 3 seconds]
 (Only include if relevant to product)
 
 ### YouTube Ads
-• Video Strategy: [content approach]
-• Audience: [targeting parameters]
-• Ad Format: [skippable/non-skippable]
-• Budget: [recommended allocation]
+• Audience Targeting: [demographics, interests, affinity audiences]
+• Keyword & Topic Targeting: [relevant YouTube search terms and content themes]
+• Placement Strategy: [specific channels, videos, or content types]
+• Ad Formats: [skippable in-stream, non-skippable, bumper, discovery]
+• Video Strategy: [content approach, length, messaging structure]
 (Only include if relevant to product)
 
 ### LinkedIn Ads
-• Targeting: [job titles/industries]
-• Content: [messaging approach]
-• Campaign: [sponsored content/InMail]
-• Budget: [recommended allocation]
+• Professional Targeting: [job titles, seniority, industries, company size]
+• Account-Based Marketing: [company targeting if B2B]
+• Interest & Skills: [relevant professional interests]
+• Campaign Types: [sponsored content, message ads, dynamic ads]
+• Content Strategy: [messaging approach, thought leadership themes]
 (Only include if relevant to product)
 
 Landing page content:
