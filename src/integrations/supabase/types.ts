@@ -122,6 +122,7 @@ export type Database = {
           session_id: string | null
           thumbnail_url: string | null
           title: string | null
+          trend_analysis: Json | null
           url: string
         }
         Insert: {
@@ -136,6 +137,7 @@ export type Database = {
           session_id?: string | null
           thumbnail_url?: string | null
           title?: string | null
+          trend_analysis?: Json | null
           url: string
         }
         Update: {
@@ -150,6 +152,7 @@ export type Database = {
           session_id?: string | null
           thumbnail_url?: string | null
           title?: string | null
+          trend_analysis?: Json | null
           url?: string
         }
         Relationships: [

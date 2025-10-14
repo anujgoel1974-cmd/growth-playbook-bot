@@ -1223,6 +1223,153 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
       return updatedCreatives;
     };
 
+    // Analyze trends in parallel with main analysis parsing
+    const analyzeTrends = async (productContext: string, productName: string, category: string) => {
+      try {
+        const trendPrompt = `You are a trend analyst specializing in identifying relevant marketing opportunities.
+
+Analyze current and upcoming trends (past 7 days and next 30 days) that align with this product:
+
+Product: ${productName}
+Category: ${category}
+Context: ${productContext.substring(0, 2000)}
+
+Identify 5-7 trends including:
+- Recent viral moments or news (past 7 days)
+- Upcoming holidays, events, or cultural moments (next 30 days)
+- Seasonal patterns relevant to this product
+- Social media trends aligned with product positioning
+
+For each trend, provide:
+
+## [Trend Headline]
+**Timeframe:** [Past Week / Next Month / Ongoing]
+**Category:** [Cultural / Seasonal / News / Holiday / Social Media]
+**Overview:** [2-3 sentences explaining the trend and why it matters]
+**Product Alignment:** [2-3 sentences on how this product can leverage this trend in marketing campaigns. Be specific about angles, messaging, or creative approaches]
+**Relevance Score:** [1-10]
+
+Focus on actionable, specific trends that a marketing team can immediately use for campaign ideation.`;
+
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: 'You are a marketing trend analyst.' },
+              { role: 'user', content: trendPrompt }
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(`Trend analysis failed: ${response.status}`);
+          return [];
+        }
+
+        const data = await response.json();
+        const trendText = data.choices[0].message.content;
+        
+        // Parse trends from markdown response
+        const trends: Array<{
+          id: string;
+          headline: string;
+          overview: string;
+          productAlignment: string;
+          timeframe: 'past' | 'upcoming';
+          relevanceScore: number;
+          category: string;
+          icon: string;
+        }> = [];
+        
+        const sections = trendText.split('##').filter((s: string) => s.trim());
+        
+        sections.forEach((section: string, index: number) => {
+          const lines = section.split('\n').filter((l: string) => l.trim());
+          const headline = lines[0].trim();
+          
+          let timeframe: 'past' | 'upcoming' = 'upcoming';
+          let category = 'General';
+          let overview = '';
+          let productAlignment = '';
+          let relevanceScore = 7;
+          
+          lines.forEach((line: string) => {
+            if (line.includes('**Timeframe:**')) {
+              const timeValue = line.split('**Timeframe:**')[1].trim().toLowerCase();
+              timeframe = timeValue.includes('past') || timeValue.includes('week') ? 'past' : 'upcoming';
+            }
+            if (line.includes('**Category:**')) {
+              category = line.split('**Category:**')[1].trim();
+            }
+            if (line.includes('**Overview:**')) {
+              overview = line.split('**Overview:**')[1].trim();
+            }
+            if (line.includes('**Product Alignment:**')) {
+              productAlignment = line.split('**Product Alignment:**')[1].trim();
+            }
+            if (line.includes('**Relevance Score:**')) {
+              const scoreMatch = line.match(/(\d+)/);
+              if (scoreMatch) relevanceScore = parseInt(scoreMatch[1]);
+            }
+          });
+          
+          // Assign icons based on category
+          const iconMap: Record<string, string> = {
+            'Cultural': 'Users',
+            'Seasonal': 'Calendar',
+            'News': 'Newspaper',
+            'Holiday': 'Gift',
+            'Social Media': 'Share2',
+          };
+          
+          if (headline && overview && productAlignment) {
+            trends.push({
+              id: `trend-${index + 1}`,
+              headline,
+              overview,
+              productAlignment,
+              timeframe,
+              relevanceScore,
+              category,
+              icon: iconMap[category] || 'TrendingUp',
+            });
+          }
+        });
+        
+        return trends.sort((a, b) => b.relevanceScore - a.relevanceScore);
+      } catch (error) {
+        console.error('Error analyzing trends:', error);
+        return [];
+      }
+    };
+
+    // Extract product name and category for trend analysis
+    const extractProductInfo = (content: string) => {
+      const lines = content.split('\n').slice(0, 50);
+      let productName = 'this product';
+      let category = 'general';
+      
+      // Simple heuristic extraction
+      for (const line of lines) {
+        if (line.toLowerCase().includes('product') || line.toLowerCase().includes('shop')) {
+          productName = line.substring(0, 100);
+          break;
+        }
+      }
+      
+      return { productName, category };
+    };
+
+    const { productName, category } = extractProductInfo(pageContent);
+    
+    // Run trend analysis in parallel with parsing
+    const trendsPromise = analyzeTrends(pageContent, productName, category);
+
     // Structure the markdown response into sections
     const lower = analysisText.toLowerCase();
     const ciIdx = lower.indexOf('## customer insight');
@@ -1279,12 +1426,16 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
       customerInsightCards = parseSubsections(analysisText, false);
     }
 
+    // Wait for trend analysis to complete
+    const trendAnalysis = await trendsPromise;
+
     const structuredData = {
       customerInsight: customerInsightCards,
       campaignTargeting: campaignTargetingCards,
       mediaPlan: mediaPlanWeeks,
       competitiveAnalysis: competitiveAnalysisData,
-      adCreatives: adCreatives.length > 0 ? adCreatives : undefined
+      adCreatives: adCreatives.length > 0 ? adCreatives : undefined,
+      trendAnalysis: trendAnalysis.length > 0 ? trendAnalysis : undefined
     };
     
     console.log('Structured response ready:', {
@@ -1295,7 +1446,8 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
         competitors: competitiveAnalysisData.competitors.length,
         insights: competitiveAnalysisData.insights.length
       } : 'not included',
-      adCreatives: adCreatives.length
+      adCreatives: adCreatives.length,
+      trendAnalysis: trendAnalysis.length
     });
 
     return new Response(
