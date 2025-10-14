@@ -214,9 +214,9 @@ const Results = () => {
 
         console.log('Calling analyze-landing-page function...');
         
-        // Create a timeout promise for 3 minutes
+        // Create a timeout promise for 5 minutes (extended to allow competitive analysis)
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Analysis timed out after 3 minutes. The page may have too many competitors to analyze.')), 180000);
+          setTimeout(() => reject(new Error('Analysis timed out. This usually happens with complex pages. The analysis will continue with partial competitive data.')), 300000);
         });
         
         // Race between the function call and timeout

@@ -913,7 +913,7 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
 
       console.log('parseCompetitors: total competitors', competitors.length);
       
-      // OPTIMIZATION: Now scrape all competitors in PARALLEL instead of sequentially
+      // OPTIMIZATION: Now scrape all competitors in PARALLEL with aggressive timeout
       if (competitors.length > 0) {
         console.log('Starting parallel scraping for all competitors...');
         
@@ -922,14 +922,20 @@ REMEMBER: Include ALL FIVE sections (Customer Insight, Campaign Targeting, Media
           const catSlug = (comp.category || 'products').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
           
           try {
-            // Scrape products
-            const products = await scrapeCompetitorProducts(comp.domain, catSlug);
-            comp.products = products;
+            // Add aggressive 15-second timeout per competitor to prevent hanging
+            const scrapingTimeout = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Competitor scraping timeout')), 15000)
+            );
             
-            // Generate ad copy if we have products
-            if (products.length > 0 && lovableApiKey) {
-              try {
-                const adCopyPrompt = `Based on this real competitor brand "${comp.competitorName}" and their actual product "${products[0].name}" priced at ${products[0].price}, generate 3 realistic ad copy examples they would likely run on different platforms. Keep it concise and authentic to their brand positioning as ${comp.marketPosition}.
+            const scrapingWork = (async () => {
+              // Scrape products
+              const products = await scrapeCompetitorProducts(comp.domain, catSlug);
+              comp.products = products;
+              
+              // Generate ad copy if we have products (skip if no products to save time)
+              if (products.length > 0 && lovableApiKey) {
+                try {
+                  const adCopyPrompt = `Based on this real competitor brand "${comp.competitorName}" and their actual product "${products[0].name}" priced at ${products[0].price}, generate 3 realistic ad copy examples they would likely run on different platforms. Keep it concise and authentic to their brand positioning as ${comp.marketPosition}.
 
 Format:
 **Platform Name:**
@@ -938,55 +944,59 @@ Format:
 
 Generate for: Meta Feed, Google Search, and Google Display.`;
 
-                const adCopyResponse = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', 10000, {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${lovableApiKey}`,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    model: 'google/gemini-2.5-flash',
-                    messages: [
-                      { role: 'user', content: adCopyPrompt }
-                    ],
-                    max_tokens: 1000,
-                  }),
-                });
+                  const adCopyResponse = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', 10000, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${lovableApiKey}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      model: 'google/gemini-2.5-flash',
+                      messages: [
+                        { role: 'user', content: adCopyPrompt }
+                      ],
+                      max_tokens: 1000,
+                    }),
+                  });
 
-                if (adCopyResponse.ok) {
-                  const adData = await adCopyResponse.json();
-                  const adText = adData.choices[0].message.content;
-                  
-                  // Parse the ad copy from response
-                  const adCopyExamples: Array<{ platform: string; headline: string; description: string }> = [];
-                  const adLines = adText.split('\n');
-                  let currentAd: any = null;
-                  
-                  for (const line of adLines) {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith('**') && trimmed.includes(':')) {
-                      if (currentAd) adCopyExamples.push(currentAd);
-                      currentAd = { platform: trimmed.replace(/\*\*/g, '').replace(':', '').trim(), headline: '', description: '' };
-                    } else if (currentAd && trimmed.startsWith('•')) {
-                      const withoutBullet = trimmed.replace(/^•\s*/, '');
-                      if (withoutBullet.toLowerCase().includes('headline:')) {
-                        currentAd.headline = withoutBullet.split(':')[1].trim();
-                      } else if (withoutBullet.toLowerCase().includes('description:')) {
-                        currentAd.description = withoutBullet.split(':')[1].trim();
+                  if (adCopyResponse.ok) {
+                    const adData = await adCopyResponse.json();
+                    const adText = adData.choices[0].message.content;
+                    
+                    // Parse the ad copy from response
+                    const adCopyExamples: Array<{ platform: string; headline: string; description: string }> = [];
+                    const adLines = adText.split('\n');
+                    let currentAd: any = null;
+                    
+                    for (const line of adLines) {
+                      const trimmed = line.trim();
+                      if (trimmed.startsWith('**') && trimmed.includes(':')) {
+                        if (currentAd) adCopyExamples.push(currentAd);
+                        currentAd = { platform: trimmed.replace(/\*\*/g, '').replace(':', '').trim(), headline: '', description: '' };
+                      } else if (currentAd && trimmed.startsWith('•')) {
+                        const withoutBullet = trimmed.replace(/^•\s*/, '');
+                        if (withoutBullet.toLowerCase().includes('headline:')) {
+                          currentAd.headline = withoutBullet.split(':')[1].trim();
+                        } else if (withoutBullet.toLowerCase().includes('description:')) {
+                          currentAd.description = withoutBullet.split(':')[1].trim();
+                        }
                       }
                     }
+                    if (currentAd) adCopyExamples.push(currentAd);
+                    
+                    comp.adCopyExamples = adCopyExamples;
                   }
-                  if (currentAd) adCopyExamples.push(currentAd);
-                  
-                  comp.adCopyExamples = adCopyExamples;
+                } catch (error) {
+                  console.error(`Error generating ad copy for ${comp.competitorName}:`, error);
                 }
-              } catch (error) {
-                console.error(`Error generating ad copy for ${comp.competitorName}:`, error);
               }
-            }
+              
+              console.log(`parseCompetitors: pushed competitor ${comp.competitorName}`);
+              return { success: true, competitor: comp };
+            })();
             
-            console.log(`parseCompetitors: pushed competitor ${comp.competitorName}`);
-            return { success: true, competitor: comp };
+            // Race between actual scraping and timeout
+            return await Promise.race([scrapingWork, scrapingTimeout]);
           } catch (error) {
             console.error(`Error scraping competitor ${comp.competitorName}:`, error);
             // Return competitor with empty products on error (graceful degradation)
@@ -996,11 +1006,21 @@ Generate for: Meta Feed, Google Search, and Google Display.`;
           }
         });
         
-        // Wait for all scraping to complete (or fail)
-        const results = await Promise.allSettled(scrapingPromises);
+        // Wait for all scraping with overall 30-second timeout
+        const overallTimeout = new Promise((resolve) => 
+          setTimeout(() => {
+            console.log('Competitive scraping taking too long, moving forward with partial results...');
+            resolve([]);
+          }, 30000)
+        );
+        
+        const results = await Promise.race([
+          Promise.allSettled(scrapingPromises),
+          overallTimeout
+        ]) as any;
         
         // Log results
-        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const successful = Array.isArray(results) ? results.filter((r: any) => r.status === 'fulfilled').length : 0;
         console.log(`Competitive Analysis parsing result: {
   total: ${competitors.length},
   items: [
