@@ -267,7 +267,7 @@ const Results = () => {
         setAnalysis(data.analysis);
 
         // Auto-save analysis to history
-        if (data.analysis && data.sessionId) {
+        if (data.analysis) {
           try {
             // Extract metadata from analysis
             const productName = data.analysis.customerInsight?.find((card: any) => 
@@ -285,16 +285,14 @@ const Results = () => {
 
             const thumbnailUrl = data.analysis.adCreatives?.[0]?.imageUrl || null;
 
-            await supabase.from("saved_analyses").upsert({
-              session_id: data.sessionId,
+            // Insert new analysis (let database generate ID, no session_id needed)
+            await supabase.from("saved_analyses").insert({
               url: url,
               title: productName ? `${productName} Campaign Analysis` : null,
               thumbnail_url: thumbnailUrl,
               analysis_data: data.analysis,
               product_name: productName,
               channels: channels.length > 0 ? channels : null,
-            }, {
-              onConflict: 'session_id'
             });
 
             sonnerToast.success("Analysis saved to history", {
