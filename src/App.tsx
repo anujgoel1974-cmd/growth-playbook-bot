@@ -10,6 +10,7 @@ import History from "./pages/History";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import ConnectPlatforms from "./pages/ConnectPlatforms";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
         <Routes>
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/connect-platforms" element={<ConnectPlatforms />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/" element={<Index />} />
           <Route path="/results" element={<Results />} />
           <Route path="/sitemap" element={<Sitemap />} />
