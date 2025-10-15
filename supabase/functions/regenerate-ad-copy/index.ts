@@ -114,6 +114,39 @@ ${filters.trendHeadline && filters.trendHeadline !== 'none'
 CRITICAL PLATFORM CONSTRAINTS:
 You MUST maintain the exact same structure and character limits for each platform. Return the EXACT number of headlines and descriptions as the original.`;
 
+    // Helper function to extract visual context from trend headlines
+    const getTrendVisualContext = (trendHeadline: string | undefined): string => {
+      if (!trendHeadline || trendHeadline === 'none') return '';
+      
+      // Map trend keywords to visual context descriptors
+      const trendKeywords: Record<string, string> = {
+        'diwali': 'festive lighting, diya elements, traditional patterns in background, celebratory atmosphere',
+        'festival': 'festive decorations, celebration vibes, joyful atmosphere, cultural elements',
+        'sustainable': 'natural elements, eco-friendly aesthetic, green tones, organic textures',
+        'wellness': 'calming atmosphere, natural light, zen elements, health-focused mood',
+        'tech': 'modern minimalist setting, digital aesthetic, futuristic elements, innovation feel',
+        'holiday': 'seasonal decorations, gift-giving context, warm cozy atmosphere',
+        'summer': 'bright natural lighting, outdoor vibes, fresh energetic mood',
+        'winter': 'cozy indoor setting, warm lighting, seasonal ambiance',
+        'fashion week': 'runway-inspired lighting, high-fashion aesthetic, editorial style',
+        'sale': 'attention-grabbing elements, promotional visual cues, excitement indicators',
+        'new year': 'fresh start aesthetic, renewal vibes, forward-looking mood',
+        'back to school': 'educational setting hints, organized aesthetic, preparation mood'
+      };
+      
+      const lowerHeadline = trendHeadline.toLowerCase();
+      
+      // Find matching keywords in the trend headline
+      for (const [keyword, visualContext] of Object.entries(trendKeywords)) {
+        if (lowerHeadline.includes(keyword)) {
+          return visualContext;
+        }
+      }
+      
+      // Default subtle trend influence if no specific keyword matches
+      return 'contextually relevant background elements that subtly reference current trends';
+    };
+
     // Helper function to generate style-aware image prompts
     const enhanceImagePrompt = (originalPrompt: string, creative: AdCreative): string => {
       const voiceDescriptors: Record<string, string> = {
@@ -136,14 +169,28 @@ You MUST maintain the exact same structure and character limits for each platfor
 
       const voiceStyle = voiceDescriptors[filters.brandVoice] || '';
       const emotionalStyle = emotionalDescriptors[filters.emotionalHook] || '';
+      const trendContext = getTrendVisualContext(filters.trendHeadline);
 
-      return `${originalPrompt}. Style: ${voiceStyle}, ${emotionalStyle}. Platform: ${creative.channel}`;
+      // Combine all style elements
+      let stylePrompt = `${originalPrompt}. Style: ${voiceStyle}, ${emotionalStyle}`;
+      
+      // Add trend context if available (should be subtle and in background only)
+      if (trendContext) {
+        stylePrompt += `. Background Context (subtle): ${trendContext}`;
+      }
+      
+      stylePrompt += `. Platform: ${creative.channel}`;
+      
+      return stylePrompt;
     };
 
     // Helper function to generate ad images
     const generateAdImage = async (creative: AdCreative, apiKey: string): Promise<string | undefined> => {
       try {
         console.log(`Regenerating image for ${creative.channel}...`);
+        if (filters.trendHeadline && filters.trendHeadline !== 'none') {
+          console.log(`Applying trend context: ${filters.trendHeadline}`);
+        }
         
         const aspectRatioMap: Record<string, string> = {
           '1:1': 'square 1:1 format, centered composition',
@@ -157,7 +204,21 @@ You MUST maintain the exact same structure and character limits for each platfor
         // Enhance the image prompt with filter-based styling
         const enhancedImagePrompt = enhanceImagePrompt(creative.imagePrompt, creative);
         
-        const fullPrompt = `CRITICAL: Generate in ${aspectInstruction}. You MUST keep the main product from the base image EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact. DO NOT modify, alter, or reimagine the product itself in any way. ONLY add creative background elements, lighting effects, lifestyle context, or platform-specific styling AROUND the product to make it suitable for ${creative.channel} ${creative.placement} advertising. ${enhancedImagePrompt}`;
+        const fullPrompt = `CRITICAL: Generate in ${aspectInstruction}. 
+
+PRODUCT PRESERVATION (ABSOLUTE PRIORITY):
+- Keep the main product EXACTLY as it is - 100% unchanged, same colors, same design, same shape, completely recognizable and intact
+- DO NOT modify, alter, or reimagine the product itself in any way
+- The product should be the clear focal point
+
+BACKGROUND & CONTEXT MODIFICATIONS (ALLOWED):
+- Add creative background elements, lighting effects, lifestyle context around the product
+- Apply platform-specific styling for ${creative.channel} ${creative.placement} advertising
+${filters.trendHeadline && filters.trendHeadline !== 'none' 
+  ? `- Incorporate subtle visual references to the trend "${filters.trendHeadline}" in the BACKGROUND/CONTEXT only (e.g., seasonal decorations, themed props, relevant atmosphere)` 
+  : ''}
+
+${enhancedImagePrompt}`;
         
         const messageContent: any[] = [
           {
