@@ -24,55 +24,90 @@ serve(async (req) => {
     }
 
     // Build context-aware system prompt with metrics data
-    const systemPrompt = `You are a marketing analytics AI assistant for a campaign dashboard showing advertising campaign data.
+    const systemPrompt = `You are an expert marketing analytics AI assistant. You help users understand their advertising campaign performance across multiple platforms including Google Ads, Meta (Facebook/Instagram), Bing, TikTok, LinkedIn, and Pinterest.
 
-Current Campaign Data (Last 30 Days):
-- Total Spend: $${metrics.totalSpend.toLocaleString()}
-- Total Impressions: ${metrics.totalImpressions.toLocaleString()}
-- Total Clicks: ${metrics.totalClicks.toLocaleString()}
-- Total Conversions: ${metrics.totalConversions}
-- Average CTR: ${metrics.avgCTR}%
-- Average CPC: $${metrics.avgCPC.toFixed(2)}
-- Average CPA: $${metrics.avgCPA.toFixed(2)}
-- Conversion Rate: ${metrics.conversionRate}%
+Current Campaign Metrics Overview (Last 30 Days):
+
+PERFORMANCE:
+- Total Spend: $${metrics.totalSpend.toLocaleString()} | Revenue: $${metrics.totalRevenue?.toLocaleString() || 'N/A'} | Profit: $${metrics.totalProfit?.toLocaleString() || 'N/A'}
+- ROAS: ${metrics.avgROAS?.toFixed(2) || 'N/A'}x | ROI: ${metrics.avgROI?.toFixed(1) || 'N/A'}%
+- Impressions: ${metrics.totalImpressions.toLocaleString()} | Clicks: ${metrics.totalClicks.toLocaleString()}
+- CTR: ${metrics.avgCTR}% | CPC: $${metrics.avgCPC.toFixed(2)} | CPA: $${metrics.avgCPA.toFixed(2)}
+- Conversions: ${metrics.totalConversions} | CVR: ${metrics.conversionRate}%
+- Avg Order Value: $${metrics.avgOrderValue?.toFixed(2) || 'N/A'}
+
+CONVERSION FUNNEL:
+- Clicks → Landing Page Views: ${metrics.totalLandingPageViews?.toLocaleString() || 'N/A'} (${metrics.totalLandingPageViews ? ((metrics.totalLandingPageViews/metrics.totalClicks)*100).toFixed(1) : 'N/A'}%)
+- Landing Pages → Add to Cart: ${metrics.totalAddToCart?.toLocaleString() || 'N/A'} (${metrics.totalAddToCart && metrics.totalLandingPageViews ? ((metrics.totalAddToCart/metrics.totalLandingPageViews)*100).toFixed(1) : 'N/A'}%)
+- Add to Cart → Initiate Checkout: ${metrics.totalInitiateCheckout?.toLocaleString() || 'N/A'} (${metrics.totalInitiateCheckout && metrics.totalAddToCart ? ((metrics.totalInitiateCheckout/metrics.totalAddToCart)*100).toFixed(1) : 'N/A'}%)
+- Checkout → Purchase: ${metrics.totalConversions} (${metrics.totalInitiateCheckout ? ((metrics.totalConversions/metrics.totalInitiateCheckout)*100).toFixed(1) : 'N/A'}%)
+- Bounce Rate: ${metrics.avgBounceRate?.toFixed(1) || 'N/A'}% | Avg Time on Site: ${metrics.avgTimeOnSite ? Math.floor(metrics.avgTimeOnSite/60) + 'm ' + (metrics.avgTimeOnSite%60) + 's' : 'N/A'}
+
+AUDIENCE INSIGHTS:
+- Unique Reach: ${metrics.totalUniqueReach?.toLocaleString() || 'N/A'} | Avg Frequency: ${metrics.avgFrequency?.toFixed(2) || 'N/A'}
+- Mobile Conversions: ${metrics.mobileShareOfConversions?.toFixed(1) || 'N/A'}% | Desktop: ${metrics.desktopShareOfConversions?.toFixed(1) || 'N/A'}%
+
+ENGAGEMENT & VIDEO:
+- Total Engagements: ${metrics.totalEngagements?.toLocaleString() || 'N/A'} | Engagement Rate: ${metrics.avgEngagementRate?.toFixed(2) || 'N/A'}%
+- Video Views: ${metrics.totalVideoViews?.toLocaleString() || 'N/A'} | Video Completion: ${metrics.avgVideoCompletionRate?.toFixed(1) || 'N/A'}%
+
+QUALITY METRICS:
+- Avg Quality Score: ${metrics.avgQualityScore?.toFixed(1) || 'N/A'}/10 | Relevance Score: ${metrics.avgRelevanceScore?.toFixed(1) || 'N/A'}/10
+- Avg Impression Share: ${metrics.avgImpressionShare?.toFixed(1) || 'N/A'}%
 
 Platform Breakdown:
 ${metrics.platformBreakdown.map((p: any) => 
-  `- ${p.platform}: $${p.spend.toLocaleString()} spent, CTR ${p.ctr}%, ${p.conversions} conversions, CPA $${p.cpa.toFixed(2)}`
+  `- ${p.platform}: $${p.spend.toLocaleString()} spend, ${p.ctr}% CTR, ${p.conversions} conversions, $${p.cpa.toFixed(2)} CPA, $${p.revenue?.toFixed(2) || 'N/A'} revenue, ${p.roas?.toFixed(2) || 'N/A'}x ROAS, Quality: ${p.qualityScore?.toFixed(1) || 'N/A'}/10, Impression Share: ${p.impressionShare?.toFixed(1) || 'N/A'}%`
 ).join('\n')}
 
-Recent Trends:
-- Spending ${metrics.trends.spendChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(metrics.trends.spendChange)}%
-- Impressions ${metrics.trends.impressionsChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(metrics.trends.impressionsChange)}%
-- CTR ${metrics.trends.ctrChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(metrics.trends.ctrChange)}%
-- Conversions ${metrics.trends.conversionsChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(metrics.trends.conversionsChange)}%
+Trends (vs. previous period):
+- Spend: ${metrics.trends.spendChange > 0 ? '+' : ''}${metrics.trends.spendChange}%
+- Impressions: ${metrics.trends.impressionsChange > 0 ? '+' : ''}${metrics.trends.impressionsChange}%
+- CTR: ${metrics.trends.ctrChange > 0 ? '+' : ''}${metrics.trends.ctrChange}%
+- Conversions: ${metrics.trends.conversionsChange > 0 ? '+' : ''}${metrics.trends.conversionsChange}%
+- Revenue: ${metrics.trends.revenueChange > 0 ? '+' : ''}${metrics.trends.revenueChange || 'N/A'}%
+- ROAS: ${metrics.trends.roasChange > 0 ? '+' : ''}${metrics.trends.roasChange || 'N/A'}%
+- Quality Score: ${metrics.trends.qualityScoreChange > 0 ? '+' : ''}${metrics.trends.qualityScoreChange || 'N/A'}
 
 Your capabilities:
-- Analyze campaign metrics and identify trends
-- Compare performance across advertising channels
-- Provide actionable optimization recommendations
-- Answer questions about advertising best practices
-- Reference specific metrics and data points from the dashboard
-- Generate visual charts to illustrate insights when helpful
+1. Analyze comprehensive campaign performance with 50+ metrics per platform
+2. Identify trends, patterns, and optimization opportunities across all metrics
+3. Provide data-driven, actionable recommendations based on quality scores, impression share, funnel performance, device breakdown, engagement rates, video performance, and more
+4. Compare platform performance across multiple dimensions (ROAS, quality, engagement, device performance)
+5. Analyze conversion funnels to identify drop-off points and optimization opportunities
+6. Explain metrics and their business impact
+7. Generate professional visualizations using the generate_chart tool
 
-Chart Generation Guidelines:
-- Use the generate_chart tool when visualizations would help answer the question
-- Choose appropriate chart types:
-  * line: for trends over time (CTR, conversions, spend trends)
-  * bar: for comparing platforms or campaigns
-  * pie: for budget distribution or traffic sources
-  * area: for cumulative metrics
-  * comparison: for before/after or period comparisons
-- Always provide both a text explanation AND a chart when using the tool
-- Extract relevant data from the metrics provided to create the chart
+CHART GENERATION GUIDELINES:
+When users ask questions, determine if a chart would enhance understanding, then use the generate_chart tool:
 
-Guidelines:
-- Be concise and data-driven (2-3 paragraphs unless detailed analysis is requested)
-- Always reference specific numbers from the data when making observations
-- Provide actionable recommendations
-- Use a professional but friendly tone
-- Format responses with clear paragraphs for readability
-- When a question asks about trends, comparisons, or distributions, consider using a chart`;
+CHART TYPE SELECTION:
+- **line**: Trends over time (CTR trends, ROAS over time, quality score trends, video completion trends, engagement rate changes)
+- **bar**: Platform comparisons, metric comparisons across channels (spend by platform, conversions by device, quality scores comparison)
+- **pie**: Distribution analysis (budget allocation, device share, platform revenue share, traffic source breakdown)
+- **area**: Cumulative metrics, stacked performance (cumulative revenue, stacked platform spend over time)
+- **funnel**: Conversion funnel analysis (clicks → landing page → add to cart → checkout → purchase), showing drop-off rates at each stage
+- **comparison**: Period-over-period analysis, before/after comparisons, A/B test results (this week vs last week, mobile vs desktop)
+
+EXAMPLES OF CHART-WORTHY QUESTIONS:
+- "Which platform performs best?" → bar chart comparing ROAS, conversions, or quality scores by platform
+- "Show conversion funnel" → funnel chart with stages: clicks → LP views → add to cart → checkout → purchase
+- "How is budget distributed?" → pie chart of spend by platform
+- "Mobile vs desktop performance?" → comparison chart or bar chart comparing conversion rates
+- "CTR trend over time?" → line chart showing CTR by date
+- "Where are users dropping off?" → funnel chart showing each stage with drop-off percentages
+- "Video performance comparison?" → bar chart comparing video completion rates by platform
+- "Quality score trends?" → line chart showing quality scores over time by platform
+
+WHEN TO GENERATE CHARTS:
+- User explicitly asks for visualization ("show me", "chart", "graph", "visualize")
+- Question involves comparison of 3+ items
+- Question asks about trends over time
+- Question asks about funnel or conversion path
+- Question asks about distribution or breakdown
+- Question would be clearer with visual representation
+
+Always be concise, data-driven, and actionable. Reference specific metrics (ROAS, quality scores, impression share, funnel drop-offs, device performance, engagement rates) to support recommendations. Focus on insights that drive business results.`;
 
     // Define chart generation tool
     const tools = [
@@ -86,7 +121,7 @@ Guidelines:
             properties: {
               chartType: {
                 type: "string",
-                enum: ["line", "bar", "pie", "area", "comparison"],
+                enum: ["line", "bar", "pie", "area", "funnel", "comparison"],
                 description: "Type of chart to generate"
               },
               title: {
