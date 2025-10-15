@@ -13,6 +13,7 @@ const Index = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isNewToAdvertising = localStorage.getItem("hasAdvertisedBefore") === "false";
 
   useEffect(() => {
     const hasCompleted = localStorage.getItem("hasCompletedOnboarding");
@@ -114,10 +115,16 @@ const Index = () => {
           {/* Headline */}
           <div className="space-y-4 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
-              Turn Your Landing Page into a Full Growth Playbook
+              {isNewToAdvertising 
+                ? "Launch Your First Growth Campaign in Minutes"
+                : "Turn Your Landing Page into a Full Growth Playbook"
+              }
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Paste any product URL and get structured customer insights + campaign strategy instantly
+              {isNewToAdvertising
+                ? "Simply paste your product page URL and we'll create a complete campaign strategy ready to launch"
+                : "Paste any product URL and get structured customer insights + campaign strategy instantly"
+              }
             </p>
           </div>
 
@@ -128,7 +135,10 @@ const Index = () => {
                 <div className="flex gap-3">
                   <Input
                     type="url"
-                    placeholder="Paste your product landing page URL here..."
+                    placeholder={isNewToAdvertising 
+                      ? "Paste your product page URL to launch your campaign..."
+                      : "Paste your product landing page URL here..."
+                    }
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     className="flex-1 h-12 text-base"
@@ -143,10 +153,10 @@ const Index = () => {
                     {isAnalyzing ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analyzing...
+                        {isNewToAdvertising ? "Creating Campaign..." : "Analyzing..."}
                       </>
                     ) : (
-                      "Analyze My Page"
+                      isNewToAdvertising ? "Launch Campaign" : "Analyze My Page"
                     )}
                   </Button>
                 </div>
@@ -213,9 +223,14 @@ const Index = () => {
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                   <Search className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="font-semibold text-lg">① Paste Your URL</h3>
+                <h3 className="font-semibold text-lg">
+                  {isNewToAdvertising ? "① Share Your Product" : "① Paste Your URL"}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Enter any product landing page you want to analyze
+                  {isNewToAdvertising 
+                    ? "Paste your product page URL - that's all we need to get started"
+                    : "Enter any product landing page you want to analyze"
+                  }
                 </p>
               </CardContent>
             </Card>
@@ -225,9 +240,14 @@ const Index = () => {
                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                   <Zap className="h-6 w-6 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg">② AI Scrapes & Analyzes</h3>
+                <h3 className="font-semibold text-lg">
+                  {isNewToAdvertising ? "② AI Builds Strategy" : "② AI Scrapes & Analyzes"}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Our AI extracts and understands your product positioning
+                  {isNewToAdvertising
+                    ? "Our AI creates your customer personas, targeting, and campaign creatives"
+                    : "Our AI extracts and understands your product positioning"
+                  }
                 </p>
               </CardContent>
             </Card>
@@ -237,9 +257,14 @@ const Index = () => {
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                   <Target className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="font-semibold text-lg">③ Get Insights + Plan</h3>
+                <h3 className="font-semibold text-lg">
+                  {isNewToAdvertising ? "③ Launch & Grow" : "③ Get Insights + Plan"}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Receive detailed personas and ready-to-use campaign strategies
+                  {isNewToAdvertising
+                    ? "Get ready-to-use ads for Google, Meta, TikTok and more platforms"
+                    : "Receive detailed personas and ready-to-use campaign strategies"
+                  }
                 </p>
               </CardContent>
             </Card>
