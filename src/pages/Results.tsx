@@ -436,6 +436,69 @@ const Results = () => {
 
   const adjustedMediaPlan = calculateAdjustedMediaPlan();
 
+  // Summary extraction functions
+  const getCustomerInsightSummary = (insights: InsightCard[]) => {
+    return insights.slice(0, 3).map(card => ({
+      icon: card.icon,
+      title: card.title,
+      description: card.content.split('\n')[0].substring(0, 100) + '...'
+    }));
+  };
+
+  const getCompetitiveSummary = (competitive: AnalysisData['competitiveAnalysis']) => {
+    if (!competitive) return [];
+    return [
+      { text: `${competitive.competitors.length} competitors analyzed` },
+      { text: competitive.competitors[0]?.competitorName ? `Top competitor: ${competitive.competitors[0].competitorName}` : 'Multiple competitors identified' },
+      { text: competitive.insights[0]?.title || 'Strategic insights available' },
+      { text: `${competitive.competitors.reduce((acc, c) => acc + (c.products?.length || 0), 0)} competitor products analyzed` }
+    ].filter(Boolean);
+  };
+
+  const getTrendSummary = (trends: TrendItem[]) => {
+    if (!trends) return [];
+    const upcoming = trends.filter(t => t.timeframe === 'upcoming').length;
+    const past = trends.filter(t => t.timeframe === 'past').length;
+    return [
+      { text: `${trends.length} relevant trends identified` },
+      { text: `${upcoming} upcoming opportunities` },
+      { text: `${past} current trends to leverage` },
+      { text: trends[0]?.headline ? `Top trend: ${trends[0].headline.substring(0, 50)}...` : '' }
+    ].filter(item => item.text);
+  };
+
+  const getTargetingSummary = (targeting: InsightCard[]) => {
+    return targeting.slice(0, 3).map(card => ({
+      icon: card.icon,
+      title: card.title,
+      description: card.content.split('\n')[0].substring(0, 100) + '...'
+    }));
+  };
+
+  const getAdCreativeSummary = (creatives: AdCreative[]) => {
+    if (!creatives) return [];
+    const channels = [...new Set(creatives.map(c => c.channel))];
+    return [
+      { text: `${creatives.length} ad variations created` },
+      { text: `${channels.length} channels: ${channels.slice(0, 3).join(', ')}` },
+      { text: `Ready-to-use headlines and descriptions` },
+      { text: `AI-generated creative assets included` }
+    ];
+  };
+
+  const getMediaPlanSummary = (mediaPlan: MediaPlanWeek[]) => {
+    if (!mediaPlan) return [];
+    const allChannels = mediaPlan.flatMap(w => w.channels);
+    const totalBudget = allChannels.reduce((sum, ch) => sum + ch.budget, 0);
+    const uniqueChannels = [...new Set(allChannels.map(ch => ch.name))];
+    return [
+      { text: `${mediaPlan.length}-week campaign strategy` },
+      { text: `Total budget: $${totalBudget}` },
+      { text: `${uniqueChannels.length} channels: ${uniqueChannels.slice(0, 2).join(', ')}${uniqueChannels.length > 2 ? '...' : ''}` },
+      { text: `Budget optimized for ROAS` }
+    ];
+  };
+
   const handleRegenerateAdCopy = async () => {
     if (!analysis?.adCreatives || !url) return;
     
@@ -684,8 +747,9 @@ const Results = () => {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="insight" className="w-full">
-            <TabsList className="grid w-full max-w-6xl mx-auto grid-cols-6 mb-8">
+          <Tabs defaultValue="summary" className="w-full">
+            <TabsList className="grid w-full max-w-6xl mx-auto grid-cols-7 mb-8">
+              <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="insight">Customer Insight</TabsTrigger>
               <TabsTrigger value="competitive">Competitive Analysis</TabsTrigger>
               <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
@@ -693,6 +757,240 @@ const Results = () => {
               <TabsTrigger value="adcreative">Ad Creative</TabsTrigger>
               <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
             </TabsList>
+
+            {/* Summary Tab */}
+            <TabsContent value="summary" className="animate-fade-in">
+              <div className="space-y-8">
+                {/* Overview Header */}
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    Campaign Analysis Summary
+                  </h2>
+                  <p className="text-muted-foreground">
+                    A comprehensive overview of your growth strategy
+                  </p>
+                </div>
+
+                {/* Summary Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  
+                  {/* Customer Insight Summary Card */}
+                  {analysis?.customerInsight && analysis.customerInsight.length > 0 && (
+                    <Card className="shadow-card hover:shadow-card-hover transition-all border-2 border-blue-200 dark:border-blue-800">
+                      <CardHeader className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <CardTitle className="text-lg">Customer Insight</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <ul className="space-y-3">
+                          {getCustomerInsightSummary(analysis.customerInsight).map((item, idx) => {
+                            const Icon = iconMap[item.icon] || Users;
+                            return (
+                              <li key={idx} className="flex items-start gap-2 text-sm">
+                                <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="font-semibold">{item.title}</p>
+                                  <p className="text-muted-foreground text-xs">{item.description}</p>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Competitive Analysis Summary Card */}
+                  {analysis?.competitiveAnalysis && (
+                    <Card className="shadow-card hover:shadow-card-hover transition-all border-2 border-purple-200 dark:border-purple-800">
+                      <CardHeader className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                            <Briefcase className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <CardTitle className="text-lg">Competitive Analysis</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <ul className="space-y-2">
+                          {getCompetitiveSummary(analysis.competitiveAnalysis).map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <CheckCircle className="h-4 w-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-muted-foreground">{item.text}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Trend Analysis Summary Card */}
+                  {analysis?.trendAnalysis && analysis.trendAnalysis.length > 0 && (
+                    <Card className="shadow-card hover:shadow-card-hover transition-all border-2 border-emerald-200 dark:border-emerald-800">
+                      <CardHeader className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                            <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <CardTitle className="text-lg">Trend Analysis</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <ul className="space-y-2">
+                          {getTrendSummary(analysis.trendAnalysis).map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-muted-foreground">{item.text}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Campaign Targeting Summary Card */}
+                  {analysis?.campaignTargeting && analysis.campaignTargeting.length > 0 && (
+                    <Card className="shadow-card hover:shadow-card-hover transition-all border-2 border-orange-200 dark:border-orange-800">
+                      <CardHeader className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                            <Target className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <CardTitle className="text-lg">Campaign Targeting</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <ul className="space-y-3">
+                          {getTargetingSummary(analysis.campaignTargeting).map((item, idx) => {
+                            const Icon = iconMap[item.icon] || Target;
+                            return (
+                              <li key={idx} className="flex items-start gap-2 text-sm">
+                                <Icon className="h-4 w-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="font-semibold">{item.title}</p>
+                                  <p className="text-muted-foreground text-xs">{item.description}</p>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Ad Creative Summary Card */}
+                  {analysis?.adCreatives && analysis.adCreatives.length > 0 && (
+                    <Card className="shadow-card hover:shadow-card-hover transition-all border-2 border-pink-200 dark:border-pink-800">
+                      <CardHeader className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/50 dark:to-pink-900/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-pink-500/20 flex items-center justify-center">
+                            <Palette className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                          </div>
+                          <CardTitle className="text-lg">Ad Creative</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <ul className="space-y-2">
+                          {getAdCreativeSummary(analysis.adCreatives).map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <Sparkles className="h-4 w-4 text-pink-600 dark:text-pink-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-muted-foreground">{item.text}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Media Plan Summary Card */}
+                  {analysis?.mediaPlan && analysis.mediaPlan.length > 0 && (
+                    <Card className="shadow-card hover:shadow-card-hover transition-all border-2 border-cyan-200 dark:border-cyan-800">
+                      <CardHeader className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/50 dark:to-cyan-900/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                            <DollarSign className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                          </div>
+                          <CardTitle className="text-lg">Media Plan</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <ul className="space-y-2">
+                          {getMediaPlanSummary(analysis.mediaPlan).map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <CheckCircle className="h-4 w-4 text-cyan-600 dark:text-cyan-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-muted-foreground">{item.text}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Quick Actions Footer */}
+                <Card className="shadow-card bg-gradient-to-br from-primary/5 to-accent/5 border-2 border-primary/20">
+                  <CardContent className="py-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div className="text-center md:text-left">
+                        <h3 className="font-semibold text-lg mb-1">Ready to dive deeper?</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Explore each section for detailed insights and recommendations
+                        </p>
+                      </div>
+                      <Button
+                        onClick={async () => {
+                          setIsGeneratingPdf(true);
+                          try {
+                            // Transform the data to match the PDF export format
+                            const pdfData = {
+                              customerInsight: { sections: analysis?.customerInsight || [] },
+                              campaignTargeting: { sections: analysis?.campaignTargeting || [] },
+                              mediaPlan: { weeks: analysis?.mediaPlan?.map((week, idx) => ({
+                                week: week.weekNumber || idx + 1,
+                                channels: week.channels.map(ch => ({
+                                  name: ch.name,
+                                  budget: `$${ch.budget}`,
+                                  campaignType: ch.campaignType,
+                                  allocation: `${ch.percentage}%`,
+                                  color: '#000000'
+                                })),
+                                reasoning: week.reasoning || ''
+                              })) || [] },
+                              competitiveAnalysis: analysis?.competitiveAnalysis,
+                              adCreatives: analysis?.adCreatives
+                            };
+                            await generatePDF(pdfData, url || '');
+                            sonnerToast.success("PDF generated successfully!");
+                          } catch (error) {
+                            sonnerToast.error("Failed to generate PDF");
+                          } finally {
+                            setIsGeneratingPdf(false);
+                          }
+                        }}
+                        disabled={isGeneratingPdf}
+                        className="gap-2"
+                      >
+                        {isGeneratingPdf ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4" />
+                            Download Full Playbook
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
             {/* Customer Insight Tab */}
             <TabsContent value="insight" className="animate-fade-in">
