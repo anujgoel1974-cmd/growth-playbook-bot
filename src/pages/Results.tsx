@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -217,11 +217,34 @@ const Results = () => {
   const [applyToAllChannels, setApplyToAllChannels] = useState(true);
   const [trendFilter, setTrendFilter] = useState<'all' | 'past' | 'upcoming'>('all');
 
+  const lastKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!url) {
       navigate("/");
       return;
     }
+
+    // Validate and sanitize URL from query params
+    let safeUrl: string;
+    try {
+      safeUrl = new URL(url).toString();
+    } catch {
+      toast({
+        title: "Invalid URL",
+        description: "Please provide a valid URL (https://example.com/product).",
+        variant: "destructive",
+      });
+      navigate("/");
+      return;
+    }
+
+    // Prevent duplicate invocations (React StrictMode and rapid navigations)
+    const key = `${safeUrl}|${sessionId ?? ""}`;
+    if (lastKeyRef.current === key) {
+      return;
+    }
+    lastKeyRef.current = key;
 
     const analyzeUrl = async () => {
       try {
@@ -240,7 +263,7 @@ const Results = () => {
           if (savedError) {
             console.error('Error loading saved analysis:', savedError);
           } else if (savedData) {
-            // Update accessed_at timestamp
+            // Update accessed_at timestamp (best-effort)
             await supabase
               .from("saved_analyses")
               .update({ accessed_at: new Date().toISOString() })
@@ -261,7 +284,7 @@ const Results = () => {
         
         // Race between the function call and timeout
         const functionPromise = supabase.functions.invoke('analyze-landing-page', {
-          body: { url }
+          body: { url: safeUrl }
         });
         
         const { data, error } = await Promise.race([
@@ -274,15 +297,15 @@ const Results = () => {
           throw error;
         }
 
-        if (!data.success) {
-          throw new Error(data.error || 'Analysis failed');
+        if (!data?.success) {
+          throw new Error(data?.error || 'Analysis failed');
         }
 
         console.log('Analysis successful:', data);
         setAnalysis(data.analysis);
 
-        // Auto-save analysis to history
-        if (data.analysis) {
+        // Auto-save analysis to history (avoid duplicates when viewing a saved session)
+        if (data.analysis && (!sessionId || sessionId === 'null')) {
           try {
             // Extract metadata from analysis
             const productName = data.analysis.customerInsight?.find((card: any) => 
@@ -302,7 +325,7 @@ const Results = () => {
 
             // Insert new analysis (let database generate ID, no session_id needed)
             await supabase.from("saved_analyses").insert({
-              url: url,
+              url: safeUrl,
               title: productName ? `${productName} Campaign Analysis` : null,
               thumbnail_url: thumbnailUrl,
               analysis_data: data.analysis,
@@ -324,12 +347,35 @@ const Results = () => {
         }
       } catch (err) {
         console.error('Error analyzing URL:', err);
-        setError(err instanceof Error ? err.message : 'Failed to analyze URL');
-        toast({
-          title: "Analysis Failed",
-          description: err instanceof Error ? err.message : 'Failed to analyze URL',
-          variant: "destructive",
-        });
+        // Attempt graceful fallback: load last saved analysis for this URL
+        try {
+          const { data: previous, error: prevErr } = await supabase
+            .from('saved_analyses')
+            .select('*')
+            .eq('url', safeUrl)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!prevErr && previous && previous.length > 0) {
+            setAnalysis(previous[0].analysis_data as AnalysisData);
+            sonnerToast.info('Loaded last saved analysis for this URL.');
+          } else {
+            setError(err instanceof Error ? err.message : 'Failed to analyze URL');
+            toast({
+              title: 'Analysis Failed',
+              description: err instanceof Error ? err.message : 'Failed to analyze URL',
+              variant: 'destructive',
+            });
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback load failed:', fallbackErr);
+          setError(err instanceof Error ? err.message : 'Failed to analyze URL');
+          toast({
+            title: 'Analysis Failed',
+            description: err instanceof Error ? err.message : 'Failed to analyze URL',
+            variant: 'destructive',
+          });
+        }
       } finally {
         setIsLoading(false);
       }
