@@ -10,7 +10,11 @@ const Onboarding = () => {
     localStorage.setItem("hasAdvertisedBefore", JSON.stringify(hasAdvertised));
     localStorage.setItem("hasCompletedOnboarding", "true");
     
-    navigate("/connect-platforms");
+    if (hasAdvertised) {
+      navigate("/connect-platforms");
+    } else {
+      navigate("/");
+    }
   };
 
   return (
