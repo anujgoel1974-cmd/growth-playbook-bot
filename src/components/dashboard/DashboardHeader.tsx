@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { BarChart3, History, ArrowLeft } from 'lucide-react';
+import { BarChart3, History, ArrowLeft, Rocket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function DashboardHeader() {
@@ -31,6 +31,14 @@ export function DashboardHeader() {
             >
               <History className="h-4 w-4" />
               History
+            </Button>
+            
+            <Button
+              onClick={() => navigate('/')}
+              className="gap-2"
+            >
+              <Rocket className="h-4 w-4" />
+              Launch New Campaign
             </Button>
           </div>
         </div>
