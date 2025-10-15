@@ -213,6 +213,7 @@ const Results = () => {
     cta: 'shop-now',
     emphasis: 'benefits',
     length: 'balanced',
+    trendHeadline: 'none',
   });
   const [applyToAllChannels, setApplyToAllChannels] = useState(true);
   const [trendFilter, setTrendFilter] = useState<'all' | 'past' | 'upcoming'>('all');
@@ -1250,6 +1251,11 @@ const Results = () => {
                                 <span className="px-3 py-1 bg-background/80 rounded-full text-xs font-medium border">
                                   {adFilters.length.charAt(0).toUpperCase() + adFilters.length.slice(1)} copy
                                 </span>
+                                {adFilters.trendHeadline !== 'none' && (
+                                  <span className="px-3 py-1 bg-primary/20 rounded-full text-xs font-medium border border-primary">
+                                    🎯 Trend: {adFilters.trendHeadline.slice(0, 30)}{adFilters.trendHeadline.length > 30 ? '...' : ''}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1472,6 +1478,58 @@ const Results = () => {
                                 {adFilters.length === 'short' && '⚡ Concise messaging for quick impact - perfect for mobile'}
                                 {adFilters.length === 'balanced' && '📝 Moderate detail for clarity without overwhelming'}
                                 {adFilters.length === 'detailed' && '📚 Comprehensive information for informed decisions'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Trend Focus */}
+                          <div className="space-y-3 group">
+                            <Label htmlFor="trendHeadline" className="text-sm font-semibold flex items-center gap-2">
+                              <TrendingUp className="h-4 w-4 text-primary" />
+                              Trend Focus
+                            </Label>
+                            <Select
+                              value={adFilters.trendHeadline}
+                              onValueChange={(value) => setAdFilters({ ...adFilters, trendHeadline: value })}
+                              disabled={!analysis?.trendAnalysis || analysis.trendAnalysis.length === 0}
+                            >
+                              <SelectTrigger id="trendHeadline" className="h-11 transition-all group-hover:border-primary/50">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-background max-h-[300px]">
+                                <SelectItem value="none" className="cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <span>🎯</span>
+                                    None - Original Positioning
+                                  </div>
+                                </SelectItem>
+                                {analysis?.trendAnalysis?.map((trend, index) => (
+                                  <SelectItem key={index} value={trend.headline} className="cursor-pointer">
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                          trend.category === 'current' ? 'bg-green-500/20 text-green-700 dark:text-green-300' : 
+                                          'bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                                        }`}>
+                                          {trend.category === 'current' ? '🔥 Current' : '📅 Upcoming'}
+                                        </span>
+                                      </div>
+                                      <span className="text-sm">{trend.headline}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="bg-muted/50 rounded-lg p-3 min-h-[60px] transition-all">
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {adFilters.trendHeadline === 'none' && '🎯 No trend focus - ads will use original positioning'}
+                                {adFilters.trendHeadline !== 'none' && analysis?.trendAnalysis && (
+                                  <>
+                                    <span className="font-semibold block mb-1">Selected Trend:</span>
+                                    {analysis.trendAnalysis.find(t => t.headline === adFilters.trendHeadline)?.productAlignment || 'Align your ads with this trending topic'}
+                                  </>
+                                )}
+                                {(!analysis?.trendAnalysis || analysis.trendAnalysis.length === 0) && '⚠️ No trends available for this analysis'}
                               </p>
                             </div>
                           </div>

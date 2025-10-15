@@ -32,6 +32,7 @@ interface RegenerateRequest {
     cta: string;
     emphasis: string;
     length: string;
+    trendHeadline?: string;
   };
   channelsToRegenerate?: string[]; // If not provided, regenerate all
 }
@@ -104,6 +105,11 @@ LENGTH PREFERENCES:
 - Short: Concise, punchy, direct. Use minimum character counts.
 - Balanced: Standard length, natural flow, complete thoughts.
 - Detailed: Maximum character usage, comprehensive, rich descriptions.
+${filters.trendHeadline && filters.trendHeadline !== 'none' 
+  ? `\nTREND ALIGNMENT:
+- Selected Trend: ${filters.trendHeadline}
+- Instruction: Incorporate this trending topic into your ad copy. Reference the trend naturally in headlines or descriptions where relevant. Make the connection clear but not forced. Ensure the trend enhances the message without overshadowing the core product value.` 
+  : ''}
 
 CRITICAL PLATFORM CONSTRAINTS:
 You MUST maintain the exact same structure and character limits for each platform. Return the EXACT number of headlines and descriptions as the original.`;
@@ -226,6 +232,9 @@ CHARACTER CONSTRAINTS:
 - Maintain the same structure and format
 
 Apply the style parameters from the system prompt while respecting these exact constraints.
+${filters.trendHeadline && filters.trendHeadline !== 'none' 
+  ? `\nIMPORTANT: Align this ad creative with the trending topic: "${filters.trendHeadline}". Reference it naturally in at least one headline or description where it makes sense contextually.` 
+  : ''}
 
 Return ONLY a JSON object in this exact format (no markdown, no code blocks, no additional text):
 {
