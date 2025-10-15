@@ -34,7 +34,7 @@ export function DashboardHeader() {
             </Button>
             
             <Button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/connect-platforms')}
               className="gap-2"
             >
               <Rocket className="h-4 w-4" />
