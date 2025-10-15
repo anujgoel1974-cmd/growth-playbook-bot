@@ -8,6 +8,8 @@ import Results from "./pages/Results";
 import Sitemap from "./pages/Sitemap";
 import History from "./pages/History";
 import NotFound from "./pages/NotFound";
+import Onboarding from "./pages/Onboarding";
+import ConnectPlatforms from "./pages/ConnectPlatforms";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +20,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/connect-platforms" element={<ConnectPlatforms />} />
           <Route path="/" element={<Index />} />
           <Route path="/results" element={<Results />} />
           <Route path="/sitemap" element={<Sitemap />} />
