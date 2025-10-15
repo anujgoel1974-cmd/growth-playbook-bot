@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Search, Facebook, Music, Video, Linkedin, Image } from "lucide-react";
+import { CheckCircle2, Search, Facebook, Music, Video, Linkedin, Image, ArrowLeft } from "lucide-react";
 
 interface ConnectedPlatforms {
   google: boolean;
@@ -92,6 +92,16 @@ const ConnectPlatforms = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-8">
       <div className="max-w-6xl mx-auto animate-fade-in">
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/onboarding")}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+        </div>
         <div className="text-center mb-8">
           <Badge variant="outline" className="mb-4">
             Step 2 of 2
