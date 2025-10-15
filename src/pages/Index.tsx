@@ -93,7 +93,7 @@ const Index = () => {
         <div className="flex justify-between">
           <Button
             variant="ghost"
-            onClick={() => navigate("/connect-platforms")}
+            onClick={() => navigate("/onboarding")}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
