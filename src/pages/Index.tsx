@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Target, Zap, Loader2, Package } from "lucide-react";
+import { Search, Target, Zap, Loader2, Package, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -90,7 +90,15 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-hero">
       {/* Navigation */}
       <div className="container mx-auto px-4 pt-6">
-        <div className="flex justify-end">
+        <div className="flex justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/connect-platforms")}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
           <Button
             variant="outline"
             onClick={() => navigate("/history")}
