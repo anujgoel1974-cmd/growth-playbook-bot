@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,13 @@ const Index = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const hasCompleted = localStorage.getItem("hasCompletedOnboarding");
+    if (!hasCompleted) {
+      navigate("/onboarding");
+    }
+  }, [navigate]);
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
