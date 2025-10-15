@@ -347,35 +347,19 @@ const Results = () => {
         }
       } catch (err) {
         console.error('Error analyzing URL:', err);
-        // Attempt graceful fallback: load last saved analysis for this URL
-        try {
-          const { data: previous, error: prevErr } = await supabase
-            .from('saved_analyses')
-            .select('*')
-            .eq('url', safeUrl)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          if (!prevErr && previous && previous.length > 0) {
-            setAnalysis(previous[0].analysis_data as AnalysisData);
-            sonnerToast.info('Loaded last saved analysis for this URL.');
-          } else {
-            setError(err instanceof Error ? err.message : 'Failed to analyze URL');
-            toast({
-              title: 'Analysis Failed',
-              description: err instanceof Error ? err.message : 'Failed to analyze URL',
-              variant: 'destructive',
-            });
-          }
-        } catch (fallbackErr) {
-          console.error('Fallback load failed:', fallbackErr);
-          setError(err instanceof Error ? err.message : 'Failed to analyze URL');
-          toast({
-            title: 'Analysis Failed',
-            description: err instanceof Error ? err.message : 'Failed to analyze URL',
-            variant: 'destructive',
-          });
-        }
+        const errorMessage = err instanceof Error ? err.message : 'Failed to analyze URL';
+        
+        // Check if it's a credits issue
+        const isCreditsIssue = errorMessage.includes('402') || errorMessage.includes('credits') || errorMessage.includes('payment');
+        
+        setError(isCreditsIssue ? 'Insufficient Lovable AI credits. Please add credits to continue.' : errorMessage);
+        toast({
+          title: isCreditsIssue ? 'Insufficient Credits' : 'Analysis Failed',
+          description: isCreditsIssue 
+            ? 'Your Lovable AI credits have run out. Please add credits to perform new analyses.' 
+            : errorMessage,
+          variant: 'destructive',
+        });
       } finally {
         setIsLoading(false);
       }
