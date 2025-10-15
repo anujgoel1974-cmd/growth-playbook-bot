@@ -180,9 +180,17 @@ const Index = () => {
                     <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
                       <Package className="h-6 w-6 text-accent" />
                     </div>
-                    <h3 className="text-xl font-semibold">Analyze Your Entire Product Catalog</h3>
+                    <h3 className="text-xl font-semibold">
+                      {isNewToAdvertising 
+                        ? "Launch Campaigns for Multiple Products"
+                        : "Analyze Your Entire Product Catalog"
+                      }
+                    </h3>
                     <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Extract and categorize all products from your e-commerce site for bulk campaign planning
+                      {isNewToAdvertising
+                        ? "Have multiple products? We'll create campaign strategies for your entire catalog at once"
+                        : "Extract and categorize all products from your e-commerce site for bulk campaign planning"
+                      }
                     </p>
                   </div>
                   <form onSubmit={handleExtractCatalog} className="flex gap-3">
@@ -204,10 +212,10 @@ const Index = () => {
                       {isExtracting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Extracting...
+                          {isNewToAdvertising ? "Setting Up..." : "Extracting..."}
                         </>
                       ) : (
-                        "Extract Catalog"
+                        isNewToAdvertising ? "Launch Multi-Product Campaign" : "Extract Catalog"
                       )}
                     </Button>
                   </form>
