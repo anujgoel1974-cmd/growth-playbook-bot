@@ -53,13 +53,70 @@ Your capabilities:
 - Provide actionable optimization recommendations
 - Answer questions about advertising best practices
 - Reference specific metrics and data points from the dashboard
+- Generate visual charts to illustrate insights when helpful
+
+Chart Generation Guidelines:
+- Use the generate_chart tool when visualizations would help answer the question
+- Choose appropriate chart types:
+  * line: for trends over time (CTR, conversions, spend trends)
+  * bar: for comparing platforms or campaigns
+  * pie: for budget distribution or traffic sources
+  * area: for cumulative metrics
+  * comparison: for before/after or period comparisons
+- Always provide both a text explanation AND a chart when using the tool
+- Extract relevant data from the metrics provided to create the chart
 
 Guidelines:
 - Be concise and data-driven (2-3 paragraphs unless detailed analysis is requested)
 - Always reference specific numbers from the data when making observations
 - Provide actionable recommendations
 - Use a professional but friendly tone
-- Format responses with clear paragraphs for readability`;
+- Format responses with clear paragraphs for readability
+- When a question asks about trends, comparisons, or distributions, consider using a chart`;
+
+    // Define chart generation tool
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "generate_chart",
+          description: "Generate a chart visualization to answer the user's question about campaign performance",
+          parameters: {
+            type: "object",
+            properties: {
+              chartType: {
+                type: "string",
+                enum: ["line", "bar", "pie", "area", "comparison"],
+                description: "Type of chart to generate"
+              },
+              title: {
+                type: "string",
+                description: "Title for the chart"
+              },
+              data: {
+                type: "array",
+                description: "Array of data points for the chart",
+                items: {
+                  type: "object"
+                }
+              },
+              xAxis: {
+                type: "string",
+                description: "Key for x-axis data"
+              },
+              metrics: {
+                type: "array",
+                description: "Array of metric keys to display",
+                items: {
+                  type: "string"
+                }
+              }
+            },
+            required: ["chartType", "title", "data", "metrics"]
+          }
+        }
+      }
+    ];
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -73,6 +130,7 @@ Guidelines:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
+        tools: tools,
       }),
     });
 
@@ -84,9 +142,25 @@ Guidelines:
 
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
+    const toolCalls = data.choices[0].message.tool_calls;
+
+    let chartData = null;
+    if (toolCalls && toolCalls.length > 0) {
+      const chartTool = toolCalls.find((tool: any) => tool.function.name === 'generate_chart');
+      if (chartTool) {
+        try {
+          chartData = JSON.parse(chartTool.function.arguments);
+        } catch (e) {
+          console.error('Error parsing chart data:', e);
+        }
+      }
+    }
 
     return new Response(
-      JSON.stringify({ response: aiResponse }),
+      JSON.stringify({ 
+        response: aiResponse,
+        chart: chartData 
+      }),
       { 
         headers: { 
           ...corsHeaders, 

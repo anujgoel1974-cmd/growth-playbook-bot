@@ -6,6 +6,7 @@ import { Send, Bot, User } from 'lucide-react';
 import { AggregateMetrics } from '@/utils/mockCampaignData';
 import { useChatbot } from '@/hooks/useChatbot';
 import { format } from 'date-fns';
+import { DynamicChart } from './DynamicChart';
 
 interface ChatInterfaceProps {
   aggregateMetrics: AggregateMetrics;
@@ -134,14 +135,19 @@ export function ChatInterface({ aggregateMetrics }: ChatInterfaceProps) {
                   message.role === 'user' ? 'items-end' : 'items-start'
                 } flex flex-col`}
               >
-                <div
-                  className={`rounded-lg px-4 py-2.5 max-w-[80%] shadow-sm ${
-                    message.role === 'user'
-                      ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground ml-auto'
-                      : 'bg-card border border-border'
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                <div className="w-full max-w-[80%]">
+                  <div
+                    className={`rounded-lg px-4 py-2.5 shadow-sm ${
+                      message.role === 'user'
+                        ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground ml-auto'
+                        : 'bg-card border border-border'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                  </div>
+                  {message.chart && message.role === 'assistant' && (
+                    <DynamicChart config={message.chart} />
+                  )}
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {format(message.timestamp, 'HH:mm')}

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AggregateMetrics } from '@/utils/mockCampaignData';
+import { ChartConfig } from '@/types/chart';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  chart?: ChartConfig;
 }
 
 export function useChatbot(aggregateMetrics: AggregateMetrics) {
@@ -39,6 +41,7 @@ export function useChatbot(aggregateMetrics: AggregateMetrics) {
         role: 'assistant',
         content: data.response,
         timestamp: new Date(),
+        chart: data.chart || undefined,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
