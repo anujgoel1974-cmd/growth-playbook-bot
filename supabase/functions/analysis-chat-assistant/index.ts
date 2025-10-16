@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, analysisData } = await req.json();
+    const { message, conversationHistory, analysisData } = await req.json();
     
     if (!message) {
       throw new Error('Message is required');
@@ -106,7 +106,62 @@ RESPONSE STYLE:
 - Use bullet points for clarity
 - Reference specific data from the analysis when relevant
 
-Always be encouraging and supportive - launching a first campaign can be intimidating!`;
+Always be encouraging and supportive - launching a first campaign can be intimidating!
+
+FOLLOW-UP QUESTION GENERATION:
+After answering, you will be asked to suggest exactly 4 natural follow-up questions that:
+1. Build directly on the current answer's context
+2. Address likely founder concerns based on the topic just discussed
+3. Are specific and actionable (not generic questions like "what else?")
+4. Progress the conversation toward campaign launch readiness
+
+Examples of good follow-up progression:
+- If you just explained platform selection → suggest budget allocation questions
+- If you discussed budget → suggest timeline/expectations questions
+- If you covered setup steps → suggest optimization/testing questions
+- If you explained metrics → suggest interpretation/action questions`;
+
+    // Build messages array with conversation history
+    const messages = [
+      { role: 'system', content: systemPrompt }
+    ];
+
+    // Add conversation history if provided (last 10 messages for context)
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      const recentHistory = conversationHistory.slice(-10);
+      messages.push(...recentHistory);
+    } else {
+      // If no history, just add the current message
+      messages.push({ role: 'user', content: message });
+    }
+
+    // Define tool for follow-up question generation
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'suggest_followup_questions',
+          description: 'Generate 4 contextually relevant follow-up questions based on the conversation',
+          parameters: {
+            type: 'object',
+            properties: {
+              questions: {
+                type: 'array',
+                description: 'Array of exactly 4 follow-up questions',
+                items: {
+                  type: 'string',
+                  description: 'A natural, specific follow-up question'
+                },
+                minItems: 4,
+                maxItems: 4
+              }
+            },
+            required: ['questions'],
+            additionalProperties: false
+          }
+        }
+      }
+    ];
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -116,10 +171,9 @@ Always be encouraging and supportive - launching a first campaign can be intimid
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ],
+        messages: messages,
+        tools: tools,
+        tool_choice: { type: 'function', function: { name: 'suggest_followup_questions' } }
       }),
     });
 
@@ -132,9 +186,26 @@ Always be encouraging and supportive - launching a first campaign can be intimid
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
 
+    // Extract follow-up questions from tool call
+    let followUpQuestions: string[] = [];
+    try {
+      const toolCalls = data.choices[0].message.tool_calls;
+      if (toolCalls && toolCalls.length > 0) {
+        const toolCall = toolCalls[0];
+        if (toolCall.function.name === 'suggest_followup_questions') {
+          const args = JSON.parse(toolCall.function.arguments);
+          followUpQuestions = args.questions || [];
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse follow-up questions:', e);
+      // Continue with empty array - graceful degradation
+    }
+
     return new Response(
       JSON.stringify({ 
         response: aiResponse,
+        followUpQuestions: followUpQuestions,
       }),
       { 
         headers: { 

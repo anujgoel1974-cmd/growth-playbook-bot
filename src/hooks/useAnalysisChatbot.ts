@@ -6,6 +6,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  followUpQuestions?: string[];
 }
 
 export function useAnalysisChatbot(analysisData: any) {
@@ -24,9 +25,15 @@ export function useAnalysisChatbot(analysisData: any) {
     setIsLoading(true);
 
     try {
+      // Prepare conversation history (last 10 messages for context)
+      const conversationHistory = [...messages, userMsg]
+        .slice(-10)
+        .map(m => ({ role: m.role, content: m.content }));
+
       const { data, error } = await supabase.functions.invoke('analysis-chat-assistant', {
         body: {
           message: userMessage,
+          conversationHistory: conversationHistory,
           analysisData: analysisData,
         },
       });
@@ -37,6 +44,7 @@ export function useAnalysisChatbot(analysisData: any) {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: data.response,
+        followUpQuestions: data.followUpQuestions || [],
         timestamp: new Date(),
       };
 

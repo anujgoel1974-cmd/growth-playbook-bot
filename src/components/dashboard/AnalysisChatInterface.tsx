@@ -77,8 +77,9 @@ export function AnalysisChatInterface({ analysisData }: AnalysisChatInterfacePro
     }
   };
 
-  const handleSuggestedQuestion = (question: string) => {
-    setInput(question);
+  const handleSuggestedQuestion = async (question: string) => {
+    if (isLoading) return;
+    await sendMessage(question);
   };
 
   return (
@@ -108,46 +109,77 @@ export function AnalysisChatInterface({ analysisData }: AnalysisChatInterfacePro
             </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${
-                message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-              }`}
-            >
+          messages.map((message, index) => (
+            <div key={message.id} className="space-y-3">
               <div
-                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-md ${
-                  message.role === 'user'
-                    ? 'bg-gradient-to-br from-primary to-primary/70'
-                    : 'bg-gradient-to-br from-accent to-accent/70'
+                className={`flex gap-3 ${
+                  message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                 }`}
               >
-                {message.role === 'user' ? (
-                  <User className="h-4 w-4 text-primary-foreground" />
-                ) : (
-                  <Sparkles className="h-4 w-4 text-accent-foreground" />
-                )}
+                <div
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-md ${
+                    message.role === 'user'
+                      ? 'bg-gradient-to-br from-primary to-primary/70'
+                      : 'bg-gradient-to-br from-accent to-accent/70'
+                  }`}
+                >
+                  {message.role === 'user' ? (
+                    <User className="h-4 w-4 text-primary-foreground" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 text-accent-foreground" />
+                  )}
+                </div>
+                <div
+                  className={`flex-1 space-y-1 ${
+                    message.role === 'user' ? 'items-end' : 'items-start'
+                  } flex flex-col`}
+                >
+                  <div className="w-full max-w-[80%]">
+                    <div
+                      className={`rounded-lg px-4 py-2.5 shadow-sm ${
+                        message.role === 'user'
+                          ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground ml-auto'
+                          : 'bg-card border border-border'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {format(message.timestamp, 'HH:mm')}
+                  </span>
+                </div>
               </div>
-              <div
-                className={`flex-1 space-y-1 ${
-                  message.role === 'user' ? 'items-end' : 'items-start'
-                } flex flex-col`}
-              >
-                <div className="w-full max-w-[80%]">
-                  <div
-                    className={`rounded-lg px-4 py-2.5 shadow-sm ${
-                      message.role === 'user'
-                        ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground ml-auto'
-                        : 'bg-card border border-border'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+
+              {/* Follow-up questions - only for last assistant message */}
+              {message.role === 'assistant' && 
+               index === messages.length - 1 && 
+               message.followUpQuestions && 
+               message.followUpQuestions.length > 0 && (
+                <div className="ml-11 space-y-2 animate-fade-in">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    You might also want to ask:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {message.followUpQuestions.map((question, qIndex) => (
+                      <button
+                        key={qIndex}
+                        onClick={() => handleSuggestedQuestion(question)}
+                        disabled={isLoading}
+                        className="text-left text-xs p-2.5 rounded-lg border border-primary/20 
+                                   bg-background hover:bg-primary/5 hover:border-primary/40 
+                                   transition-all duration-200 shadow-sm hover:shadow-md
+                                   group disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="text-primary group-hover:text-primary/80 mr-1.5">→</span>
+                        <span className="text-muted-foreground group-hover:text-foreground">
+                          {question}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {format(message.timestamp, 'HH:mm')}
-                </span>
-              </div>
+              )}
             </div>
           ))
         )}
