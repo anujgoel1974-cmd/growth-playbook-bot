@@ -29,7 +29,7 @@ const navigationGroups = [
       {
         title: 'New Campaign',
         icon: Rocket,
-        url: '/',
+        url: '/new-campaign',
         description: 'Analyze landing page',
       },
       {
@@ -84,7 +84,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
+    if (path === '/new-campaign') return location.pathname === '/new-campaign';
     return location.pathname.startsWith(path);
   };
 

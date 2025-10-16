@@ -72,7 +72,7 @@ const Onboarding = () => {
     if (hasAdvertised) {
       navigate("/connect-platforms");
     } else {
-      navigate("/");
+      navigate("/new-campaign");
     }
   };
 
