@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
-  Loader2, ArrowLeft, Copy, Download,
+  Loader2, Copy, Download,
   Users, Brain, Zap, MessageCircle, TrendingUp,
   Target, UsersRound, Search, Palette, DollarSign, Megaphone, FileText,
   Share2, Image, Music, Video, Briefcase, Hash, Building2, Shield, 
@@ -715,23 +715,8 @@ const Results = () => {
     <div className="min-h-screen bg-gradient-hero">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/")}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              New Analysis
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/history")}
-            >
-              View History
-            </Button>
-          </div>
+        <div className="mb-8 flex flex-col gap-4">
+          <h1 className="text-3xl font-bold">Campaign Analysis</h1>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Analyzing:</span>
             <span className="font-medium truncate max-w-md">{url}</span>

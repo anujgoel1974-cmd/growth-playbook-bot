@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { AnalysisHistoryCard } from "@/components/AnalysisHistoryCard";
 import { useAnalysisHistory } from "@/hooks/useAnalysisHistory";
-import { Search, ArrowLeft, Filter } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -31,14 +31,6 @@ const History = () => {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Button>
           <h1 className="text-4xl font-bold mb-2">Analysis History</h1>
           <p className="text-muted-foreground">
             View and manage your saved campaign analyses

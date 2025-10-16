@@ -1,4 +1,3 @@
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
 import { DynamicChartDisplay } from '@/components/dashboard/DynamicChartDisplay';
 import { ChatInterface } from '@/components/dashboard/ChatInterface';
@@ -11,9 +10,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      
       <main className="container mx-auto px-4 py-6 space-y-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Campaign Analytics</h1>
+          <p className="text-muted-foreground">Monitor and optimize your campaign performance</p>
+        </div>
         {/* Metrics Cards */}
         <MetricsCards metrics={aggregateMetrics} />
         
