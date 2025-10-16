@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Briefcase, Megaphone, TrendingUp, Palette, Building2, Users, ChevronLeft } from "lucide-react";
 
 const roles = [
@@ -55,6 +56,7 @@ const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [hasAdvertised, setHasAdvertised] = useState<boolean | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
+  const [customRole, setCustomRole] = useState<string>("");
 
   const handleStep1Answer = (answer: boolean) => {
     setHasAdvertised(answer);
@@ -63,9 +65,12 @@ const Onboarding = () => {
 
   const handleStep2Complete = () => {
     if (!selectedRole) return;
+    if (selectedRole === 'Other' && customRole.trim().length === 0) return;
+    
+    const roleToSave = selectedRole === 'Other' ? customRole.trim() : selectedRole;
     
     localStorage.setItem("hasAdvertisedBefore", hasAdvertised!.toString());
-    localStorage.setItem("userRole", selectedRole);
+    localStorage.setItem("userRole", roleToSave);
     localStorage.setItem("hasCompletedOnboarding", "true");
     
     // Navigate based on step 1 answer
@@ -159,7 +164,12 @@ const Onboarding = () => {
                 </div>
                 
                 <div className="space-y-4 pt-4">
-                  <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <Select value={selectedRole} onValueChange={(value) => {
+                    setSelectedRole(value);
+                    if (value !== 'Other') {
+                      setCustomRole("");
+                    }
+                  }}>
                     <SelectTrigger className="h-14 text-base border-2">
                       <SelectValue placeholder="Select your role..." />
                     </SelectTrigger>
@@ -181,6 +191,24 @@ const Onboarding = () => {
                     </SelectContent>
                   </Select>
 
+                  {selectedRole === 'Other' && (
+                    <div className="space-y-2 animate-fade-in">
+                      <label className="text-sm font-medium text-foreground">
+                        Describe your role
+                      </label>
+                      <Textarea
+                        placeholder="e.g., E-commerce Store Owner, Social Media Coordinator, Product Manager..."
+                        value={customRole}
+                        onChange={(e) => setCustomRole(e.target.value)}
+                        className="min-h-[100px] border-2"
+                        maxLength={100}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Tell us about your role so we can personalize your experience
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex gap-3 pt-4">
                     <Button
                       variant="outline"
@@ -195,7 +223,7 @@ const Onboarding = () => {
                       size="lg"
                       className="flex-1 bg-gradient-primary hover:opacity-90"
                       onClick={handleStep2Complete}
-                      disabled={!selectedRole}
+                      disabled={!selectedRole || (selectedRole === 'Other' && customRole.trim().length === 0)}
                     >
                       Get Started
                     </Button>
