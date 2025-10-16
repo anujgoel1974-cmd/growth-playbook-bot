@@ -96,14 +96,14 @@ const Index = () => {
           <div className="space-y-4 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
               {isNewToAdvertising 
-                ? "Launch Your First Growth Campaign in Minutes"
-                : "Turn Your Landing Page into a Full Growth Playbook"
+                ? "Launch Your First Campaign in Minutes"
+                : "Launch High-Impact Campaigns Instantly"
               }
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               {isNewToAdvertising
-                ? "Simply paste your product page URL and we'll create a complete campaign strategy ready to launch"
-                : "Paste any product URL and get structured customer insights + campaign strategy instantly"
+                ? "Paste your product URL and get a complete campaign strategy with ready-to-use ads for every platform"
+                : "Transform any product URL into a full campaign playbook with AI-powered targeting and creative assets"
               }
             </p>
           </div>
@@ -115,10 +115,7 @@ const Index = () => {
                 <div className="flex gap-3">
                   <Input
                     type="url"
-                    placeholder={isNewToAdvertising 
-                      ? "Paste your product page URL to launch your campaign..."
-                      : "Paste your product landing page URL here..."
-                    }
+                    placeholder="Paste your product page URL to create your campaign..."
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     className="flex-1 h-12 text-base"
@@ -133,10 +130,10 @@ const Index = () => {
                     {isAnalyzing ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {isNewToAdvertising ? "Creating Campaign..." : "Analyzing..."}
+                        Building Campaign...
                       </>
                     ) : (
-                      isNewToAdvertising ? "Launch Campaign" : "Analyze My Page"
+                      "Create Campaign"
                     )}
                   </Button>
                 </div>
@@ -161,16 +158,10 @@ const Index = () => {
                       <Package className="h-6 w-6 text-accent" />
                     </div>
                     <h3 className="text-xl font-semibold">
-                      {isNewToAdvertising 
-                        ? "Launch Campaigns for Multiple Products"
-                        : "Analyze Your Entire Product Catalog"
-                      }
+                      Launch Multi-Product Campaigns
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      {isNewToAdvertising
-                        ? "Have multiple products? We'll create campaign strategies for your entire catalog at once"
-                        : "Extract and categorize all products from your e-commerce site for bulk campaign planning"
-                      }
+                      Have multiple products? We'll extract your catalog and create campaign strategies for all products at once
                     </p>
                   </div>
                   <form onSubmit={handleExtractCatalog} className="flex gap-3">
@@ -192,10 +183,10 @@ const Index = () => {
                       {isExtracting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {isNewToAdvertising ? "Setting Up..." : "Extracting..."}
+                          Building Campaigns...
                         </>
                       ) : (
-                        isNewToAdvertising ? "Launch Multi-Product Campaign" : "Extract Catalog"
+                        "Launch Catalog Campaigns"
                       )}
                     </Button>
                   </form>
@@ -212,13 +203,10 @@ const Index = () => {
                   <Search className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="font-semibold text-lg">
-                  {isNewToAdvertising ? "① Share Your Product" : "① Paste Your URL"}
+                  ① Enter Product URL
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isNewToAdvertising 
-                    ? "Paste your product page URL - that's all we need to get started"
-                    : "Enter any product landing page you want to analyze"
-                  }
+                  Paste your product page URL—that's all we need to start building your campaign
                 </p>
               </CardContent>
             </Card>
@@ -229,13 +217,10 @@ const Index = () => {
                   <Zap className="h-6 w-6 text-accent" />
                 </div>
                 <h3 className="font-semibold text-lg">
-                  {isNewToAdvertising ? "② AI Builds Strategy" : "② AI Scrapes & Analyzes"}
+                  ② AI Creates Strategy
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isNewToAdvertising
-                    ? "Our AI creates your customer personas, targeting, and campaign creatives"
-                    : "Our AI extracts and understands your product positioning"
-                  }
+                  Our AI builds customer personas, targeting parameters, and generates campaign creatives automatically
                 </p>
               </CardContent>
             </Card>
@@ -246,13 +231,10 @@ const Index = () => {
                   <Target className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="font-semibold text-lg">
-                  {isNewToAdvertising ? "③ Launch & Grow" : "③ Get Insights + Plan"}
+                  ③ Launch Campaigns
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isNewToAdvertising
-                    ? "Get ready-to-use ads for Google, Meta, TikTok and more platforms"
-                    : "Receive detailed personas and ready-to-use campaign strategies"
-                  }
+                  Get platform-ready ads for Google, Meta, TikTok, and more—download and launch instantly
                 </p>
               </CardContent>
             </Card>
