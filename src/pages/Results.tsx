@@ -30,6 +30,7 @@ import { TikTokAdPreview } from "@/components/ad-previews/TikTokAdPreview";
 import { YouTubeThumbnailPreview } from "@/components/ad-previews/YouTubeThumbnailPreview";
 import { CampaignPreviewDialog } from "@/components/CampaignPreviewDialog";
 import { TrendCard } from "@/components/TrendCard";
+import { AnalysisChatInterface } from "@/components/dashboard/AnalysisChatInterface";
 
 interface InsightCard {
   id: string;
@@ -1972,6 +1973,13 @@ const Results = () => {
             </TabsContent>
 
           </Tabs>
+        )}
+
+        {/* AI Campaign Assistant */}
+        {analysis && !isLoading && (
+          <div className="mt-8">
+            <AnalysisChatInterface analysisData={analysis} />
+          </div>
         )}
 
         {/* Export Button */}
