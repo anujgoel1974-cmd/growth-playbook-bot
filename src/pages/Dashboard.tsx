@@ -1,4 +1,5 @@
 import { MetricsCards } from '@/components/dashboard/MetricsCards';
+import { MetricsSummary } from '@/components/dashboard/MetricsSummary';
 import { DynamicChartDisplay } from '@/components/dashboard/DynamicChartDisplay';
 import { ChatInterface } from '@/components/dashboard/ChatInterface';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
@@ -7,6 +8,7 @@ import { useDashboardChartState } from '@/hooks/useDashboardChartState';
 export default function Dashboard() {
   const { dailyMetrics, aggregateMetrics } = useDashboardMetrics();
   const { currentChart, setCurrentChart, clearChart } = useDashboardChartState();
+  const userRole = localStorage.getItem("userRole") || "Other";
 
   return (
     <div className="min-h-screen bg-background">
@@ -17,6 +19,12 @@ export default function Dashboard() {
         </div>
         {/* Metrics Cards */}
         <MetricsCards metrics={aggregateMetrics} />
+        
+        {/* AI Campaign Insights */}
+        <MetricsSummary 
+          aggregateMetrics={aggregateMetrics} 
+          userRole={userRole}
+        />
         
         {/* Dynamic Chart Display - Shows AI-generated charts or defaults */}
         <DynamicChartDisplay
