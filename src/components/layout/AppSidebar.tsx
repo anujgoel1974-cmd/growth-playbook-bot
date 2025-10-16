@@ -21,6 +21,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { RoleSwitcher } from './RoleSwitcher';
 
 const navigationGroups = [
   {
@@ -144,8 +145,13 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t">
-        <div className="px-2 py-2 text-xs text-muted-foreground">
-          {!collapsed && <p>v1.0.0</p>}
+        <div className="space-y-2 px-2 py-2">
+          <RoleSwitcher collapsed={collapsed} />
+          {!collapsed && (
+            <div className="text-xs text-muted-foreground">
+              <p>v1.0.0</p>
+            </div>
+          )}
         </div>
       </SidebarFooter>
     </Sidebar>
