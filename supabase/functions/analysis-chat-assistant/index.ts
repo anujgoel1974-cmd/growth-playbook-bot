@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory, analysisData } = await req.json();
+    const { message, conversationHistory, analysisData, userRole } = await req.json();
     
     if (!message) {
       throw new Error('Message is required');
@@ -47,8 +47,69 @@ serve(async (req) => {
       `Week ${week.weekNumber}: ${week.channels.map((ch: any) => `${ch.name} ($${ch.budget})`).join(', ')}`
     ).join('\n') || 'No media plan available';
 
+    // Helper functions for role-based personalization
+    function getUserRoleDescription(role: string): string {
+      const descriptions: Record<string, string> = {
+        'Founder/CEO': 'founders and CEOs focused on business growth',
+        'Marketing Manager': 'marketing managers executing campaigns',
+        'Marketing Analyst': 'marketing analysts optimizing performance',
+        'Content Creator': 'content creators developing ad assets',
+        'Agency Professional': 'agency professionals managing client campaigns',
+        'Freelancer': 'freelance marketers running multiple campaigns',
+        'Other': 'small business owners and marketers'
+      };
+      return descriptions[role] || descriptions['Other'];
+    }
+
+    function getExpertiseLevel(role: string): string {
+      const levels: Record<string, string> = {
+        'Founder/CEO': 'Strategic, business-focused',
+        'Marketing Manager': 'Intermediate to advanced marketing',
+        'Marketing Analyst': 'Advanced analytical and data-focused',
+        'Content Creator': 'Creative and brand-focused',
+        'Agency Professional': 'Advanced multi-client management',
+        'Freelancer': 'Practical and efficiency-focused',
+        'Other': 'Beginner to intermediate'
+      };
+      return levels[role] || levels['Other'];
+    }
+
+    function getRolePrimaryConcerns(role: string): string {
+      const concerns: Record<string, string> = {
+        'Founder/CEO': 'ROI, growth rate, competitive advantage, brand building',
+        'Marketing Manager': 'Campaign execution, budget management, team coordination, timeline delivery',
+        'Marketing Analyst': 'Data accuracy, optimization opportunities, attribution, performance tracking',
+        'Content Creator': 'Creative quality, brand consistency, engagement, storytelling',
+        'Agency Professional': 'Client satisfaction, reportable results, scalability, efficiency',
+        'Freelancer': 'Time efficiency, cost-effectiveness, portfolio building, client retention',
+        'Other': 'Learning, getting started, avoiding mistakes, achieving results'
+      };
+      return concerns[role] || concerns['Other'];
+    }
+
+    function getRoleCommunicationStyle(role: string): string {
+      const styles: Record<string, string> = {
+        'Founder/CEO': '- Use business language and focus on strategic outcomes\n- Connect tactics to business KPIs\n- Be concise and executive-friendly\n- Emphasize competitive positioning',
+        'Marketing Manager': '- Provide step-by-step execution guidance\n- Include resource and timeline considerations\n- Balance strategy with practical tactics\n- Suggest team workflows',
+        'Marketing Analyst': '- Use data-driven language with specific metrics\n- Include statistical reasoning\n- Suggest measurement frameworks\n- Reference industry benchmarks',
+        'Content Creator': '- Focus on creative strategy and storytelling\n- Provide visual and copy direction\n- Use inspirational, creative language\n- Suggest content variations',
+        'Agency Professional': '- Use professional, client-ready language\n- Focus on demonstrable ROI\n- Include competitive context\n- Suggest reporting approaches',
+        'Freelancer': '- Emphasize time-saving tactics\n- Suggest reusable frameworks\n- Focus on high-impact, low-effort wins\n- Provide automation opportunities',
+        'Other': '- Use plain language and explain terms\n- Be educational and supportive\n- Break down complex concepts\n- Provide learning resources'
+      };
+      return styles[role] || styles['Other'];
+    }
+
     // Build comprehensive system prompt
-    const systemPrompt = `You are an AI campaign strategy assistant helping small business owners and first-time advertisers launch their marketing campaigns. You have deep expertise in digital advertising and explain concepts in simple, actionable terms.
+    const systemPrompt = `You are an AI campaign strategy assistant helping ${getUserRoleDescription(userRole || 'Other')} launch their marketing campaigns.
+
+USER CONTEXT:
+- Role: ${userRole || 'small business owner'}
+- Expertise Level: ${getExpertiseLevel(userRole || 'Other')}
+- Primary Concerns: ${getRolePrimaryConcerns(userRole || 'Other')}
+
+COMMUNICATION STYLE FOR THIS ROLE:
+${getRoleCommunicationStyle(userRole || 'Other')}
 
 CAMPAIGN ANALYSIS CONTEXT:
 

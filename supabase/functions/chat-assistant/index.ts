@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, metrics } = await req.json();
+    const { message, metrics, userRole } = await req.json();
     
     if (!message) {
       throw new Error('Message is required');
@@ -23,8 +23,69 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Helper functions for role-based personalization
+    function getUserRoleDescription(role: string): string {
+      const descriptions: Record<string, string> = {
+        'Founder/CEO': 'founders and CEOs focused on business growth',
+        'Marketing Manager': 'marketing managers executing campaigns',
+        'Marketing Analyst': 'marketing analysts optimizing performance',
+        'Content Creator': 'content creators developing ad assets',
+        'Agency Professional': 'agency professionals managing client campaigns',
+        'Freelancer': 'freelance marketers running multiple campaigns',
+        'Other': 'small business owners and marketers'
+      };
+      return descriptions[role] || descriptions['Other'];
+    }
+
+    function getExpertiseLevel(role: string): string {
+      const levels: Record<string, string> = {
+        'Founder/CEO': 'Strategic, business-focused',
+        'Marketing Manager': 'Intermediate to advanced marketing',
+        'Marketing Analyst': 'Advanced analytical and data-focused',
+        'Content Creator': 'Creative and brand-focused',
+        'Agency Professional': 'Advanced multi-client management',
+        'Freelancer': 'Practical and efficiency-focused',
+        'Other': 'Beginner to intermediate'
+      };
+      return levels[role] || levels['Other'];
+    }
+
+    function getRolePrimaryConcerns(role: string): string {
+      const concerns: Record<string, string> = {
+        'Founder/CEO': 'ROI, growth rate, competitive advantage, brand building',
+        'Marketing Manager': 'Campaign execution, budget management, team coordination, timeline delivery',
+        'Marketing Analyst': 'Data accuracy, optimization opportunities, attribution, performance tracking',
+        'Content Creator': 'Creative quality, brand consistency, engagement, storytelling',
+        'Agency Professional': 'Client satisfaction, reportable results, scalability, efficiency',
+        'Freelancer': 'Time efficiency, cost-effectiveness, portfolio building, client retention',
+        'Other': 'Learning, getting started, avoiding mistakes, achieving results'
+      };
+      return concerns[role] || concerns['Other'];
+    }
+
+    function getDashboardRoleGuidance(role: string): string {
+      const guidance: Record<string, string> = {
+        'Founder/CEO': '- Highlight business impact of metrics (revenue, profit margins)\n- Suggest strategic pivots based on data\n- Connect performance to growth objectives\n- Use board-ready language',
+        'Marketing Manager': '- Focus on campaign optimization actions\n- Suggest budget reallocation strategies\n- Highlight team performance indicators\n- Provide execution-ready recommendations',
+        'Marketing Analyst': '- Deep dive into statistical patterns\n- Suggest advanced segmentation analysis\n- Provide technical optimization recommendations\n- Reference analytical methodologies',
+        'Content Creator': '- Analyze engagement and creative performance\n- Suggest content improvements based on data\n- Highlight audience response patterns\n- Connect metrics to creative decisions',
+        'Agency Professional': '- Present client-reportable insights\n- Benchmark against industry standards\n- Focus on demonstrable ROI\n- Suggest client communication approaches',
+        'Freelancer': '- Identify quick optimization wins\n- Suggest time-efficient improvements\n- Highlight scalable tactics\n- Focus on effort vs reward',
+        'Other': '- Explain metrics in simple terms\n- Provide context for performance\n- Suggest beginner-friendly optimizations\n- Include educational insights'
+      };
+      return guidance[role] || guidance['Other'];
+    }
+
     // Build context-aware system prompt with metrics data
-    const systemPrompt = `You are an expert marketing analytics AI assistant. You help users understand their advertising campaign performance across multiple platforms including Google Ads, Meta (Facebook/Instagram), Bing, TikTok, LinkedIn, and Pinterest.
+    const systemPrompt = `You are an expert marketing analytics AI assistant helping ${getUserRoleDescription(userRole || 'Other')}.
+
+USER CONTEXT:
+- Role: ${userRole || 'marketer'}
+- Expertise Level: ${getExpertiseLevel(userRole || 'Other')}
+- Primary Concerns: ${getRolePrimaryConcerns(userRole || 'Other')}
+
+YOUR APPROACH FOR THIS ROLE:
+${getDashboardRoleGuidance(userRole || 'Other')}
 
 Current Campaign Metrics Overview (Last 30 Days):
 

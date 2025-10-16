@@ -279,6 +279,9 @@ const Results = () => {
 
         console.log('Calling analyze-landing-page function...');
         
+        // Get user role for personalized analysis
+        const userRole = searchParams.get("userRole") || localStorage.getItem('userRole') || 'Other';
+        
         // Create a timeout promise for 4 minutes to accommodate full analysis
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Analysis timed out after 4 minutes. Please try again, or check History for a partial save.')), 240000);
@@ -286,7 +289,7 @@ const Results = () => {
         
         // Race between the function call and timeout
         const functionPromise = supabase.functions.invoke('analyze-landing-page', {
-          body: { url: safeUrl }
+          body: { url: safeUrl, userRole: userRole }
         });
         
         const { data, error } = await Promise.race([

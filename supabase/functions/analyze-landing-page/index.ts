@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
-    console.log('Analyzing URL:', url);
+    const { url, userRole } = await req.json();
+    console.log('Analyzing URL:', url, 'for user role:', userRole);
 
     if (!url) {
       throw new Error('URL is required');
@@ -264,8 +264,70 @@ serve(async (req) => {
       }
     };
 
+    // Helper function for role-specific guidelines
+    function getRoleSpecificGuidelines(role: string): string {
+      switch(role) {
+        case 'Founder/CEO':
+          return `- Lead with business impact and ROI projections
+- Emphasize growth strategy and competitive positioning
+- Use executive summary format with clear action items
+- Focus on revenue potential and market opportunities
+- Explain technical terms in business context`;
+        
+        case 'Marketing Manager':
+          return `- Provide tactical campaign execution steps
+- Focus on channel strategy and budget allocation
+- Include team coordination considerations
+- Highlight quick wins vs long-term plays
+- Emphasize practical implementation timelines`;
+        
+        case 'Marketing Analyst':
+          return `- Include detailed data analysis and statistical insights
+- Provide optimization recommendations with expected impact
+- Reference industry benchmarks and performance indicators
+- Use analytical terminology and metrics-focused language
+- Suggest A/B testing opportunities and measurement frameworks`;
+        
+        case 'Content Creator':
+          return `- Lead with creative direction and messaging strategy
+- Provide detailed visual and copy guidance
+- Include storytelling frameworks and emotional hooks
+- Focus on audience engagement and brand voice
+- Suggest content variations and creative testing ideas`;
+        
+        case 'Agency Professional':
+          return `- Present insights in client-ready format
+- Include competitive benchmarks and industry standards
+- Focus on reportable KPIs and client success metrics
+- Provide strategic recommendations with clear rationale
+- Emphasize scalability and white-label execution`;
+        
+        case 'Freelancer':
+          return `- Prioritize time-efficient tactics and quick wins
+- Suggest automation and scaling opportunities
+- Focus on multi-client applicable strategies
+- Highlight cost-effective approaches
+- Provide reusable templates and frameworks`;
+        
+        default:
+          return `- Use clear, educational language
+- Balance strategic and tactical insights
+- Explain technical terms when used
+- Focus on actionable, measurable outcomes`;
+      }
+    }
+
     // Prepare the prompt for AI
-    const systemPrompt = `You are an AI marketing analyst specializing in landing page analysis and ad campaign strategy. Your role is to provide actionable insights that marketing teams can use to create highly targeted campaigns. Focus on delivering practical, data-driven recommendations based on the landing page content. 
+    const systemPrompt = `You are an AI marketing analyst specializing in landing page analysis and ad campaign strategy. 
+
+USER CONTEXT:
+- Role: ${userRole || 'General User'}
+- This shapes how you present insights (see role-specific guidelines below)
+
+ROLE-SPECIFIC PRESENTATION:
+${getRoleSpecificGuidelines(userRole)}
+
+Your role is to provide actionable insights that marketing teams can use to create highly targeted campaigns. Focus on delivering practical, data-driven recommendations based on the landing page content.
 
 CRITICAL FORMATTING RULES:
 - Use ### for subsection headers (e.g., "### Target Personas", "### Demographics")

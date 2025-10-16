@@ -30,11 +30,14 @@ export function useAnalysisChatbot(analysisData: any) {
         .slice(-10)
         .map(m => ({ role: m.role, content: m.content }));
 
+      const userRole = localStorage.getItem('userRole') || 'Other';
+
       const { data, error } = await supabase.functions.invoke('analysis-chat-assistant', {
         body: {
           message: userMessage,
           conversationHistory: conversationHistory,
           analysisData: analysisData,
+          userRole: userRole,
         },
       });
 

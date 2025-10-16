@@ -31,10 +31,13 @@ export function useChatbot(
     setIsLoading(true);
 
     try {
+      const userRole = localStorage.getItem('userRole') || 'Other';
+      
       const { data, error } = await supabase.functions.invoke('chat-assistant', {
         body: {
           message: userMessage,
           metrics: aggregateMetrics,
+          userRole: userRole,
         },
       });
 

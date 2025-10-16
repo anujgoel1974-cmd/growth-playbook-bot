@@ -48,9 +48,12 @@ const Index = () => {
 
     setIsAnalyzing(true);
     
-    // Navigate to results page
+    // Get user role for personalized analysis
+    const userRole = localStorage.getItem('userRole') || 'Other';
+    
+    // Navigate to results page with role context
     setTimeout(() => {
-      navigate(`/results?url=${encodeURIComponent(url)}`);
+      navigate(`/results?url=${encodeURIComponent(url)}&userRole=${encodeURIComponent(userRole)}`);
       setIsAnalyzing(false);
     }, 500);
   };
