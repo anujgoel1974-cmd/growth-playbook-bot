@@ -9,6 +9,7 @@ interface Message {
   content: string;
   timestamp: Date;
   chart?: ChartConfig;
+  followUpQuestions?: string[];
 }
 
 export function useChatbot(
@@ -45,6 +46,7 @@ export function useChatbot(
         content: data.response,
         timestamp: new Date(),
         chart: data.chart || undefined,
+        followUpQuestions: data.followUpQuestions || [],
       };
 
       setMessages((prev) => [...prev, assistantMsg]);

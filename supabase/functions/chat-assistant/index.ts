@@ -109,7 +109,7 @@ WHEN TO GENERATE CHARTS:
 
 Always be concise, data-driven, and actionable. Reference specific metrics (ROAS, quality scores, impression share, funnel drop-offs, device performance, engagement rates) to support recommendations. Focus on insights that drive business results.`;
 
-    // Define chart generation tool
+    // Define chart generation and follow-up questions tools
     const tools = [
       {
         type: "function",
@@ -150,6 +150,28 @@ Always be concise, data-driven, and actionable. Reference specific metrics (ROAS
             required: ["chartType", "title", "data", "metrics"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "suggest_followup_questions",
+          description: "After answering, suggest 4 contextually relevant follow-up questions that build on the current conversation and help the user optimize their campaigns",
+          parameters: {
+            type: "object",
+            properties: {
+              questions: {
+                type: "array",
+                description: "Array of exactly 4 natural, specific follow-up questions",
+                items: {
+                  type: "string"
+                },
+                minItems: 4,
+                maxItems: 4
+              }
+            },
+            required: ["questions"]
+          }
+        }
       }
     ];
 
@@ -180,6 +202,8 @@ Always be concise, data-driven, and actionable. Reference specific metrics (ROAS
     const toolCalls = data.choices[0].message.tool_calls;
 
     let chartData = null;
+    let followUpQuestions: string[] = [];
+    
     if (toolCalls && toolCalls.length > 0) {
       const chartTool = toolCalls.find((tool: any) => tool.function.name === 'generate_chart');
       if (chartTool) {
@@ -189,12 +213,23 @@ Always be concise, data-driven, and actionable. Reference specific metrics (ROAS
           console.error('Error parsing chart data:', e);
         }
       }
+
+      const followUpTool = toolCalls.find((tool: any) => tool.function.name === 'suggest_followup_questions');
+      if (followUpTool) {
+        try {
+          const parsed = JSON.parse(followUpTool.function.arguments);
+          followUpQuestions = parsed.questions || [];
+        } catch (e) {
+          console.error('Error parsing follow-up questions:', e);
+        }
+      }
     }
 
     return new Response(
       JSON.stringify({ 
         response: aiResponse,
-        chart: chartData 
+        chart: chartData,
+        followUpQuestions: followUpQuestions
       }),
       { 
         headers: { 

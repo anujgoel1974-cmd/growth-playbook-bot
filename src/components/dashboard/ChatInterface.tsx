@@ -80,8 +80,9 @@ export function ChatInterface({ aggregateMetrics, onChartGenerated }: ChatInterf
     }
   };
 
-  const handleSuggestedQuestion = (question: string) => {
-    setInput(question);
+  const handleSuggestedQuestion = async (question: string) => {
+    setInput('');
+    await sendMessage(question);
   };
 
   return (
@@ -148,6 +149,35 @@ export function ChatInterface({ aggregateMetrics, onChartGenerated }: ChatInterf
                   </div>
                   {message.chart && message.role === 'assistant' && (
                     <DynamicChart config={message.chart} />
+                  )}
+                  
+                  {/* Follow-up questions - only for last assistant message */}
+                  {message.role === 'assistant' && 
+                   messages.indexOf(message) === messages.length - 1 && 
+                   message.followUpQuestions && 
+                   message.followUpQuestions.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        You might also want to ask:
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {message.followUpQuestions.map((question, qIndex) => (
+                          <button
+                            key={qIndex}
+                            onClick={() => handleSuggestedQuestion(question)}
+                            className="text-left text-xs p-2.5 rounded-lg border border-primary/20 
+                                     bg-background hover:bg-primary/5 hover:border-primary/40 
+                                     transition-all duration-200 shadow-sm hover:shadow-md
+                                     group"
+                          >
+                            <span className="text-primary group-hover:text-primary/80 mr-1.5">→</span>
+                            <span className="text-muted-foreground group-hover:text-foreground">
+                              {question}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground">
