@@ -11,7 +11,10 @@ interface Message {
   chart?: ChartConfig;
 }
 
-export function useChatbot(aggregateMetrics: AggregateMetrics) {
+export function useChatbot(
+  aggregateMetrics: AggregateMetrics,
+  onChartGenerated?: (chart: ChartConfig) => void
+) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -45,6 +48,11 @@ export function useChatbot(aggregateMetrics: AggregateMetrics) {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
+
+      // Notify parent component if a chart was generated
+      if (data.chart && onChartGenerated) {
+        onChartGenerated(data.chart);
+      }
     } catch (error) {
       console.error('Chatbot error:', error);
       const errorMsg: Message = {

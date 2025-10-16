@@ -10,6 +10,7 @@ import { DynamicChart } from './DynamicChart';
 
 interface ChatInterfaceProps {
   aggregateMetrics: AggregateMetrics;
+  onChartGenerated?: (chart: any) => void;
 }
 
 const MARKETING_QUESTION_TEMPLATES = [
@@ -51,10 +52,10 @@ const MARKETING_QUESTION_TEMPLATES = [
   },
 ];
 
-export function ChatInterface({ aggregateMetrics }: ChatInterfaceProps) {
+export function ChatInterface({ aggregateMetrics, onChartGenerated }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, isLoading, sendMessage } = useChatbot(aggregateMetrics);
+  const { messages, isLoading, sendMessage } = useChatbot(aggregateMetrics, onChartGenerated);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
