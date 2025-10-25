@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Users, Briefcase, TrendingUp, Target, ArrowRight, 
   Lightbulb, CheckCircle2, AlertCircle, Sparkles,
-  Calendar, Award
+  Calendar, Award, DollarSign, MapPin, Heart, Zap
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -55,24 +55,106 @@ export function IntelligenceBrief({
   onNavigateToTab 
 }: IntelligenceBriefProps) {
   
+  // Helper function to extract text from bullet points
+  const extractBulletPoints = (content: string, limit = 3) => {
+    const lines = content.split('\n').filter(line => line.trim().startsWith('•') || line.trim().startsWith('-'));
+    return lines.slice(0, limit).map(line => line.replace(/^[•\-]\s*/, '').trim());
+  };
+
+  // Helper function to find section by title
+  const findSection = (title: string) => {
+    return customerInsight.find(insight => 
+      insight.title.toLowerCase().includes(title.toLowerCase())
+    );
+  };
+
+  // Extract persona information
+  const extractPersonaProfile = () => {
+    const personasSection = findSection('target persona');
+    const demographicsSection = findSection('demographic');
+    const psychographicsSection = findSection('psychographic');
+    const painPointsSection = findSection('pain point');
+    const triggersSection = findSection('decision trigger');
+    const communicationSection = findSection('communication');
+
+    // Extract persona name from first persona section
+    let personaName = 'Target Audience';
+    if (personasSection) {
+      const firstLine = personasSection.content.split('\n').find(line => 
+        line.includes('Persona') || line.includes(':')
+      );
+      if (firstLine) {
+        const match = firstLine.match(/Persona \d+:\s*(?:The\s+)?["']?([^"'\n-]+)["']?/i);
+        if (match) {
+          personaName = match[1].trim();
+        }
+      }
+    }
+
+    // Extract demographics
+    const demographics = {
+      age: '',
+      income: '',
+      gender: '',
+      location: ''
+    };
+
+    if (demographicsSection) {
+      const content = demographicsSection.content;
+      const ageMatch = content.match(/Age:\s*([^\n•]+)/i);
+      const incomeMatch = content.match(/Income:\s*([^\n•]+)/i);
+      const genderMatch = content.match(/Gender:\s*([^\n•]+)/i);
+      const locationMatch = content.match(/Location:\s*([^\n•]+)/i);
+
+      if (ageMatch) demographics.age = ageMatch[1].trim();
+      if (incomeMatch) demographics.income = incomeMatch[1].trim();
+      if (genderMatch) demographics.gender = genderMatch[1].trim();
+      if (locationMatch) demographics.location = locationMatch[1].trim();
+    }
+
+    // Extract psychographics
+    const values = psychographicsSection ? extractBulletPoints(psychographicsSection.content, 3) : [];
+    
+    // Extract pain points
+    const painPoints = painPointsSection ? extractBulletPoints(painPointsSection.content, 3) : [];
+
+    // Extract decision triggers
+    const triggers = triggersSection ? extractBulletPoints(triggersSection.content, 3) : [];
+
+    // Extract communication style
+    let communicationTone = '';
+    let communicationThemes = '';
+    if (communicationSection) {
+      const toneMatch = communicationSection.content.match(/Tone[:\s]+([^\n•]+)/i);
+      const themesMatch = communicationSection.content.match(/(?:Language|Themes|Messaging)[:\s]+([^\n•]+)/i);
+      if (toneMatch) communicationTone = toneMatch[1].trim();
+      if (themesMatch) communicationThemes = themesMatch[1].trim();
+    }
+
+    return {
+      personaName,
+      demographics,
+      values,
+      painPoints,
+      triggers,
+      communicationTone,
+      communicationThemes
+    };
+  };
+
+  const persona = extractPersonaProfile();
+  
   // Extract top insights
-  const topCustomerSegment = customerInsight[0];
   const topCompetitor = competitiveAnalysis.competitors[0];
   const topTrend = trendAnalysis.find(t => t.timeframe === 'upcoming') || trendAnalysis[0];
   const upcomingTrends = trendAnalysis.filter(t => t.timeframe === 'upcoming').length;
   const currentTrends = trendAnalysis.filter(t => t.timeframe === 'past').length;
-  
-  // Calculate segment distribution for visualization
-  const segmentDistribution = customerInsight.slice(0, 4).map((insight, idx) => ({
-    name: insight.title,
-    percentage: idx === 0 ? 40 : idx === 1 ? 30 : idx === 2 ? 20 : 10
-  }));
 
   // Generate strategic recommendations
   const recommendations = [
     {
       priority: 'high',
-      action: `Target ${topCustomerSegment?.title || 'primary segment'} with messaging focused on ${competitiveAnalysis.insights[0]?.title.toLowerCase() || 'key differentiators'}`,
+      action: `Target "${persona.personaName}" with messaging focused on ${competitiveAnalysis.insights[0]?.title.toLowerCase() || 'key differentiators'}`,
       reasoning: 'Highest conversion potential based on customer analysis and competitive gaps'
     },
     {
@@ -135,53 +217,154 @@ export function IntelligenceBrief({
               </div>
               <div>
                 <CardTitle className="text-lg">Customer Intelligence</CardTitle>
-                <p className="text-xs text-muted-foreground">Target audience insights</p>
+                <p className="text-xs text-muted-foreground">Target persona profile</p>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            {/* Top Insight Callout */}
-            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-              <div className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                Primary Target Segment
+          <CardContent className="pt-6 space-y-5">
+            {/* Persona Hero */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <div className="text-xs font-semibold text-blue-700 dark:text-blue-300">Primary Persona</div>
               </div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {topCustomerSegment?.title}
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                {persona.personaName}
+              </div>
+              <div className="text-xs text-blue-700 dark:text-blue-300">
+                {persona.demographics.age && `${persona.demographics.age} • `}
+                {persona.demographics.income && `${persona.demographics.income} • `}
+                {persona.demographics.location}
               </div>
             </div>
 
-            {/* Segment Distribution Visual */}
-            <div className="space-y-3">
-              <div className="text-sm font-semibold">Segment Distribution</div>
-              {segmentDistribution.map((segment, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{segment.name}</span>
-                    <span className="font-semibold">{segment.percentage}%</span>
+            {/* Demographics Grid */}
+            {(persona.demographics.age || persona.demographics.income || persona.demographics.gender || persona.demographics.location) && (
+              <div className="grid grid-cols-2 gap-2">
+                {persona.demographics.age && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded p-2 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      <div className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase">Age</div>
+                    </div>
+                    <div className="text-xs font-medium text-blue-900 dark:text-blue-100">{persona.demographics.age}</div>
                   </div>
-                  <Progress value={segment.percentage} className="h-2" />
+                )}
+                {persona.demographics.income && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded p-2 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <DollarSign className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      <div className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase">Income</div>
+                    </div>
+                    <div className="text-xs font-medium text-blue-900 dark:text-blue-100">{persona.demographics.income}</div>
+                  </div>
+                )}
+                {persona.demographics.gender && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded p-2 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Users className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      <div className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase">Gender</div>
+                    </div>
+                    <div className="text-xs font-medium text-blue-900 dark:text-blue-100">{persona.demographics.gender}</div>
+                  </div>
+                )}
+                {persona.demographics.location && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded p-2 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <MapPin className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      <div className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase">Location</div>
+                    </div>
+                    <div className="text-xs font-medium text-blue-900 dark:text-blue-100">{persona.demographics.location}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Core Profile */}
+            <div className="space-y-3">
+              {persona.values.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Heart className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                    <div className="text-xs font-semibold text-blue-900 dark:text-blue-100">Values & Motivations</div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {persona.values.map((value, idx) => (
+                      <Badge key={idx} variant="outline" className="text-[10px] border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30">
+                        {value.length > 40 ? value.substring(0, 40) + '...' : value}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {persona.painPoints.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                    <div className="text-xs font-semibold text-blue-900 dark:text-blue-100">Pain Points</div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {persona.painPoints.map((pain, idx) => (
+                      <div key={idx} className="flex items-start gap-1.5 text-xs">
+                        <div className="h-1 w-1 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
+                        <span className="text-muted-foreground leading-tight">{pain}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Key Insights */}
-            <div className="space-y-3">
-              <div className="text-sm font-semibold">Key Insights</div>
-              {customerInsight.slice(0, 3).map((insight, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">{insight.content.split('\n')[0].substring(0, 80)}...</span>
+            {/* Decision Triggers */}
+            {persona.triggers.length > 0 && (
+              <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Zap className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                  <div className="text-xs font-semibold text-green-900 dark:text-green-100">Decision Triggers</div>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1.5">
+                  {persona.triggers.map((trigger, idx) => (
+                    <div key={idx} className="flex items-start gap-1.5 text-xs">
+                      <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-green-700 dark:text-green-300 leading-tight">{trigger}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Communication Guide */}
+            {(persona.communicationTone || persona.communicationThemes) && (
+              <div className="bg-blue-100 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-300 dark:border-blue-700">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  <div className="text-xs font-semibold text-blue-900 dark:text-blue-100">How to Communicate</div>
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  {persona.communicationTone && (
+                    <div>
+                      <span className="font-semibold text-blue-800 dark:text-blue-200">Tone:</span>
+                      <span className="text-blue-700 dark:text-blue-300 ml-1">{persona.communicationTone}</span>
+                    </div>
+                  )}
+                  {persona.communicationThemes && (
+                    <div>
+                      <span className="font-semibold text-blue-800 dark:text-blue-200">Messaging:</span>
+                      <span className="text-blue-700 dark:text-blue-300 ml-1">{persona.communicationThemes}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Action Item */}
-            <div className="bg-blue-100 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-300 dark:border-blue-700">
+            <div className="bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-950/20 rounded-lg p-3 border border-blue-300 dark:border-blue-700">
               <div className="flex items-start gap-2">
                 <Target className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                 <div className="text-xs">
                   <span className="font-semibold text-blue-900 dark:text-blue-100">Action:</span>
-                  <span className="text-blue-700 dark:text-blue-300"> Target {topCustomerSegment?.title} first for highest ROI potential</span>
+                  <span className="text-blue-700 dark:text-blue-300"> Target "{persona.personaName}" with {persona.communicationTone ? persona.communicationTone.toLowerCase() : 'personalized'} messaging that addresses their core pain points</span>
                 </div>
               </div>
             </div>
