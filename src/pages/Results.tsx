@@ -1000,6 +1000,40 @@ const Results = () => {
                                 </div>
                               </div>
                             )}
+
+                            {/* Historical optimization insights (from past campaigns) */}
+                            {analysis?.campaignOptimizations?.optimizedMediaPlan && (() => {
+                              const optWeek = analysis.campaignOptimizations.optimizedMediaPlan.find((w: any) => w.weekNumber === week.weekNumber);
+                              if (!optWeek) return null;
+                              return (
+                                <div className="mt-3 p-4 bg-gradient-to-br from-muted/10 to-muted/20 rounded-lg border border-border">
+                                  <div className="flex items-start gap-2">
+                                    <div className="mt-0.5">
+                                      <div className="h-5 w-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                                        <span className="text-xs font-bold text-green-600 dark:text-green-400">★</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-2">Historical optimization insights</p>
+                                      <div className="space-y-1">
+                                        {optWeek.channels.slice(0, 3).map((ch: any, i: number) => (
+                                          <div key={i} className="text-xs text-muted-foreground">
+                                            <span className="font-semibold">{ch.channel}</span>: {ch.reasoning}
+                                            {typeof ch.historicalROAS !== 'undefined' && (
+                                              <span className="ml-2 text-green-700 dark:text-green-300">{ch.historicalROAS}x ROAS</span>
+                                            )}
+                                            {typeof ch.historicalCPA !== 'undefined' && (
+                                              <span className="ml-2">| ${'{'}ch.historicalCPA{'}'} CPA</span>
+                                            )}
+                                            {ch.change && <span className="ml-2">({ch.change})</span>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </CardContent>
                         </Card>
                       );
