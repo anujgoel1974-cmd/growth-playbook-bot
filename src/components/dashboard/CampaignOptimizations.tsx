@@ -177,11 +177,25 @@ export function CampaignOptimizations({ optimizations }: CampaignOptimizationsPr
                     <div className="flex items-center gap-3 flex-wrap text-xs">
                       <div className="flex items-center gap-1">
                         <Target className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                        <span className="font-semibold">{audience.historicalConversionRate.toFixed(1)}%</span> conv. rate
+                        <span className="font-semibold">
+                          {(() => {
+                            const val = typeof audience.historicalConversionRate === 'number'
+                              ? audience.historicalConversionRate
+                              : parseFloat(String(audience.historicalConversionRate).replace(/[^\d.-]/g, '')) || 0;
+                            return val.toFixed(1);
+                          })()}%
+                        </span> conv. rate
                       </div>
                       <div className="flex items-center gap-1">
                         <BarChart3 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                        <span className="font-semibold">${audience.historicalAOV}</span> AOV
+                        <span className="font-semibold">
+                          ${(() => {
+                            const val = typeof audience.historicalAOV === 'number'
+                              ? audience.historicalAOV
+                              : parseFloat(String(audience.historicalAOV).replace(/[^\d.-]/g, '')) || 0;
+                            return val.toLocaleString();
+                          })()}
+                        </span> AOV
                       </div>
                     </div>
                   </div>
