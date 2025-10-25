@@ -25,6 +25,9 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Get authorization header for calling other edge functions
+    const authHeader = req.headers.get('authorization');
+
     // Fetch the landing page content
     console.log('Fetching landing page content...');
     const pageResponse = await fetch(url, {
@@ -1555,7 +1558,8 @@ CRITICAL RULES:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${lovableApiKey}`,
+          'Authorization': authHeader || '',
+          'apikey': Deno.env.get('SUPABASE_ANON_KEY') || '',
         },
         body: JSON.stringify({
           newCampaignAnalysis: structuredData,

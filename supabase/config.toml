@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-metrics-summary]
 verify_jwt = false
+
+[functions.optimize-campaign]
+verify_jwt = false
