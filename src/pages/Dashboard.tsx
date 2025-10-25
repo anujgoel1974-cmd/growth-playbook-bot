@@ -4,6 +4,7 @@ import { DynamicChartDisplay } from '@/components/dashboard/DynamicChartDisplay'
 import { ChatInterface } from '@/components/dashboard/ChatInterface';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useDashboardChartState } from '@/hooks/useDashboardChartState';
+import { HistoricalBenchmark } from '@/components/dashboard/HistoricalBenchmark';
 
 export default function Dashboard() {
   const { dailyMetrics, aggregateMetrics } = useDashboardMetrics();
@@ -19,6 +20,9 @@ export default function Dashboard() {
         </div>
         {/* Metrics Cards */}
         <MetricsCards metrics={aggregateMetrics} />
+        
+        {/* Historical Benchmark */}
+        <HistoricalBenchmark currentMetrics={aggregateMetrics} />
         
         {/* AI Campaign Insights */}
         <MetricsSummary 

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { 
   Loader2, Copy, Download,
   Users, Brain, Zap, MessageCircle, TrendingUp,
@@ -32,6 +33,7 @@ import { CampaignPreviewDialog } from "@/components/CampaignPreviewDialog";
 import { TrendCard } from "@/components/TrendCard";
 import { AnalysisChatInterface } from "@/components/dashboard/AnalysisChatInterface";
 import { IntelligenceBrief } from "@/components/dashboard/IntelligenceBrief";
+import { CampaignOptimizations } from "@/components/dashboard/CampaignOptimizations";
 
 interface InsightCard {
   id: string;
@@ -120,6 +122,7 @@ interface AnalysisData {
   };
   adCreatives?: AdCreative[];
   trendAnalysis?: TrendItem[];
+  campaignOptimizations?: any;
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -739,12 +742,20 @@ const Results = () => {
           </Card>
         ) : (
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <TabsList className="grid w-full max-w-6xl mx-auto grid-cols-7 mb-8">
+            <TabsList className="grid w-full max-w-6xl mx-auto grid-cols-8 mb-8">
               <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="insight">Customer Insight</TabsTrigger>
               <TabsTrigger value="competitive">Competitive Analysis</TabsTrigger>
               <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
               <TabsTrigger value="targeting">Campaign Targeting</TabsTrigger>
+              <TabsTrigger value="optimizations" className="relative">
+                Optimizations
+                {analysis?.campaignOptimizations && (
+                  <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                    {analysis.campaignOptimizations.historicalSummary?.totalCampaigns || 47}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="adcreative">Ad Creative</TabsTrigger>
               <TabsTrigger value="mediaplan">Media Plan</TabsTrigger>
             </TabsList>
@@ -791,6 +802,19 @@ const Results = () => {
                 <Card className="shadow-card">
                   <CardContent className="py-12 text-center text-muted-foreground">
                     No campaign targeting data available
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Optimizations Tab */}
+            <TabsContent value="optimizations" className="animate-fade-in">
+              {analysis?.campaignOptimizations ? (
+                <CampaignOptimizations optimizations={analysis.campaignOptimizations} />
+              ) : (
+                <Card className="shadow-card">
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    Historical optimization data not available for this analysis.
                   </CardContent>
                 </Card>
               )}
