@@ -1889,11 +1889,25 @@ const Results = () => {
             weekNumber={selectedCampaign.weekNumber}
             adCreatives={filteredCreatives}
             campaignSettingsRationale={(() => {
-              console.log('Full campaignOptimizations:', analysis?.campaignOptimizations);
-              console.log('campaignSettingsRationale object:', analysis?.campaignOptimizations?.campaignSettingsRationale);
-              console.log('Looking for campaign name:', selectedCampaign.campaign.name);
-              console.log('Available keys:', analysis?.campaignOptimizations?.campaignSettingsRationale ? Object.keys(analysis.campaignOptimizations.campaignSettingsRationale) : 'none');
-              return analysis?.campaignOptimizations?.campaignSettingsRationale?.[selectedCampaign.campaign.name];
+              if (!analysis?.campaignOptimizations?.campaignSettingsRationale) return undefined;
+              
+              const campaignName = selectedCampaign.campaign.name;
+              const campaignType = selectedCampaign.campaign.campaignType;
+              const rationales = analysis.campaignOptimizations.campaignSettingsRationale;
+              
+              // Try exact match first
+              if (rationales[campaignName]) return rationales[campaignName];
+              
+              // Try matching with campaign type (e.g., "Google" + "Performance Max" = "Google Performance Max")
+              const compositeKey = `${campaignName} ${campaignType}`;
+              if (rationales[compositeKey]) return rationales[compositeKey];
+              
+              // Try finding a key that starts with the campaign name
+              const matchingKey = Object.keys(rationales).find(key => 
+                key.toLowerCase().startsWith(campaignName.toLowerCase())
+              );
+              
+              return matchingKey ? rationales[matchingKey] : undefined;
             })()}
           />
         )}
