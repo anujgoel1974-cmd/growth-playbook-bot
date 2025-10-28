@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MetaFeedAdPreview } from "./ad-previews/MetaFeedAdPreview";
 import { InstagramStoryAdPreview } from "./ad-previews/InstagramStoryAdPreview";
 import { GoogleSearchAdPreview } from "./ad-previews/GoogleSearchAdPreview";
@@ -9,7 +10,7 @@ import { GoogleDisplayAdPreview } from "./ad-previews/GoogleDisplayAdPreview";
 import { PinterestPinPreview } from "./ad-previews/PinterestPinPreview";
 import { TikTokAdPreview } from "./ad-previews/TikTokAdPreview";
 import { YouTubeThumbnailPreview } from "./ad-previews/YouTubeThumbnailPreview";
-import { Copy, Download, Target, DollarSign, TrendingUp } from "lucide-react";
+import { Copy, Download, Target, DollarSign, TrendingUp, HelpCircle } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 
 interface CampaignPreviewDialogProps {
@@ -33,6 +34,7 @@ interface CampaignPreviewDialogProps {
     logoUrl?: string;
     imageAspectRatio?: string;
   }>;
+  campaignSettingsRationale?: Record<string, any>;
 }
 
 export const CampaignPreviewDialog = ({
@@ -41,7 +43,9 @@ export const CampaignPreviewDialog = ({
   campaign,
   weekNumber,
   adCreatives,
+  campaignSettingsRationale,
 }: CampaignPreviewDialogProps) => {
+  const rationale = campaignSettingsRationale || {};
   // Map campaign types to ad creative placements
   const getCampaignRecommendedPlacements = () => {
     const channelType = campaign.name.toLowerCase();
@@ -226,6 +230,7 @@ export const CampaignPreviewDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <TooltipProvider>
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-3">
             <span>{campaign.name}</span>
@@ -282,30 +287,102 @@ export const CampaignPreviewDialog = ({
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Objective</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-muted-foreground">Objective</p>
+                        {rationale?.objective && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p className="text-xs">{rationale.objective}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className="text-sm">{settings.objective}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Bid Strategy</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-muted-foreground">Bid Strategy</p>
+                        {rationale?.bidStrategy && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p className="text-xs">{rationale.bidStrategy}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className="text-sm">{settings.bidStrategy}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Bid Amount</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-muted-foreground">Bid Amount</p>
+                        {rationale?.bidAmount && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p className="text-xs">{rationale.bidAmount}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className="text-sm font-semibold">{settings.bidAmount}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Demographics</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-muted-foreground">Demographics</p>
+                        {rationale?.demographics && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p className="text-xs">{rationale.demographics}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className="text-sm">{settings.demographics}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Targeting</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium text-muted-foreground">Targeting</p>
+                      {rationale?.targeting && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p className="text-xs">{rationale.targeting}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <p className="text-sm">{settings.targeting}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Placements</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium text-muted-foreground">Placements</p>
+                      {rationale?.placements && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p className="text-xs">{rationale.placements}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <p className="text-sm">{settings.placements}</p>
                   </div>
                   <div>
@@ -324,7 +401,19 @@ export const CampaignPreviewDialog = ({
                   )}
                   {settings.interests && settings.interests.length > 0 && (
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-2">Target Interests</p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-sm font-medium text-muted-foreground">Target Interests</p>
+                        {rationale?.interests && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p className="text-xs">{rationale.interests}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {settings.interests.map((interest, idx) => (
                           <Badge key={idx} variant="secondary">{interest}</Badge>
@@ -334,7 +423,19 @@ export const CampaignPreviewDialog = ({
                   )}
                   {settings.keywords && settings.keywords.length > 0 && (
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-2">Target Keywords</p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-sm font-medium text-muted-foreground">Target Keywords</p>
+                        {rationale?.keywords && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p className="text-xs">{rationale.keywords}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {settings.keywords.map((keyword, idx) => (
                           <Badge key={idx} className="bg-primary/10 text-primary hover:bg-primary/20">
@@ -414,6 +515,7 @@ export const CampaignPreviewDialog = ({
             </Button>
           </div>
         </div>
+        </TooltipProvider>
       </DialogContent>
     </Dialog>
   );

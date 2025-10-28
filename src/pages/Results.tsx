@@ -1888,6 +1888,9 @@ const Results = () => {
             campaign={selectedCampaign.campaign}
             weekNumber={selectedCampaign.weekNumber}
             adCreatives={filteredCreatives}
+            campaignSettingsRationale={
+              analysis?.campaignOptimizations?.campaignSettingsRationale?.[selectedCampaign.campaign.name]
+            }
           />
         )}
       </div>

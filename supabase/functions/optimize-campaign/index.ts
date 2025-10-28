@@ -156,6 +156,57 @@ OUTPUT FORMAT (must be valid JSON):
       "costOfInaction": "Avg $1,456 wasted spend based on past campaigns"
     }
   ],
+  "campaignSettingsRationale": {
+    "Google Performance Max": {
+      "objective": "Maximize conversions—historical 3.1x ROAS on this category",
+      "targeting": "All Google inventory captures high-intent searchers (42% of traffic)",
+      "bidStrategy": "Target ROAS automated bidding outperformed manual by 28%",
+      "bidAmount": "$2.50-$5.00 CPA based on competitor benchmarks ($3.20 avg)",
+      "demographics": "Ages 25-54, $75K+ income matches 73% of customer base",
+      "placements": "Automated placement captured 3x more conversions historically",
+      "keywords": "Derived from competitor analysis—top performers in category",
+      "interests": "Home & Garden (41% audience), Luxury Lifestyle (28%)"
+    },
+    "Meta Advantage+": {
+      "objective": "Sales optimization—Meta's historical 3.5x ROAS for visual products",
+      "targeting": "Advantage+ AI targeting found 2.3x more buyers than manual",
+      "bidStrategy": "Highest volume optimization—past campaigns scaled 40% faster",
+      "bidAmount": "$15-$30 CPA aligns with AOV (4.2x return)",
+      "demographics": "Ages 25-54 core audience, 67% female based on aesthetics",
+      "placements": "Auto-placement Feed/Stories captured 89% of conversions",
+      "interests": "Interior Design (52% affinity), Sustainable Living (38%)"
+    },
+    "Google Search": {
+      "objective": "Drive high-intent traffic—search intent converts 2.8x better",
+      "targeting": "Keyword-based targeting captures bottom-funnel buyers",
+      "bidStrategy": "Manual CPC or Target CPA for precise control",
+      "bidAmount": "$1.50-$3.00 per click based on keyword competitiveness",
+      "demographics": "Age 25-64, high purchase intent signals",
+      "placements": "Search Results—highest intent placement available",
+      "keywords": "Buy-intent keywords convert 3.2x higher than generic terms",
+      "interests": "Shopping behaviors indicate ready-to-purchase mindset"
+    },
+    "Pinterest": {
+      "objective": "Drive consideration—platform users 89% more likely to purchase",
+      "targeting": "Interest & keyword targeting—high visual affinity audience",
+      "bidStrategy": "Automatic bidding optimizes for lowest cost per result",
+      "bidAmount": "$0.75-$2.00 per click—lower CPC than other platforms",
+      "demographics": "80% Female, ages 25-54—matches product aesthetic appeal",
+      "placements": "Home feed & search—high discovery intent placements",
+      "keywords": "Inspiration keywords drive 2.1x longer site engagement",
+      "interests": "Home Decor & DIY audiences have 3.4x purchase intent"
+    },
+    "TikTok": {
+      "objective": "Engagement from Gen Z/Millennials—67% make purchases via TikTok",
+      "targeting": "Interest & behavior targeting reaches trend-savvy audience",
+      "bidStrategy": "Lowest cost optimization maximizes reach efficiently",
+      "bidAmount": "$1.00-$2.50 per click—competitive for younger demographics",
+      "demographics": "Ages 18-34—highest engagement with video content",
+      "placements": "TikTok feed—native format drives 3.8x higher engagement",
+      "keywords": "N/A—TikTok uses interest & behavior targeting",
+      "interests": "Home Decor & Aesthetic Lifestyle—viral product potential"
+    }
+  },
   "confidenceScore": 8.5,
   "reasoningExplanation": "High confidence based on ${historicalData.totalCampaignsAnalyzed} campaigns and consistent performance patterns across channels"
 }
