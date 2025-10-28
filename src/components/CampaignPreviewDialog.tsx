@@ -46,6 +46,11 @@ export const CampaignPreviewDialog = ({
   campaignSettingsRationale,
 }: CampaignPreviewDialogProps) => {
   const rationale = campaignSettingsRationale || {};
+  
+  // Debug logging
+  console.log('Campaign name:', campaign.name);
+  console.log('Campaign settings rationale received:', campaignSettingsRationale);
+  console.log('Rationale for this campaign:', rationale);
   // Map campaign types to ad creative placements
   const getCampaignRecommendedPlacements = () => {
     const channelType = campaign.name.toLowerCase();

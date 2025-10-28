@@ -1888,9 +1888,13 @@ const Results = () => {
             campaign={selectedCampaign.campaign}
             weekNumber={selectedCampaign.weekNumber}
             adCreatives={filteredCreatives}
-            campaignSettingsRationale={
-              analysis?.campaignOptimizations?.campaignSettingsRationale?.[selectedCampaign.campaign.name]
-            }
+            campaignSettingsRationale={(() => {
+              console.log('Full campaignOptimizations:', analysis?.campaignOptimizations);
+              console.log('campaignSettingsRationale object:', analysis?.campaignOptimizations?.campaignSettingsRationale);
+              console.log('Looking for campaign name:', selectedCampaign.campaign.name);
+              console.log('Available keys:', analysis?.campaignOptimizations?.campaignSettingsRationale ? Object.keys(analysis.campaignOptimizations.campaignSettingsRationale) : 'none');
+              return analysis?.campaignOptimizations?.campaignSettingsRationale?.[selectedCampaign.campaign.name];
+            })()}
           />
         )}
       </div>
