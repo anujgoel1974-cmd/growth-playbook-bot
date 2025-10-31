@@ -209,7 +209,7 @@ function detectEditIntent(message: string): EditIntent | null {
     const platform = extractPlatform(message);
     return {
       field: platform ? `${platform} budget` : 'budget',
-      platform,
+      platform: platform ?? undefined,
       newValue: parseInt(budgetMatch[3]),
     };
   }
