@@ -143,16 +143,18 @@ export function useCampaignChat() {
           return;
         }
 
-        const progressQuery = await (supabase as any)
-          .from('analysis_progress')
-          .select('id, status, section_name, progress_percentage, data, updated_at')
-          .eq('url', url)
-          .order('updated_at', { ascending: false })
-          .limit(1);
-        
-        const progressRecords = progressQuery.data;
+        try {
+          const supabaseAny = supabase as any;
+          const progressResult = await supabaseAny
+            .from('analysis_progress')
+            .select('id, status, section_name, progress_percentage, data, updated_at')
+            .eq('url', url)
+            .order('updated_at', { ascending: false })
+            .limit(1);
 
-        if (!progressRecords || progressRecords.length === 0) return;
+          if (progressResult.error || !progressResult.data || progressResult.data.length === 0) return;
+          
+          const progressRecords = progressResult.data;
 
         const progress = progressRecords[0];
         const progressData = progress.data ? (progress.data as unknown as AnalysisData) : null;
@@ -232,6 +234,9 @@ export function useCampaignChat() {
             };
             setMessages((prev) => [...prev, mediaPlanMsg]);
           }
+        }
+        } catch (pollError) {
+          console.error('Poll error:', pollError);
         }
       }, 3000); // Poll every 3 seconds
 
