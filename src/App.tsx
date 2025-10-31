@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import ConnectPlatforms from "./pages/ConnectPlatforms";
 import Dashboard from "./pages/Dashboard";
+import CampaignChat from "./pages/CampaignChat";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/" element={<Navigate to="/onboarding" replace />} />
           <Route path="/new-campaign" element={<MainLayout><Index /></MainLayout>} />
+          <Route path="/campaign-chat" element={<MainLayout><CampaignChat /></MainLayout>} />
           <Route path="/connect-platforms" element={<MainLayout><ConnectPlatforms /></MainLayout>} />
           <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
           <Route path="/results" element={<MainLayout><Results /></MainLayout>} />
