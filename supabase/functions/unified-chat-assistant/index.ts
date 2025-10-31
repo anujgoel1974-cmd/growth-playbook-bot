@@ -29,8 +29,8 @@ If asked about campaign strategies, explain your reasoning clearly.`
       { role: 'user', content: message }
     ];
 
-    // Call Lovable AI
-    const response = await fetch('https://api.lovable.app/v1/chat/completions', {
+    // Call Lovable AI Gateway
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,6 +45,12 @@ If asked about campaign strategies, explain your reasoning clearly.`
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limits exceeded, please try again later.');
+      }
+      if (response.status === 402) {
+        throw new Error('Payment required, please add funds to your Lovable AI workspace.');
+      }
       throw new Error(`AI API error: ${response.statusText}`);
     }
 
