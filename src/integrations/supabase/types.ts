@@ -49,6 +49,7 @@ export type Database = {
           started_at: string | null
           status: string | null
           updated_at: string | null
+          url: string
         }
         Insert: {
           completed_at?: string | null
@@ -60,6 +61,7 @@ export type Database = {
           started_at?: string | null
           status?: string | null
           updated_at?: string | null
+          url: string
         }
         Update: {
           completed_at?: string | null
@@ -71,6 +73,7 @@ export type Database = {
           started_at?: string | null
           status?: string | null
           updated_at?: string | null
+          url?: string
         }
         Relationships: [
           {
