@@ -79,12 +79,12 @@ const ConnectPlatforms = () => {
 
   const handleContinue = () => {
     localStorage.setItem("hasCompletedOnboarding", "true");
-    navigate("/dashboard");
+    navigate("/chat");
   };
 
   const handleSkip = () => {
     localStorage.setItem("hasCompletedOnboarding", "true");
-    navigate("/dashboard");
+    navigate("/chat");
   };
 
   const hasConnectedPlatforms = Object.values(connected).some((v) => v);

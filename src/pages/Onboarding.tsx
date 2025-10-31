@@ -33,7 +33,7 @@ const Onboarding = () => {
     if (hasAdvertised) {
       navigate("/connect-platforms");
     } else {
-      navigate("/new-campaign");
+      navigate("/chat");
     }
   };
 

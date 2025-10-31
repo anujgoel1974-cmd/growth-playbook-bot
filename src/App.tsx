@@ -13,6 +13,7 @@ import Onboarding from "./pages/Onboarding";
 import ConnectPlatforms from "./pages/ConnectPlatforms";
 import Dashboard from "./pages/Dashboard";
 import CampaignChat from "./pages/CampaignChat";
+import ChatHub from "./pages/ChatHub";
 
 const queryClient = new QueryClient();
 
@@ -25,11 +26,11 @@ const App = () => (
         <Routes>
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/" element={<Navigate to="/onboarding" replace />} />
+          <Route path="/chat" element={<ChatHub />} />
           <Route path="/new-campaign" element={<MainLayout><Index /></MainLayout>} />
-          {/* Campaign chat can be accessed without onboarding for testing */}
-          <Route path="/campaign-chat" element={<CampaignChat />} />
+          <Route path="/campaign-chat" element={<Navigate to="/chat" replace />} />
           <Route path="/connect-platforms" element={<MainLayout><ConnectPlatforms /></MainLayout>} />
-          <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
+          <Route path="/dashboard" element={<Navigate to="/chat" replace />} />
           <Route path="/results" element={<MainLayout><Results /></MainLayout>} />
           <Route path="/sitemap" element={<MainLayout><Sitemap /></MainLayout>} />
           <Route path="/history" element={<MainLayout><History /></MainLayout>} />
