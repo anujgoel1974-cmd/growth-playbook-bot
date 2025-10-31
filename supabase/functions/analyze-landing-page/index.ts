@@ -1581,6 +1581,16 @@ CRITICAL RULES:
       }).eq('id', progressId);
       console.log('📊 Updated progress: trend analysis');
     }
+    
+    // Update progress to 70% - starting media plan optimization
+    if (progressId) {
+      await supabase.from('analysis_progress').update({
+        section_name: 'media_plan_optimizing',
+        progress_percentage: 70,
+        updated_at: new Date().toISOString()
+      }).eq('id', progressId);
+      console.log('📊 Updated progress: media plan optimization starting');
+    }
 
     const structuredData = {
       customerInsight: customerInsightCards,
@@ -1603,12 +1613,24 @@ CRITICAL RULES:
       trendAnalysis: trendAnalysis.length
     });
 
+    // Update progress to 85% - optimizing with historical data
+    if (progressId) {
+      await supabase.from('analysis_progress').update({
+        section_name: 'media_plan_optimizing',
+        progress_percentage: 85,
+        updated_at: new Date().toISOString()
+      }).eq('id', progressId);
+      console.log('📊 Updated progress: 85% - optimizing media plan');
+    }
+    
     // Invoke optimize-campaign to enhance with historical data
     let campaignOptimizations = null;
     try {
       console.log('Invoking optimize-campaign function...');
       const optimizeUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/optimize-campaign`;
-      const optimizeResponse = await fetch(optimizeUrl, {
+      
+      // Add timeout to optimize-campaign call
+      const optimizePromise = fetch(optimizeUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1648,6 +1670,13 @@ CRITICAL RULES:
           productCategory: 'General'
         }),
       });
+      
+      // Timeout after 15 seconds
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Optimize-campaign timeout')), 15000)
+      );
+      
+      const optimizeResponse = await Promise.race([optimizePromise, timeoutPromise]) as Response;
 
       if (optimizeResponse.ok) {
         campaignOptimizations = await optimizeResponse.json();
@@ -1665,17 +1694,33 @@ CRITICAL RULES:
       campaignOptimizations
     };
     
-    // Save final media plan progress
+    // Save final media plan progress - ALWAYS update to complete even if optimizations failed
     if (progressId) {
-      await supabase.from('analysis_progress').update({
-        section_name: 'complete',
-        status: 'complete',
-        progress_percentage: 100,
-        data: enhancedData,
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('id', progressId);
-      console.log('📊 Analysis complete');
+      try {
+        const updateResult = await supabase.from('analysis_progress').update({
+          section_name: 'complete',
+          status: 'complete',
+          progress_percentage: 100,
+          data: enhancedData,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq('id', progressId);
+        
+        console.log('📊 Analysis complete - update result:', updateResult.error ? 'ERROR' : 'SUCCESS');
+        if (updateResult.error) {
+          console.error('Final update error:', updateResult.error);
+        }
+      } catch (updateError) {
+        console.error('Critical error updating final progress:', updateError);
+        // Try one more time with minimal data
+        await supabase.from('analysis_progress').update({
+          section_name: 'complete',
+          status: 'complete',
+          progress_percentage: 100,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq('id', progressId);
+      }
     }
 
     return new Response(
