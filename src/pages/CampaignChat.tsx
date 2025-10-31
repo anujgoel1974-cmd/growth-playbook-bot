@@ -12,6 +12,7 @@ import { InlineCompetitorCard } from '@/components/chat/InlineCompetitorCard';
 import { InlineTrendCard } from '@/components/chat/InlineTrendCard';
 import { InlineMediaPlanCard } from '@/components/chat/InlineMediaPlanCard';
 import { InlineCampaignCard } from '@/components/chat/InlineCampaignCard';
+import { InlineLoadingCard } from '@/components/chat/InlineLoadingCard';
 
 const CampaignChat = () => {
   const navigate = useNavigate();
@@ -96,16 +97,26 @@ const CampaignChat = () => {
                   } flex flex-col max-w-[85%]`}
                 >
                   <div className="w-full">
-                    {message.content && (
-                      <div
-                        className={`rounded-xl px-5 py-3 shadow-sm ${
-                          message.role === 'user'
-                            ? 'bg-gradient-primary text-primary-foreground ml-auto'
-                            : 'bg-card border border-border'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                      </div>
+                    {/* Loading Card */}
+                    {message.isLoadingCard ? (
+                      <InlineLoadingCard 
+                        title={message.loadingTitle || ''} 
+                        description={message.loadingDescription || ''} 
+                      />
+                    ) : (
+                      <>
+                        {message.content && (
+                          <div
+                            className={`rounded-xl px-5 py-3 shadow-sm ${
+                              message.role === 'user'
+                                ? 'bg-gradient-primary text-primary-foreground ml-auto'
+                                : 'bg-card border border-border'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                          </div>
+                        )}
+                      </>
                     )}
                     
                     {/* Inline Cards */}

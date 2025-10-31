@@ -14,6 +14,10 @@ interface Message {
   mediaPlan?: any;
   campaigns?: any[];
   weekNumber?: number;
+  isLoadingCard?: boolean;
+  loadingTitle?: string;
+  loadingDescription?: string;
+  sectionName?: string;
 }
 
 interface AnalysisData {
@@ -28,6 +32,29 @@ interface AnalysisData {
 }
 
 type ConversationState = 'awaiting_url' | 'analyzing' | 'results_ready' | 'refining';
+
+const ANALYSIS_STATUS_MESSAGES: Record<string, { title: string; description: string }> = {
+  initialization: {
+    title: "🔍 Scanning Your Product Page",
+    description: "Extracting content, images, and key information from your landing page..."
+  },
+  customer_insights_analyzing: {
+    title: "👥 Understanding Your Customers",
+    description: "AI is analyzing demographics, behaviors, pain points, and decision triggers..."
+  },
+  competitive_analysis_analyzing: {
+    title: "🎯 Researching Your Competition",
+    description: "Identifying competing brands and analyzing their market positioning..."
+  },
+  trend_analysis_analyzing: {
+    title: "📈 Spotting Market Trends",
+    description: "Finding trending topics and opportunities in your industry..."
+  },
+  media_plan_analyzing: {
+    title: "💼 Building Your Media Plan",
+    description: "Optimizing budget allocation and creating your weekly campaign strategy..."
+  }
+};
 
 export function useCampaignChat() {
   const [messages, setMessages] = useState<Message[]>([
@@ -124,6 +151,7 @@ export function useCampaignChat() {
 
       // Poll for progress updates
       const displayedSections = new Set<string>();
+      const displayedLoadingCards = new Set<string>();
       let pollCount = 0;
       const maxPolls = 120; // Max 6 minutes (120 * 3 seconds)
 
@@ -160,12 +188,83 @@ export function useCampaignChat() {
         const progress = progressRecords[0];
         const progressData = progress.data ? (progress.data as unknown as AnalysisData) : null;
         console.log('📊 Poll progress:', progress.section_name, progress.progress_percentage);
+        
+        // Show loading cards based on progress
+        const progressPercentage = progress?.progress_percentage || 0;
+        
+        // Show customer insights loading (10-20%)
+        if (progressPercentage >= 10 && progressPercentage < 20 && !displayedLoadingCards.has('customer_insights_analyzing')) {
+          displayedLoadingCards.add('customer_insights_analyzing');
+          const loadingMsg: Message = {
+            id: `${Date.now()}-loading-customer-insights`,
+            role: 'assistant',
+            content: '',
+            isLoadingCard: true,
+            loadingTitle: ANALYSIS_STATUS_MESSAGES.customer_insights_analyzing.title,
+            loadingDescription: ANALYSIS_STATUS_MESSAGES.customer_insights_analyzing.description,
+            sectionName: 'customer_insights_analyzing',
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, loadingMsg]);
+        }
+        
+        // Show competitive analysis loading (30-40%)
+        if (progressPercentage >= 30 && progressPercentage < 40 && !displayedLoadingCards.has('competitive_analysis_analyzing')) {
+          displayedLoadingCards.add('competitive_analysis_analyzing');
+          const loadingMsg: Message = {
+            id: `${Date.now()}-loading-competitive-analysis`,
+            role: 'assistant',
+            content: '',
+            isLoadingCard: true,
+            loadingTitle: ANALYSIS_STATUS_MESSAGES.competitive_analysis_analyzing.title,
+            loadingDescription: ANALYSIS_STATUS_MESSAGES.competitive_analysis_analyzing.description,
+            sectionName: 'competitive_analysis_analyzing',
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, loadingMsg]);
+        }
+        
+        // Show trend analysis loading (50-60%)
+        if (progressPercentage >= 50 && progressPercentage < 60 && !displayedLoadingCards.has('trend_analysis_analyzing')) {
+          displayedLoadingCards.add('trend_analysis_analyzing');
+          const loadingMsg: Message = {
+            id: `${Date.now()}-loading-trend-analysis`,
+            role: 'assistant',
+            content: '',
+            isLoadingCard: true,
+            loadingTitle: ANALYSIS_STATUS_MESSAGES.trend_analysis_analyzing.title,
+            loadingDescription: ANALYSIS_STATUS_MESSAGES.trend_analysis_analyzing.description,
+            sectionName: 'trend_analysis_analyzing',
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, loadingMsg]);
+        }
+        
+        // Show media plan loading (70-100%)
+        if (progressPercentage >= 70 && progressPercentage < 100 && !displayedLoadingCards.has('media_plan_analyzing')) {
+          displayedLoadingCards.add('media_plan_analyzing');
+          const loadingMsg: Message = {
+            id: `${Date.now()}-loading-media-plan`,
+            role: 'assistant',
+            content: '',
+            isLoadingCard: true,
+            loadingTitle: ANALYSIS_STATUS_MESSAGES.media_plan_analyzing.title,
+            loadingDescription: ANALYSIS_STATUS_MESSAGES.media_plan_analyzing.description,
+            sectionName: 'media_plan_analyzing',
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, loadingMsg]);
+        }
 
         // Display customer insights
         if (progressData?.customerInsight && 
             !displayedSections.has('customer_insights') &&
             progress.progress_percentage >= 20) {
           displayedSections.add('customer_insights');
+          
+          // Remove loading card for customer insights
+          setMessages(prev => prev.filter(m => m.sectionName !== 'customer_insights_analyzing'));
+          
           const insightMsg: Message = {
             id: Date.now().toString(),
             role: 'assistant',
@@ -182,6 +281,10 @@ export function useCampaignChat() {
             !displayedSections.has('competitors') &&
             progress.progress_percentage >= 40) {
           displayedSections.add('competitors');
+          
+          // Remove loading card for competitive analysis
+          setMessages(prev => prev.filter(m => m.sectionName !== 'competitive_analysis_analyzing'));
+          
           const competitorMsg: Message = {
             id: Date.now().toString(),
             role: 'assistant',
@@ -198,6 +301,10 @@ export function useCampaignChat() {
             !displayedSections.has('trends') &&
             progress.progress_percentage >= 60) {
           displayedSections.add('trends');
+          
+          // Remove loading card for trend analysis
+          setMessages(prev => prev.filter(m => m.sectionName !== 'trend_analysis_analyzing'));
+          
           const trendMsg: Message = {
             id: Date.now().toString(),
             role: 'assistant',
@@ -212,6 +319,9 @@ export function useCampaignChat() {
         // Display final media plan when complete
         if ((progress.status === 'complete' || progress.section_name === 'complete' || !!(progress as any).completed_at) && progressData) {
           clearInterval(pollInterval);
+          
+          // Remove loading card for media plan
+          setMessages(prev => prev.filter(m => m.sectionName !== 'media_plan_analyzing'));
           
           setAnalysisData(progressData);
           setConversationState('results_ready');
