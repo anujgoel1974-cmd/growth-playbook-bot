@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,6 +28,26 @@ serve(async (req) => {
 
     // Get authorization header for calling other edge functions
     const authHeader = req.headers.get('authorization');
+    
+    // Create Supabase client for progress tracking
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Create progress record
+    const { data: progressRecord } = await supabase
+      .from('analysis_progress')
+      .insert({
+        url,
+        status: 'analyzing',
+        section_name: 'initialization',
+        progress_percentage: 5
+      })
+      .select()
+      .single();
+    
+    const progressId = progressRecord?.id;
+    console.log('📊 Created progress record:', progressId);
 
     // Fetch the landing page content
     console.log('Fetching landing page content...');
@@ -1489,6 +1510,17 @@ CRITICAL RULES:
       customerInsightCards = parseSubsections(ciContent, false);
       campaignTargetingCards = parseSubsections(ctContent, true);
       
+      // Save customer insights progress
+      if (progressId) {
+        await supabase.from('analysis_progress').update({
+          section_name: 'customer_insights',
+          progress_percentage: 20,
+          data: { customerInsight: customerInsightCards },
+          updated_at: new Date().toISOString()
+        }).eq('id', progressId);
+        console.log('📊 Updated progress: customer insights');
+      }
+      
       // Parse media plan if exists
       if (mpIdx !== -1) {
         const mpContent = caIdx !== -1 ? analysisText.slice(mpIdx, caIdx).trim() : analysisText.slice(mpIdx).trim();
@@ -1513,6 +1545,17 @@ CRITICAL RULES:
           competitors,
           insights
         };
+        
+        // Save competitive analysis progress
+        if (progressId) {
+          await supabase.from('analysis_progress').update({
+            section_name: 'competitive_analysis',
+            progress_percentage: 40,
+            data: { competitiveAnalysis: competitiveAnalysisData },
+            updated_at: new Date().toISOString()
+          }).eq('id', progressId);
+          console.log('📊 Updated progress: competitive analysis');
+        }
       }
 
     // Parse ad creative if exists
@@ -1527,6 +1570,17 @@ CRITICAL RULES:
 
     // Wait for trend analysis to complete
     const trendAnalysis = await trendsPromise;
+    
+    // Save trend analysis progress
+    if (progressId && trendAnalysis.length > 0) {
+      await supabase.from('analysis_progress').update({
+        section_name: 'trend_analysis',
+        progress_percentage: 60,
+        data: { trendAnalysis },
+        updated_at: new Date().toISOString()
+      }).eq('id', progressId);
+      console.log('📊 Updated progress: trend analysis');
+    }
 
     const structuredData = {
       customerInsight: customerInsightCards,
@@ -1610,6 +1664,19 @@ CRITICAL RULES:
       ...structuredData,
       campaignOptimizations
     };
+    
+    // Save final media plan progress
+    if (progressId) {
+      await supabase.from('analysis_progress').update({
+        section_name: 'complete',
+        status: 'complete',
+        progress_percentage: 100,
+        data: enhancedData,
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).eq('id', progressId);
+      console.log('📊 Analysis complete');
+    }
 
     return new Response(
       JSON.stringify({ 

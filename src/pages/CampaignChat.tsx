@@ -135,7 +135,13 @@ const CampaignChat = () => {
                     
                     {message.mediaPlan && (
                       <div className="mt-4">
-                        <InlineMediaPlanCard mediaPlan={message.mediaPlan} />
+                        <InlineMediaPlanCard 
+                          mediaPlan={message.mediaPlan}
+                          onViewCampaignDetails={(campaign) => {
+                            console.log('View campaign:', campaign);
+                            handleCampaignClick(campaign, message.weekNumber || 1);
+                          }}
+                        />
                       </div>
                     )}
                     
@@ -145,8 +151,7 @@ const CampaignChat = () => {
                           <InlineCampaignCard
                             key={idx}
                             campaign={campaign}
-                            weekNumber={message.weekNumber || 1}
-                            onClick={() => handleCampaignClick(campaign, message.weekNumber || 1)}
+                            onViewDetails={() => handleCampaignClick(campaign, message.weekNumber || 1)}
                           />
                         ))}
                       </div>
