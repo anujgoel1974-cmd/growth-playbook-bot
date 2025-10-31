@@ -111,11 +111,17 @@ export function useCampaignChat() {
 
     try {
       // Call analyze-landing-page function
+      console.log('📡 Calling analyze-landing-page with:', { url, userRole });
       const { data, error } = await supabase.functions.invoke('analyze-landing-page', {
         body: { url, userRole }
       });
 
-      if (error) throw error;
+      console.log('📦 Response from analyze-landing-page:', { data, error });
+
+      if (error) {
+        console.error('❌ Error from analyze-landing-page:', error);
+        throw error;
+      }
 
       const analysis = data as AnalysisData;
       setAnalysisData(analysis);

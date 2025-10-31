@@ -29,13 +29,6 @@ const CampaignChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    const hasCompleted = localStorage.getItem("hasCompletedOnboarding");
-    if (!hasCompleted) {
-      navigate("/onboarding");
-    }
-  }, [navigate]);
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
     

@@ -12,6 +12,8 @@ Deno.serve(async (req) => {
 
   try {
     const { message, conversationHistory, analysisData, conversationState, userRole } = await req.json();
+    
+    console.log('📨 Received request:', { message, conversationState, userRole, hasAnalysisData: !!analysisData });
 
     if (!message) {
       throw new Error('Message is required');
@@ -71,11 +73,12 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
+      console.error('❌ AI API error:', response.status, errorText);
       throw new Error('AI API request failed');
     }
 
     const aiData = await response.json();
+    console.log('✅ AI response received');
     const aiMessage = aiData.choices[0].message;
     
     // Extract response and follow-up questions
@@ -101,6 +104,8 @@ Deno.serve(async (req) => {
       responseText += `\n\n✓ Updated ${editIntent.field}: ${editIntent.newValue}`;
     }
 
+    console.log('📤 Sending response:', { actionType, hasUpdatedData: !!updatedData, followUpCount: followUpQuestions.length });
+    
     return new Response(
       JSON.stringify({
         response: responseText,
