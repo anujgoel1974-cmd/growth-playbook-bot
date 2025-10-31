@@ -125,7 +125,7 @@ export function useCampaignChat() {
       // Poll for progress updates
       const displayedSections = new Set<string>();
       let pollCount = 0;
-      const maxPolls = 60; // Max 3 minutes (60 * 3 seconds)
+      const maxPolls = 120; // Max 6 minutes (120 * 3 seconds)
 
       const pollInterval = setInterval(async () => {
         pollCount++;
@@ -147,8 +147,9 @@ export function useCampaignChat() {
           const supabaseAny = supabase as any;
           const progressResult = await supabaseAny
             .from('analysis_progress')
-            .select('id, status, section_name, progress_percentage, data, updated_at')
+            .select('id, status, section_name, progress_percentage, data, updated_at, completed_at')
             .eq('url', url)
+            .order('progress_percentage', { ascending: false })
             .order('updated_at', { ascending: false })
             .limit(1);
 
@@ -209,7 +210,7 @@ export function useCampaignChat() {
         }
 
         // Display final media plan when complete
-        if (progress.status === 'complete' && progressData) {
+        if ((progress.status === 'complete' || progress.section_name === 'complete' || !!(progress as any).completed_at) && progressData) {
           clearInterval(pollInterval);
           
           setAnalysisData(progressData);
