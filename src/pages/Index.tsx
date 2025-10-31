@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Target, Zap, Loader2, Package } from "lucide-react";
+import { Search, Target, Zap, Loader2, Package, MessageSquare, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const [url, setUrl] = useState("");
@@ -95,6 +96,36 @@ const Index = () => {
       {/* Hero Section */}
       <div className="container mx-auto px-4 pt-12 pb-16">
         <div className="max-w-4xl mx-auto text-center space-y-8">
+          {/* NEW: Chat Mode Toggle Banner */}
+          <div className="animate-fade-in">
+            <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 shadow-lg">
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-md">
+                      <Sparkles className="h-5 w-5 text-primary-foreground" />
+                    </div>
+                    <div className="text-left">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-sm">✨ Try Our New Chat-Based Campaign Builder</h3>
+                        <Badge variant="secondary" className="text-xs">Experimental</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Build campaigns conversationally with AI guidance</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => navigate('/campaign-chat')}
+                    size="lg"
+                    className="bg-gradient-primary hover:opacity-90 shadow-md"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Try Chat Mode
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Headline */}
           <div className="space-y-4 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
