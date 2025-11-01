@@ -1,4 +1,4 @@
-export type VisualCanvasMode = 'none' | 'dashboard' | 'analysis' | 'media-plan' | 'history';
+export type VisualCanvasMode = 'none' | 'dashboard' | 'analysis' | 'loading' | 'media-plan' | 'history';
 
 export interface VisualCanvasData {
   // Dashboard mode

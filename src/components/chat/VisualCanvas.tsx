@@ -8,6 +8,7 @@ import { DashboardView } from './views/DashboardView';
 import { AnalysisView } from './views/AnalysisView';
 import { MediaPlanView } from './views/MediaPlanView';
 import { HistoryView } from './views/HistoryView';
+import { LoadingView } from './views/LoadingView';
 
 interface VisualCanvasProps {
   renderMode: VisualCanvasMode;
@@ -31,6 +32,7 @@ export function VisualCanvas({
   const titles = {
     dashboard: '📊 Campaign Performance',
     analysis: '🎯 Campaign Analysis',
+    loading: '🔄 Analyzing Your Campaign',
     'media-plan': '💰 Media Plan',
     history: '📂 Analysis History'
   };
@@ -66,6 +68,7 @@ export function VisualCanvas({
       {/* Content */}
       <ScrollArea className="h-[calc(100%-48px)]">
         {renderMode === 'dashboard' && <DashboardView data={data} />}
+        {renderMode === 'loading' && <LoadingView />}
         {renderMode === 'analysis' && (
           <AnalysisView 
             data={data} 

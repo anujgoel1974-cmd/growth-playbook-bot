@@ -121,8 +121,12 @@ export function useUnifiedChat() {
     setIsLoading(true);
 
     try {
-      // Add confirmation message
-      addMessage({ role: 'assistant', content: `Got it! Analyzing ${url}...` });
+      // Add confirmation message and open loading canvas immediately
+      addMessage({ role: 'assistant', content: `Analyzing ${url}... Watch the progress below.` });
+      
+      // Open visual canvas with loading view immediately
+      setVisualCanvasMode('loading');
+      setVisualCanvasData({ url });
 
       // Start analysis
       const { data: analysisResult, error } = await supabase.functions.invoke('analyze-landing-page', {
@@ -133,18 +137,7 @@ export function useUnifiedChat() {
 
       const progressId = analysisResult.progressId;
 
-      // Add reasoning container
-      const reasoningMsgId = addMessage({
-        role: 'assistant',
-        content: '',
-        isReasoningContainer: true,
-        reasoningSteps: [
-          { phase: 'scan', status: 'in-progress', text: 'Scanning product page structure...' }
-        ]
-      });
-
-      // Poll for progress
-      let displayedSteps = new Set<string>();
+      // Poll for progress (silently, without chat updates)
       const pollInterval = setInterval(async () => {
         const { data: progress } = await supabase
           .from('analysis_progress')
@@ -154,77 +147,11 @@ export function useUnifiedChat() {
 
         if (!progress) return;
 
-        // Update reasoning based on progress
-        const steps = [];
         const progressData = progress.data as any;
-        
-        if (progress.progress_percentage >= 10) {
-          steps.push({ phase: 'scan', status: 'complete' as 'complete', text: '✓ Page structure analyzed' });
-        }
-        if (progress.progress_percentage >= 25) {
-          const customerStatus: 'complete' | 'in-progress' = progress.progress_percentage >= 40 ? 'complete' : 'in-progress';
-          steps.push({ 
-            phase: 'customer', 
-            status: customerStatus,
-            text: progress.progress_percentage >= 40 ? '✓ Customer analysis complete' : 'Identifying target demographics...'
-          });
-          
-          if (progressData?.customerInsights && !displayedSteps.has('customer')) {
-            displayedSteps.add('customer');
-            const count = progressData.customerInsights.length;
-            addMessage({
-              role: 'assistant',
-              content: `🎯 Identified ${count} key customer persona${count > 1 ? 's' : ''} with distinct buying behaviors and pain points`
-            });
-          }
-        }
-        if (progress.progress_percentage >= 45) {
-          const competitorStatus: 'complete' | 'in-progress' = progress.progress_percentage >= 60 ? 'complete' : 'in-progress';
-          steps.push({
-            phase: 'competitors',
-            status: competitorStatus,
-            text: progress.progress_percentage >= 60 ? '✓ Competitive research complete' : 'Researching market positioning...'
-          });
-          
-          if (progressData?.competitors && !displayedSteps.has('competitors')) {
-            displayedSteps.add('competitors');
-            const count = progressData.competitors.length;
-            addMessage({
-              role: 'assistant',
-              content: `🔍 Analyzed ${count} competitor${count > 1 ? 's' : ''} and identified market positioning opportunities`
-            });
-          }
-        }
-        if (progress.progress_percentage >= 65) {
-          const trendStatus: 'complete' | 'in-progress' = progress.progress_percentage >= 80 ? 'complete' : 'in-progress';
-          steps.push({
-            phase: 'trends',
-            status: trendStatus,
-            text: progress.progress_percentage >= 80 ? '✓ Market trends identified' : 'Scanning industry trends...'
-          });
-          
-          if (progressData?.trends && !displayedSteps.has('trends')) {
-            displayedSteps.add('trends');
-            const count = progressData.trends.length;
-            addMessage({
-              role: 'assistant',
-              content: `📈 Found ${count} relevant market trend${count > 1 ? 's' : ''} aligned with your product`
-            });
-          }
-        }
-        if (progress.progress_percentage >= 85) {
-          const mediaPlanStatus: 'complete' | 'in-progress' = progress.status === 'complete' ? 'complete' : 'in-progress';
-          steps.push({
-            phase: 'media-plan',
-            status: mediaPlanStatus,
-            text: progress.status === 'complete' ? '✓ Media plan optimized' : 'Building weekly campaign structure...'
-          });
-        }
-
-        updateMessage(reasoningMsgId, { reasoningSteps: steps });
 
         if (progress.status === 'complete') {
           clearInterval(pollInterval);
+          setIsLoading(false);
           
           const analysisData: AnalysisData = {
             customerInsights: progressData.customerInsights,
@@ -246,12 +173,12 @@ export function useUnifiedChat() {
 
           addMessage({
             role: 'assistant',
-            content: '✅ Your complete campaign strategy is ready! View the full analysis with all customer insights, competitors, trends, and ad creatives in the visual panel below.',
+            content: '✅ Analysis complete! Your campaign strategy is ready with customer insights, competitor analysis, market trends, and ad creatives.',
             mediaPlan: progressData.mediaPlan,
             actionPrompts
           });
           
-          // Trigger visual canvas with full analysis
+          // Switch visual canvas to analysis view
           setVisualCanvasMode('analysis');
           setVisualCanvasData({
             url,
@@ -263,24 +190,25 @@ export function useUnifiedChat() {
         }
       }, 3000);
 
-      setTimeout(() => clearInterval(pollInterval), 300000); // 5 min timeout
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setIsLoading(false);
+      }, 300000); // 5 min timeout
 
     } catch (error) {
       console.error('URL analysis error:', error);
       setIsLoading(false);
+      setVisualCanvasMode('none');
       
       // Check if it's a timeout or fetch error - the analysis might still be running
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('timeout') || errorMessage.includes('Failed to fetch') || errorMessage.includes('FunctionsFetchError')) {
         addMessage({
           role: 'assistant',
-          content: '⏳ The analysis is taking longer than expected. The system is still processing your request in the background. Please wait a moment and I\'ll check if it completes...'
+          content: '⏳ The analysis is taking longer than expected. The system is still processing your request in the background. Please wait a moment...'
         });
         
         toast.info('Analysis in progress - please wait...');
-        
-        // Continue polling to see if it completes
-        return;
       } else {
         addMessage({
           role: 'assistant',
