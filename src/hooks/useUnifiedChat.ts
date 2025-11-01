@@ -267,13 +267,27 @@ export function useUnifiedChat() {
 
     } catch (error) {
       console.error('URL analysis error:', error);
-      addMessage({
-        role: 'assistant',
-        content: 'Sorry, I encountered an error analyzing this URL. Please make sure it\'s a valid product page and try again.'
-      });
-      toast.error('Analysis failed');
-    } finally {
       setIsLoading(false);
+      
+      // Check if it's a timeout or fetch error - the analysis might still be running
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('timeout') || errorMessage.includes('Failed to fetch') || errorMessage.includes('FunctionsFetchError')) {
+        addMessage({
+          role: 'assistant',
+          content: '⏳ The analysis is taking longer than expected. The system is still processing your request in the background. Please wait a moment and I\'ll check if it completes...'
+        });
+        
+        toast.info('Analysis in progress - please wait...');
+        
+        // Continue polling to see if it completes
+        return;
+      } else {
+        addMessage({
+          role: 'assistant',
+          content: 'Sorry, I encountered an error analyzing this URL. Please make sure it\'s a valid product page and try again.'
+        });
+        toast.error('Analysis failed');
+      }
     }
   };
 

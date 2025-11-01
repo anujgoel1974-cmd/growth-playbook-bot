@@ -1510,12 +1510,12 @@ CRITICAL RULES:
       customerInsightCards = parseSubsections(ciContent, false);
       campaignTargetingCards = parseSubsections(ctContent, true);
       
-      // Save customer insights progress
+      // Save customer insights progress (with minimal data to avoid timeout)
       if (progressId) {
         await supabase.from('analysis_progress').update({
           section_name: 'customer_insights',
           progress_percentage: 20,
-          data: { customerInsight: customerInsightCards },
+          data: { customerInsight: { count: customerInsightCards.length } },
           updated_at: new Date().toISOString()
         }).eq('id', progressId);
         console.log('📊 Updated progress: customer insights');
@@ -1546,12 +1546,12 @@ CRITICAL RULES:
           insights
         };
         
-        // Save competitive analysis progress
+        // Save competitive analysis progress (with minimal data to avoid timeout)
         if (progressId) {
           await supabase.from('analysis_progress').update({
             section_name: 'competitive_analysis',
             progress_percentage: 40,
-            data: { competitiveAnalysis: competitiveAnalysisData },
+            data: { competitiveAnalysis: { count: competitors.length } },
             updated_at: new Date().toISOString()
           }).eq('id', progressId);
           console.log('📊 Updated progress: competitive analysis');
@@ -1571,12 +1571,12 @@ CRITICAL RULES:
     // Wait for trend analysis to complete
     const trendAnalysis = await trendsPromise;
     
-    // Save trend analysis progress
+    // Save trend analysis progress (with minimal data to avoid timeout)
     if (progressId && trendAnalysis.length > 0) {
       await supabase.from('analysis_progress').update({
         section_name: 'trend_analysis',
         progress_percentage: 60,
-        data: { trendAnalysis },
+        data: { trendAnalysis: { count: trendAnalysis.length } },
         updated_at: new Date().toISOString()
       }).eq('id', progressId);
       console.log('📊 Updated progress: trend analysis');
@@ -1694,14 +1694,27 @@ CRITICAL RULES:
       campaignOptimizations
     };
     
-    // Save final media plan progress - ALWAYS update to complete even if optimizations failed
+    // Save final media plan progress - Store full data but with size optimization
     if (progressId) {
       try {
+        // Create a lightweight version of the data for progress tracking
+        const lightweightData = {
+          summary: {
+            customerInsightCount: customerInsightCards.length,
+            campaignTargetingCount: campaignTargetingCards.length,
+            mediaPlanWeeks: mediaPlanWeeks.length,
+            competitorsCount: competitiveAnalysisData?.competitors.length || 0,
+            adCreativesCount: adCreatives.length,
+            trendsCount: trendAnalysis.length
+          },
+          url
+        };
+        
         const updateResult = await supabase.from('analysis_progress').update({
           section_name: 'complete',
           status: 'complete',
           progress_percentage: 100,
-          data: enhancedData,
+          data: lightweightData,
           completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }).eq('id', progressId);
@@ -1712,14 +1725,14 @@ CRITICAL RULES:
         }
       } catch (updateError) {
         console.error('Critical error updating final progress:', updateError);
-        // Try one more time with minimal data
+        // Try one more time with absolute minimum
         await supabase.from('analysis_progress').update({
           section_name: 'complete',
           status: 'complete',
           progress_percentage: 100,
           completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }).eq('id', progressId);
+        }).eq('id', progressId).select('*').single();
       }
     }
 
