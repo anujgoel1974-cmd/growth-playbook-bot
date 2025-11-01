@@ -38,7 +38,7 @@ export function VisualCanvas({
   return (
     <div className={cn(
       "border-t bg-background transition-all duration-500 animate-slide-up",
-      isExpanded ? "h-screen" : "h-[33vh]",
+      isExpanded ? "h-screen" : "h-[66vh]",
       "md:relative",
       "max-md:fixed max-md:inset-0 max-md:z-50 max-md:bg-background max-md:h-screen",
       className

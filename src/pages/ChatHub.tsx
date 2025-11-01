@@ -51,7 +51,7 @@ export default function ChatHub() {
         {/* Chat Area (Top 2/3) */}
         <div className={cn(
           "flex flex-col overflow-hidden",
-          visualCanvasMode === 'none' ? 'flex-1' : 'flex-[2]'
+          visualCanvasMode === 'none' ? 'flex-1' : 'flex-[1]'
         )}>
           {messages.length === 0 ? (
             <WelcomeScreen
