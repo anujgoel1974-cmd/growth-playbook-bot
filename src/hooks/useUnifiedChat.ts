@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Message, AnalysisData, ConversationContext, ActionPrompt } from '@/types/unified-chat';
+import { VisualCanvasMode, VisualCanvasData } from '@/types/visual-canvas';
 import { toast } from 'sonner';
 
 const ANALYSIS_STATUS_MESSAGES: Record<string, { title: string; description: string }> = {
@@ -17,6 +18,10 @@ export function useUnifiedChat() {
   const [conversationContext, setConversationContext] = useState<ConversationContext>('general');
   const [currentAnalysisData, setCurrentAnalysisData] = useState<AnalysisData | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  
+  // Visual canvas state
+  const [visualCanvasMode, setVisualCanvasMode] = useState<VisualCanvasMode>('none');
+  const [visualCanvasData, setVisualCanvasData] = useState<VisualCanvasData>({});
 
   const isURL = (text: string): boolean => {
     try {
@@ -27,17 +32,36 @@ export function useUnifiedChat() {
     }
   };
 
-  const detectIntent = (message: string): 'url_analysis' | 'analytics_query' | 'campaign_modification' | 'general_chat' => {
-    if (isURL(message)) return 'url_analysis';
+  const detectIntent = (message: string): 'url_analysis' | 'prompt_for_url' | 'show_dashboard' | 'show_history' | 'general_chat' => {
+    const lower = message.toLowerCase();
     
-    const analyticsKeywords = ['performance', 'campaigns', 'metrics', 'roi', 'spend', 'conversions', 'show me', 'view'];
-    if (analyticsKeywords.some(kw => message.toLowerCase().includes(kw))) {
-      return 'analytics_query';
+    // Core flow: Create new campaign
+    if (
+      (lower.includes('create') || lower.includes('new')) && lower.includes('campaign') ||
+      lower.includes('start campaign')
+    ) {
+      return 'prompt_for_url';
     }
     
-    const modKeywords = ['change', 'modify', 'adjust', 'increase', 'decrease', 'budget'];
-    if (modKeywords.some(kw => message.toLowerCase().includes(kw)) && currentAnalysisData) {
-      return 'campaign_modification';
+    // Core flow: View all previous campaigns
+    if (
+      (lower.includes('all') || lower.includes('previous') || lower.includes('past')) &&
+      (lower.includes('campaign') || lower.includes('history') || lower.includes('analyses'))
+    ) {
+      return 'show_history';
+    }
+    
+    // Core flow: Analyze campaigns / show dashboard
+    if (
+      (lower.includes('analyze') || lower.includes('performance') || lower.includes('how')) &&
+      (lower.includes('campaign') || lower.includes('doing'))
+    ) {
+      return 'show_dashboard';
+    }
+    
+    // URL detection
+    if (isURL(message)) {
+      return 'url_analysis';
     }
     
     return 'general_chat';
@@ -56,6 +80,41 @@ export function useUnifiedChat() {
   const updateMessage = useCallback((messageId: string, updates: Partial<Message>) => {
     setMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, ...updates } : msg));
   }, []);
+
+  const handlePromptForUrl = async () => {
+    addMessage({
+      role: 'assistant',
+      content: "Great! Let's create a new campaign. Please paste the product or landing page URL you'd like to analyze, and I'll build a complete campaign strategy for you.",
+      actionPrompts: [
+        {
+          category: 'deep_dive',
+          icon: '💡',
+          label: 'Need help? Show me an example',
+          action: 'show-example-url'
+        }
+      ]
+    });
+  };
+
+  const handleShowDashboard = async () => {
+    addMessage({
+      role: 'assistant',
+      content: "I've pulled up your complete campaign performance dashboard below. You can see all your metrics, trends, and insights. What would you like to know more about?"
+    });
+    
+    setVisualCanvasMode('dashboard');
+    setVisualCanvasData({ dateRange: 'last-30-days' });
+  };
+
+  const handleShowHistory = async () => {
+    addMessage({
+      role: 'assistant',
+      content: "Here are all your previous campaign analyses. Click any one to view details or continue working on it."
+    });
+    
+    setVisualCanvasMode('history');
+    setVisualCanvasData({});
+  };
 
   const handleUrlAnalysis = async (url: string) => {
     setConversationContext('campaign_creation');
@@ -112,10 +171,10 @@ export function useUnifiedChat() {
           
           if (progressData?.customerInsights && !displayedSteps.has('customer')) {
             displayedSteps.add('customer');
+            const count = progressData.customerInsights.length;
             addMessage({
               role: 'assistant',
-              content: '',
-              customerInsights: progressData.customerInsights
+              content: `🎯 Identified ${count} key customer persona${count > 1 ? 's' : ''} with distinct buying behaviors and pain points`
             });
           }
         }
@@ -129,10 +188,10 @@ export function useUnifiedChat() {
           
           if (progressData?.competitors && !displayedSteps.has('competitors')) {
             displayedSteps.add('competitors');
+            const count = progressData.competitors.length;
             addMessage({
               role: 'assistant',
-              content: '',
-              competitors: progressData.competitors
+              content: `🔍 Analyzed ${count} competitor${count > 1 ? 's' : ''} and identified market positioning opportunities`
             });
           }
         }
@@ -146,10 +205,10 @@ export function useUnifiedChat() {
           
           if (progressData?.trends && !displayedSteps.has('trends')) {
             displayedSteps.add('trends');
+            const count = progressData.trends.length;
             addMessage({
               role: 'assistant',
-              content: '',
-              trends: progressData.trends
+              content: `📈 Found ${count} relevant market trend${count > 1 ? 's' : ''} aligned with your product`
             });
           }
         }
@@ -187,9 +246,17 @@ export function useUnifiedChat() {
 
           addMessage({
             role: 'assistant',
-            content: '✅ Your complete media plan is ready!',
+            content: '✅ Your complete campaign strategy is ready! View the full analysis with all customer insights, competitors, trends, and ad creatives in the visual panel below.',
             mediaPlan: progressData.mediaPlan,
             actionPrompts
+          });
+          
+          // Trigger visual canvas with full analysis
+          setVisualCanvasMode('analysis');
+          setVisualCanvasData({
+            url,
+            analysisData: progressData,
+            sessionId: progress.id
           });
           
           toast.success('Campaign analysis complete!');
@@ -252,6 +319,15 @@ export function useUnifiedChat() {
     const intent = detectIntent(userMessage);
 
     switch (intent) {
+      case 'prompt_for_url':
+        await handlePromptForUrl();
+        break;
+      case 'show_dashboard':
+        await handleShowDashboard();
+        break;
+      case 'show_history':
+        await handleShowHistory();
+        break;
       case 'url_analysis':
         await handleUrlAnalysis(userMessage);
         break;
@@ -267,6 +343,8 @@ export function useUnifiedChat() {
     setConversationContext('general');
     setCurrentAnalysisData(null);
     setConversationId(null);
+    setVisualCanvasMode('none');
+    setVisualCanvasData({});
   };
 
   return {
@@ -275,5 +353,9 @@ export function useUnifiedChat() {
     conversationContext,
     sendMessage,
     startNewConversation,
+    visualCanvasMode,
+    visualCanvasData,
+    setVisualCanvasMode,
+    setVisualCanvasData,
   };
 }
