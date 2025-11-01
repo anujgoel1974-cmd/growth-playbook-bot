@@ -26,7 +26,7 @@ const App = () => (
         <Routes>
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/" element={<Navigate to="/onboarding" replace />} />
-          <Route path="/chat" element={<ChatHub />} />
+          <Route path="/chat" element={<MainLayout><ChatHub /></MainLayout>} />
           <Route path="/new-campaign" element={<MainLayout><Index /></MainLayout>} />
           <Route path="/campaign-chat" element={<Navigate to="/chat" replace />} />
           <Route path="/connect-platforms" element={<MainLayout><ConnectPlatforms /></MainLayout>} />
