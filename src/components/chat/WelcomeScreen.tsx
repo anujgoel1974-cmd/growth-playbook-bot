@@ -35,16 +35,16 @@ export function WelcomeScreen({ onPromptClick, userName, isExistingUser = false 
         optimize your ad spend, and answer questions about your performance.
       </p>
 
-      <div className="flex flex-wrap gap-3 justify-center max-w-2xl">
+      <div className="flex flex-wrap gap-2 justify-center max-w-2xl">
         {quickActions.map((action) => (
           <Button
             key={action.label}
-            variant="outline"
-            size="lg"
+            variant="ghost"
+            size="sm"
             onClick={() => onPromptClick(action.prompt)}
-            className="h-auto py-4 px-6 rounded-2xl border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
+            className="h-auto py-2 px-4 rounded-full border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all text-sm"
           >
-            <action.icon className="mr-2 h-5 w-5" />
+            <action.icon className="mr-1.5 h-4 w-4" />
             {action.label}
           </Button>
         ))}

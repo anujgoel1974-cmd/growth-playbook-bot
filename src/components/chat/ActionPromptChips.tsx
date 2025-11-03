@@ -22,21 +22,22 @@ export function ActionPromptChips({ prompts, onPromptClick }: ActionPromptChipsP
   };
 
   return (
-    <div className="space-y-4 py-4">
-      <p className="font-medium">What would you like to do next?</p>
+    <div className="space-y-3 py-3">
+      <p className="text-sm font-medium text-muted-foreground">What would you like to do next?</p>
       
       {Object.entries(groupedPrompts).map(([category, categoryPrompts]) => (
         <div key={category} className="space-y-2">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground/80">
             {categoryLabels[category as keyof typeof categoryLabels]}
           </p>
           <div className="flex flex-wrap gap-2">
             {categoryPrompts.map((prompt, index) => (
               <Button
                 key={index}
-                variant="outline"
+                variant="ghost"
+                size="sm"
                 onClick={() => onPromptClick(prompt.action)}
-                className="h-auto py-2 px-4 rounded-full border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
+                className="h-auto py-1.5 px-3 rounded-full border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all text-xs"
               >
                 <span className="mr-1">{prompt.icon}</span>
                 {prompt.label}

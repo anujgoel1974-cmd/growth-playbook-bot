@@ -1,5 +1,4 @@
 import { TopBar } from '@/components/chat/TopBar';
-import { CoreActionsStrip } from '@/components/chat/CoreActionsStrip';
 import { WelcomeScreen } from '@/components/chat/WelcomeScreen';
 import { MessageList } from '@/components/chat/MessageList';
 import { ChatInput } from '@/components/chat/ChatInput';
@@ -25,15 +24,6 @@ export default function ChatHub() {
     sendMessage(prompt);
   };
   
-  const handleCoreAction = (action: 'create' | 'view-all' | 'analyze') => {
-    const prompts = {
-      create: 'I want to create a new campaign',
-      'view-all': 'Show me all my previous campaigns',
-      analyze: 'Analyze my campaign performance'
-    };
-    
-    sendMessage(prompts[action]);
-  };
   
   const handleCanvasSendMessage = (message: any) => {
     sendMessage(message.content);
@@ -42,9 +32,6 @@ export default function ChatHub() {
   return (
     <div className="flex flex-col h-full bg-background">
       <TopBar onNewConversation={startNewConversation} />
-      
-      {/* Core Actions Strip - Always visible */}
-      <CoreActionsStrip onActionClick={handleCoreAction} />
       
       {/* Split layout container */}
       <div className="flex-1 flex flex-col overflow-hidden">
