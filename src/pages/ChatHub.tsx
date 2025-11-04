@@ -15,6 +15,7 @@ export default function ChatHub() {
     visualCanvasMode,
     visualCanvasData,
     setVisualCanvasMode,
+    isAITyping,
   } = useUnifiedChat();
   
   const userName = localStorage.getItem('userName');
@@ -50,6 +51,7 @@ export default function ChatHub() {
             <MessageList
               messages={messages}
               onPromptClick={handlePromptClick}
+              isAITyping={isAITyping}
             />
           )}
           

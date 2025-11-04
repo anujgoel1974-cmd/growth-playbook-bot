@@ -5,14 +5,16 @@ import { ReasoningSection } from './ReasoningSection';
 import { InlineCardsGroup } from './InlineCardsGroup';
 import { ActionPromptChips } from './ActionPromptChips';
 import { DynamicChart } from '@/components/dashboard/DynamicChart';
+import { Sparkles } from 'lucide-react';
 
 interface MessageListProps {
   messages: Message[];
   onPromptClick: (prompt: string) => void;
   onViewCampaignDetails?: () => void;
+  isAITyping?: boolean;
 }
 
-export function MessageList({ messages, onPromptClick, onViewCampaignDetails }: MessageListProps) {
+export function MessageList({ messages, onPromptClick, onViewCampaignDetails, isAITyping }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export function MessageList({ messages, onPromptClick, onViewCampaignDetails }: 
               </div>
             ) : (
               <div className="space-y-6">
-                <AssistantMessage content={message.content} />
+                <AssistantMessage content={message.content} isStreaming={message.isStreaming} />
                 
                 {message.reasoningSteps && message.reasoningSteps.length > 0 && (
                   <ReasoningSection steps={message.reasoningSteps} />
@@ -71,6 +73,25 @@ export function MessageList({ messages, onPromptClick, onViewCampaignDetails }: 
             )}
           </div>
         ))}
+        
+        {isAITyping && (
+          <div className="flex items-start gap-3 animate-fade-in-up">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 bg-card border shadow-soft rounded-2xl px-5 py-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>AI is thinking</span>
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-breathe" style={{ animationDelay: '0s' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-breathe" style={{ animationDelay: '0.2s' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-breathe" style={{ animationDelay: '0.4s' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div ref={bottomRef} />
       </div>
     </div>

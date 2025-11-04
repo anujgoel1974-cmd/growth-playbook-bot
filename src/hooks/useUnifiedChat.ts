@@ -22,6 +22,10 @@ export function useUnifiedChat() {
   // Visual canvas state
   const [visualCanvasMode, setVisualCanvasMode] = useState<VisualCanvasMode>('none');
   const [visualCanvasData, setVisualCanvasData] = useState<VisualCanvasData>({});
+  
+  // Streaming state
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [isAITyping, setIsAITyping] = useState(false);
 
   const isURL = (text: string): boolean => {
     try {
@@ -152,65 +156,84 @@ export function useUnifiedChat() {
 
       if (error) throw error;
 
-      const progressId = analysisResult.progressId;
+      const sessionId = analysisResult.sessionId;
 
-      // Poll for progress (silently, without chat updates)
-      const pollInterval = setInterval(async () => {
-        const { data: progress } = await supabase
-          .from('analysis_progress')
-          .select('*')
-          .eq('id', progressId)
-          .single();
+      // Subscribe to real-time updates instead of polling
+      const channel = supabase
+        .channel(`analysis-session-${sessionId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'analysis_sessions',
+            filter: `id=eq.${sessionId}`,
+          },
+          async (payload) => {
+            console.log('Analysis session update:', payload);
+            const session = payload.new as any;
+            
+            if (session.status === 'complete') {
+              // Fetch the complete analysis data
+              const { data: progress } = await supabase
+                .from('analysis_progress')
+                .select('*')
+                .eq('session_id', sessionId)
+                .single();
+              
+              if (!progress) return;
+              
+              const progressData = progress.data as any;
+              
+              setIsLoading(false);
+              
+              const analysisData: AnalysisData = {
+                customerInsights: progressData.customerInsights,
+                competitors: progressData.competitors,
+                trends: progressData.trends,
+                mediaPlan: progressData.mediaPlan,
+                url: url
+              };
+              
+              setCurrentAnalysisData(analysisData);
 
-        if (!progress) return;
+              const actionPrompts: ActionPrompt[] = [
+                { category: 'deep_dive', icon: '👥', label: 'Explain customer insights', action: 'Tell me more about the customer personas you identified' },
+                { category: 'deep_dive', icon: '🎯', label: 'Competitive breakdown', action: 'Deep dive into the competitive analysis' },
+                { category: 'deep_dive', icon: '📈', label: 'Trend opportunities', action: 'Explain the trend opportunities in detail' },
+                { category: 'make_changes', icon: '💰', label: 'Adjust budgets', action: 'I want to modify the platform budget allocation' },
+                { category: 'take_action', icon: '📄', label: 'Export PDF', action: 'Export this campaign plan as PDF' },
+              ];
 
-        const progressData = progress.data as any;
+              addMessage({
+                role: 'assistant',
+                content: '✅ Analysis complete! Your campaign strategy is ready with customer insights, competitor analysis, market trends, and ad creatives.',
+                mediaPlan: progressData.mediaPlan,
+                actionPrompts
+              });
+              
+              // Switch visual canvas to analysis view
+              setVisualCanvasMode('analysis');
+              setVisualCanvasData({
+                url,
+                analysisData: progressData,
+                sessionId: progress.id
+              });
+              
+              toast.success('Campaign analysis complete!');
+              
+              // Cleanup channel
+              supabase.removeChannel(channel);
+            }
+          }
+        )
+        .subscribe();
 
-        if (progress.status === 'complete') {
-          clearInterval(pollInterval);
-          setIsLoading(false);
-          
-          const analysisData: AnalysisData = {
-            customerInsights: progressData.customerInsights,
-            competitors: progressData.competitors,
-            trends: progressData.trends,
-            mediaPlan: progressData.mediaPlan,
-            url: url
-          };
-          
-          setCurrentAnalysisData(analysisData);
-
-          const actionPrompts: ActionPrompt[] = [
-            { category: 'deep_dive', icon: '👥', label: 'Explain customer insights', action: 'Tell me more about the customer personas you identified' },
-            { category: 'deep_dive', icon: '🎯', label: 'Competitive breakdown', action: 'Deep dive into the competitive analysis' },
-            { category: 'deep_dive', icon: '📈', label: 'Trend opportunities', action: 'Explain the trend opportunities in detail' },
-            { category: 'make_changes', icon: '💰', label: 'Adjust budgets', action: 'I want to modify the platform budget allocation' },
-            { category: 'take_action', icon: '📄', label: 'Export PDF', action: 'Export this campaign plan as PDF' },
-          ];
-
-          addMessage({
-            role: 'assistant',
-            content: '✅ Analysis complete! Your campaign strategy is ready with customer insights, competitor analysis, market trends, and ad creatives.',
-            mediaPlan: progressData.mediaPlan,
-            actionPrompts
-          });
-          
-          // Switch visual canvas to analysis view
-          setVisualCanvasMode('analysis');
-          setVisualCanvasData({
-            url,
-            analysisData: progressData,
-            sessionId: progress.id
-          });
-          
-          toast.success('Campaign analysis complete!');
-        }
-      }, 3000);
-
+      // Timeout fallback (5 min)
       setTimeout(() => {
-        clearInterval(pollInterval);
+        supabase.removeChannel(channel);
         setIsLoading(false);
-      }, 300000); // 5 min timeout
+      }, 300000);
 
     } catch (error) {
       console.error('URL analysis error:', error);
@@ -238,37 +261,108 @@ export function useUnifiedChat() {
 
   const handleGeneralChat = async (message: string) => {
     setIsLoading(true);
+    setIsAITyping(true);
+    
+    // Create empty assistant message for streaming
+    const assistantMessageId = addMessage({
+      role: 'assistant',
+      content: '',
+      isStreaming: true,
+    });
+    
+    setStreamingMessageId(assistantMessageId);
+    setIsAITyping(false); // Remove typing indicator once streaming starts
     
     try {
-      const { data, error } = await supabase.functions.invoke('unified-chat-assistant', {
-        body: {
-          message,
-          conversationHistory: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
-          context: { type: conversationContext }
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/unified-chat-assistant`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            message,
+            conversationHistory: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+            context: { type: conversationContext }
+          }),
         }
-      });
+      );
 
-      if (error) throw error;
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('Rate limits exceeded, please try again later.');
+        }
+        if (response.status === 402) {
+          throw new Error('Payment required, please add funds to your Lovable AI workspace.');
+        }
+        throw new Error('Failed to get response');
+      }
 
-      addMessage({
-        role: 'assistant',
-        content: data.response,
-        actionPrompts: data.followUpQuestions?.map((q: string) => ({
-          category: 'deep_dive',
-          icon: '💡',
-          label: q,
-          action: q
-        }))
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response stream');
+      
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulatedContent = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.trim() === '' || line.startsWith(':')) continue;
+          if (!line.startsWith('data: ')) continue;
+          
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          
+          try {
+            const parsed = JSON.parse(data);
+            const token = parsed.choices?.[0]?.delta?.content;
+            
+            if (token) {
+              accumulatedContent += token;
+              updateMessage(assistantMessageId, {
+                content: accumulatedContent,
+              });
+            }
+          } catch (e) {
+            console.error('Parse error:', e);
+          }
+        }
+      }
+      
+      // Mark streaming as complete
+      updateMessage(assistantMessageId, {
+        isStreaming: false,
       });
 
     } catch (error) {
       console.error('Chat error:', error);
-      addMessage({
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.'
+      const errorMessage = error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.';
+      
+      updateMessage(assistantMessageId, {
+        content: errorMessage,
+        isStreaming: false,
       });
+      
+      if (errorMessage.includes('Rate limit')) {
+        toast.error('Rate limit exceeded - please wait a moment');
+      } else if (errorMessage.includes('Payment required')) {
+        toast.error('Credits exhausted - please add funds');
+      } else {
+        toast.error('Chat error occurred');
+      }
     } finally {
       setIsLoading(false);
+      setStreamingMessageId(null);
+      setIsAITyping(false);
     }
   };
 
@@ -316,5 +410,7 @@ export function useUnifiedChat() {
     visualCanvasData,
     setVisualCanvasMode,
     setVisualCanvasData,
+    isAITyping,
+    streamingMessageId,
   };
 }

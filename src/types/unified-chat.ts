@@ -70,6 +70,8 @@ export interface Message {
   
   // UI state
   isReasoningContainer?: boolean;
+  isStreaming?: boolean;
+  isOptimistic?: boolean;
 }
 
 export interface AnalysisData {

@@ -29,7 +29,7 @@ If asked about campaign strategies, explain your reasoning clearly.`
       { role: 'user', content: message }
     ];
 
-    // Call Lovable AI Gateway
+    // Call Lovable AI Gateway with streaming enabled
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -39,34 +39,40 @@ If asked about campaign strategies, explain your reasoning clearly.`
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: messages,
-        temperature: 0.7,
-        max_tokens: 1000,
+        stream: true, // Enable streaming
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error('Rate limits exceeded, please try again later.');
+        return new Response(
+          JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       if (response.status === 402) {
-        throw new Error('Payment required, please add funds to your Lovable AI workspace.');
+        return new Response(
+          JSON.stringify({ error: 'Payment required, please add funds to your Lovable AI workspace.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-      throw new Error(`AI API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('AI gateway error:', response.status, errorText);
+      return new Response(
+        JSON.stringify({ error: `AI API error: ${response.statusText}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
-
-    // Generate contextual follow-up questions
-    const followUpQuestions = generateFollowUps(message, context?.type);
-
-    return new Response(
-      JSON.stringify({
-        response: aiResponse,
-        followUpQuestions,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // Return the stream directly with SSE headers
+    return new Response(response.body, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
 
   } catch (error) {
     console.error('Unified chat error:', error);
