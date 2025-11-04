@@ -21,20 +21,24 @@ export function MessageList({ messages, onPromptClick, onViewCampaignDetails }: 
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        {messages.map((message) => (
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+        {messages.map((message, index) => (
           <div
             key={message.id}
-            className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${
+            style={{ 
+              animationDelay: `${index * 0.05}s`,
+              animationFillMode: 'both'
+            }}
+            className={`animate-fade-in-up ${
               message.role === 'user' ? 'flex justify-end' : ''
             }`}
           >
             {message.role === 'user' ? (
-              <div className="bg-primary text-primary-foreground rounded-2xl px-6 py-3 max-w-[80%]">
+              <div className="bg-primary text-primary-foreground rounded-2xl px-6 py-3.5 max-w-[80%] shadow-soft hover:shadow-glow transition-all duration-300">
                 {message.content}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <AssistantMessage content={message.content} />
                 
                 {message.reasoningSteps && message.reasoningSteps.length > 0 && (
@@ -52,7 +56,7 @@ export function MessageList({ messages, onPromptClick, onViewCampaignDetails }: 
                 )}
                 
                 {message.chart && (
-                  <div className="bg-card rounded-2xl p-6 border">
+                  <div className="bg-card rounded-2xl p-6 border shadow-soft transition-shadow duration-300 hover:shadow-card-hover">
                     <DynamicChart config={message.chart} />
                   </div>
                 )}

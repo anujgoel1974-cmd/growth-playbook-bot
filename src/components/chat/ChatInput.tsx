@@ -46,9 +46,9 @@ export function ChatInput({ onSend, isLoading, placeholder = 'Type a message or 
   };
 
   return (
-    <div className="sticky bottom-0 w-full border-t bg-background p-4">
+    <div className="sticky bottom-0 w-full border-t bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 p-4">
       <div className="max-w-3xl mx-auto">
-        <div className="relative flex items-end gap-2">
+        <div className="relative flex items-end gap-3">
           <div className="flex-1 relative">
             <Textarea
               ref={textareaRef}
@@ -57,11 +57,11 @@ export function ChatInput({ onSend, isLoading, placeholder = 'Type a message or 
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               disabled={isLoading}
-              className="min-h-[52px] max-h-[120px] resize-none pr-12 rounded-2xl"
+              className="min-h-[52px] max-h-[120px] resize-none pr-12 rounded-2xl shadow-soft focus:shadow-glow transition-shadow duration-200"
               rows={1}
             />
             {hasURL && (
-              <div className="absolute right-3 top-3 text-primary">
+              <div className="absolute right-3 top-3 text-primary animate-slide-in-smooth">
                 <LinkIcon className="h-4 w-4" />
               </div>
             )}
@@ -71,7 +71,7 @@ export function ChatInput({ onSend, isLoading, placeholder = 'Type a message or 
             onClick={handleSend}
             disabled={!message.trim() || isLoading}
             size="icon"
-            className="h-[52px] w-[52px] rounded-2xl shrink-0"
+            className="h-[52px] w-[52px] rounded-2xl shrink-0 shadow-soft hover:shadow-glow transition-all duration-200 hover:scale-105"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -81,7 +81,7 @@ export function ChatInput({ onSend, isLoading, placeholder = 'Type a message or 
           </Button>
         </div>
         
-        <p className="text-xs text-muted-foreground text-center mt-2">
+        <p className="text-xs text-muted-foreground/70 text-center mt-2.5">
           Press Enter to send, Shift+Enter for new line
         </p>
       </div>

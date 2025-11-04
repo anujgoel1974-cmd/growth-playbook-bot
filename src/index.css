@@ -41,10 +41,17 @@ All colors MUST be HSL.
     /* Gradient tokens */
     --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(220 90% 56%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(240 10% 98%) 0%, hsl(240 20% 94%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(240 10% 98%) 0%, hsl(240 5% 96%) 100%);
     
-    /* Shadow tokens */
+    /* Shadow tokens - AI-native depth */
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-card-hover: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-glow: 0 0 20px -5px hsl(262 83% 58% / 0.3);
+    --shadow-soft: 0 2px 8px -2px rgb(0 0 0 / 0.05);
+    
+    /* Transition tokens */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 
   .dark {
@@ -79,6 +86,8 @@ All colors MUST be HSL.
     /* Dark mode shadows */
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
     --shadow-card-hover: 0 10px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+    --shadow-glow: 0 0 30px -5px hsl(262 83% 58% / 0.5);
+    --shadow-soft: 0 2px 8px -2px rgb(0 0 0 / 0.15);
   }
 }
 
@@ -92,7 +101,7 @@ All colors MUST be HSL.
   }
 }
 
-/* Slide-up animation for visual canvas */
+/* AI-native animations */
 @keyframes slide-up {
   from {
     transform: translateY(100%);
@@ -104,6 +113,49 @@ All colors MUST be HSL.
   }
 }
 
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px -5px hsl(262 83% 58% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px -5px hsl(262 83% 58% / 0.6);
+  }
+}
+
+@keyframes slide-in-smooth {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .animate-slide-up {
   animation: slide-up 0.4s ease-out;
+}
+
+.animate-breathe {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-slide-in-smooth {
+  animation: slide-in-smooth 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
