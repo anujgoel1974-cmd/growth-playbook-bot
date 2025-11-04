@@ -84,37 +84,99 @@ If asked about campaign strategies, explain your reasoning clearly.`
 function generateFollowUps(message: string, contextType?: string): string[] {
   const lowerMessage = message.toLowerCase();
   
-  // Analytics-related follow-ups
-  if (lowerMessage.includes('performance') || lowerMessage.includes('campaign') || lowerMessage.includes('metrics')) {
+  // CTR-related follow-ups
+  if (lowerMessage.includes('ctr') || lowerMessage.includes('click')) {
     return [
-      'Compare this to last month',
-      'What can I optimize?',
-      'Show me platform-specific breakdown'
+      'How can I improve CTR?',
+      'Compare CTR across platforms',
+      'Show me best performing ads'
+    ];
+  }
+  
+  // Conversion-related follow-ups
+  if (lowerMessage.includes('conversion') || lowerMessage.includes('cvr')) {
+    return [
+      'What affects conversion rate?',
+      'Optimize landing page for conversions',
+      'Compare conversion by audience'
+    ];
+  }
+  
+  // ROI/ROAS-related follow-ups
+  if (lowerMessage.includes('roi') || lowerMessage.includes('roas') || lowerMessage.includes('return')) {
+    return [
+      'Which channels have best ROI?',
+      'How to increase ROAS?',
+      'Budget reallocation suggestions'
+    ];
+  }
+  
+  // Analytics-related follow-ups
+  if (lowerMessage.includes('performance') || lowerMessage.includes('metrics')) {
+    return [
+      'Show key trends',
+      'What should I focus on?',
+      'Platform comparison'
     ];
   }
   
   // Budget-related follow-ups
-  if (lowerMessage.includes('budget') || lowerMessage.includes('spend')) {
+  if (lowerMessage.includes('budget') || lowerMessage.includes('spend') || lowerMessage.includes('cost')) {
     return [
-      'How can I optimize my budget?',
-      'Which platform has the best ROI?',
-      'Suggest budget reallocation'
+      'Optimize budget allocation',
+      'Which platform has best ROI?',
+      'Reduce cost per acquisition'
     ];
   }
   
   // Campaign creation follow-ups
   if (contextType === 'campaign_creation') {
     return [
-      'Explain the targeting strategy',
+      'Explain targeting strategy',
       'Why this budget split?',
-      'Show me the ad creatives'
+      'Show ad creatives'
     ];
   }
   
-  // Default follow-ups
+  // Audience/targeting follow-ups
+  if (lowerMessage.includes('audience') || lowerMessage.includes('targeting') || lowerMessage.includes('demographic')) {
+    return [
+      'Who is my best audience?',
+      'Refine targeting strategy',
+      'Expand to similar audiences'
+    ];
+  }
+  
+  // Platform-specific follow-ups
+  if (lowerMessage.includes('meta') || lowerMessage.includes('facebook') || lowerMessage.includes('instagram')) {
+    return [
+      'Meta optimization tips',
+      'Instagram vs Facebook performance',
+      'Best Meta ad formats'
+    ];
+  }
+  
+  if (lowerMessage.includes('google') || lowerMessage.includes('search') || lowerMessage.includes('display')) {
+    return [
+      'Google Ads optimization',
+      'Search vs Display performance',
+      'Keyword strategy tips'
+    ];
+  }
+  
+  // Default follow-ups based on context
+  if (contextType === 'analytics') {
+    return [
+      'Show me trends',
+      'What needs attention?',
+      'Export this data'
+    ];
+  }
+  
+  // Generic helpful follow-ups
   return [
-    'Tell me more',
     'What should I do next?',
-    'Show me examples'
+    'Show me examples',
+    'Explain in more detail'
   ];
 }

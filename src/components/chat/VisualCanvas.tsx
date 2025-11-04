@@ -37,6 +37,40 @@ export function VisualCanvas({
     history: '📂 Analysis History'
   };
 
+  // Generate breadcrumbs based on mode and data
+  const getBreadcrumbs = () => {
+    const base = ['Home'];
+    
+    switch (renderMode) {
+      case 'dashboard':
+        base.push('Analytics', 'Dashboard');
+        if (data?.dateRange) {
+          base.push(data.dateRange === 'last-30-days' ? 'Last 30 Days' : data.dateRange);
+        }
+        break;
+      case 'analysis':
+        base.push('Campaigns', 'Analysis');
+        if (data?.url) {
+          const urlObj = new URL(data.url);
+          base.push(urlObj.hostname);
+        }
+        break;
+      case 'history':
+        base.push('Campaigns', 'History');
+        break;
+      case 'media-plan':
+        base.push('Campaigns', 'Media Plan');
+        break;
+      case 'loading':
+        base.push('Creating Campaign');
+        break;
+    }
+    
+    return base;
+  };
+
+  const breadcrumbs = getBreadcrumbs();
+
   return (
     <div className={cn(
       "border-t bg-background transition-all duration-500 animate-slide-up",
@@ -46,22 +80,41 @@ export function VisualCanvas({
       className
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
-        <h3 className="font-semibold text-sm">
-          {titles[renderMode]}
-        </h3>
-        <div className="flex gap-1">
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="hidden md:flex"
-          >
-            {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+      <div className="border-b bg-muted/30">
+        {/* Breadcrumbs */}
+        <div className="px-4 py-1.5 text-xs text-muted-foreground border-b border-border/40">
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {breadcrumbs.map((crumb, i) => (
+              <div key={i} className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className={i === breadcrumbs.length - 1 ? 'text-foreground font-medium' : ''}>
+                  {crumb}
+                </span>
+                {i < breadcrumbs.length - 1 && (
+                  <span className="text-muted-foreground/50">/</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Title bar */}
+        <div className="flex items-center justify-between px-4 py-2">
+          <h3 className="font-semibold text-sm">
+            {titles[renderMode]}
+          </h3>
+          <div className="flex gap-1">
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="hidden md:flex"
+            >
+              {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
       

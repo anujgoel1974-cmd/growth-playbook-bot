@@ -97,9 +97,18 @@ export function useUnifiedChat() {
   };
 
   const handleShowDashboard = async () => {
+    const contextualPrompts: ActionPrompt[] = [
+      { category: 'deep_dive', icon: '📉', label: 'Explain performance trends', action: 'Explain the CTR trends over the past month' },
+      { category: 'deep_dive', icon: '🔍', label: 'Platform comparison', action: 'Compare Meta vs Google performance' },
+      { category: 'deep_dive', icon: '💡', label: 'Optimization opportunities', action: 'What can I optimize to improve ROI?' },
+      { category: 'make_changes', icon: '📊', label: 'Custom chart', action: 'Show me a chart of conversion rate by platform' },
+      { category: 'take_action', icon: '📄', label: 'Export report', action: 'Export this dashboard as PDF' },
+    ];
+
     addMessage({
       role: 'assistant',
-      content: "I've pulled up your complete campaign performance dashboard below. You can see all your metrics, trends, and insights. What would you like to know more about?"
+      content: "I've pulled up your complete campaign performance dashboard below. You can see all your metrics, trends, and insights. What would you like to know more about?",
+      actionPrompts: contextualPrompts
     });
     
     setVisualCanvasMode('dashboard');
@@ -107,9 +116,17 @@ export function useUnifiedChat() {
   };
 
   const handleShowHistory = async () => {
+    const historyPrompts: ActionPrompt[] = [
+      { category: 'deep_dive', icon: '🔄', label: 'Continue most recent', action: 'Continue working on my most recent campaign' },
+      { category: 'deep_dive', icon: '📊', label: 'Compare campaigns', action: 'Compare my last 3 campaigns' },
+      { category: 'deep_dive', icon: '⭐', label: 'Best performers', action: 'Show me my best performing campaigns' },
+      { category: 'take_action', icon: '✨', label: 'Create new campaign', action: 'Create a new campaign' },
+    ];
+
     addMessage({
       role: 'assistant',
-      content: "Here are all your previous campaign analyses. Click any one to view details or continue working on it."
+      content: "Here are all your previous campaign analyses. Click any one to view details or continue working on it.",
+      actionPrompts: historyPrompts
     });
     
     setVisualCanvasMode('history');
