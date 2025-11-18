@@ -41,101 +41,94 @@ export function TemplateGallery({ onRunTemplate, recentSessions = [], onLoadSess
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="p-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold tracking-tight mb-1">Analytics Templates</h2>
-          <p className="text-sm text-muted-foreground">
-            Start with a prebuilt analysis, then dig deeper with questions.
-          </p>
+      <div>
+        <h2 className="text-xl font-bold tracking-tight mb-1">Analytics Templates</h2>
+        <p className="text-sm text-muted-foreground">
+          Start with a prebuilt analysis, then dig deeper with questions.
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-3 items-center">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search templates..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
 
-        {/* Filters */}
-        <div className="space-y-3">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+        {/* Date Range */}
+        <Select value={dateRange} onValueChange={setDateRange}>
+          <SelectTrigger className="w-[140px]">
+            <Calendar className="h-4 w-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">Last 7 days</SelectItem>
+            <SelectItem value="14">Last 14 days</SelectItem>
+            <SelectItem value="30">Last 30 days</SelectItem>
+          </SelectContent>
+        </Select>
 
-          {/* Date Range & Platforms */}
-          <div className="flex gap-2">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[140px]">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="14">Last 14 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex gap-1.5 flex-1">
-              {platforms.map(platform => (
-                <Badge
-                  key={platform}
-                  variant={selectedPlatforms.includes(platform) ? "default" : "outline"}
-                  className="cursor-pointer transition-colors px-3"
-                  onClick={() => togglePlatform(platform)}
-                >
-                  {platform}
-                </Badge>
-              ))}
-            </div>
-          </div>
+        {/* Platform Filters */}
+        <div className="flex gap-1.5">
+          {platforms.map(platform => (
+            <Badge
+              key={platform}
+              variant={selectedPlatforms.includes(platform) ? "default" : "outline"}
+              className="cursor-pointer transition-colors px-3"
+              onClick={() => togglePlatform(platform)}
+            >
+              {platform}
+            </Badge>
+          ))}
         </div>
       </div>
 
       {/* Templates Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid gap-4 grid-cols-1">
-          {filteredTemplates.map(template => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              onRun={handleRunTemplate}
-            />
-          ))}
-        </div>
-
-        {/* Recent Sessions */}
-        {recentSessions.length > 0 && (
-          <div className="mt-8 pt-6 border-t">
-            <h3 className="text-sm font-semibold mb-3">Recent Analyses</h3>
-            <div className="space-y-2">
-              {recentSessions.map(session => (
-                <Card
-                  key={session.sessionId}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => onLoadSession?.(session)}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{session.templateName}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {session.timeRange} • {session.platforms.join(', ')}
-                        </p>
-                      </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                        {format(session.timestamp, 'MMM d, h:mm a')}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {filteredTemplates.map(template => (
+          <TemplateCard
+            key={template.id}
+            template={template}
+            onRun={handleRunTemplate}
+          />
+        ))}
       </div>
+
+      {/* Recent Sessions */}
+      {recentSessions.length > 0 && (
+        <div className="pt-6 border-t">
+          <h3 className="text-sm font-semibold mb-3">Recent Analyses</h3>
+          <div className="grid gap-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {recentSessions.map(session => (
+              <Card
+                key={session.sessionId}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => onLoadSession?.(session)}
+              >
+                <CardContent className="p-3">
+                  <div className="space-y-1">
+                    <p className="font-medium text-sm truncate">{session.templateName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {session.timeRange} • {session.platforms.join(', ')}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      {format(session.timestamp, 'MMM d, h:mm a')}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
