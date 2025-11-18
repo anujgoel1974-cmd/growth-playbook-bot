@@ -1,11 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TemplateGallery } from '@/components/analytics/TemplateGallery';
 import { AnalysisPanel } from '@/components/analytics/AnalysisPanel';
 import { AnalyticsChat } from '@/components/analytics/AnalyticsChat';
 import { generateMockAnalyticsResponse, analyticsTemplates } from '@/utils/mockAnalyticsData';
 import { AnalyticsRunResponse, AnalyticsSession, ChatMessage } from '@/types/analytics';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 
 export default function Analytics() {
+  const navigate = useNavigate();
   const [currentResponse, setCurrentResponse] = useState<AnalyticsRunResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -111,7 +115,29 @@ export default function Analytics() {
   };
 
   return (
-    <div className="h-screen flex bg-background">
+    <div className="h-screen flex flex-col bg-background">
+      {/* Top Navigation Bar */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/chat')}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <div className="h-5 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-semibold">Analytics & Optimization</h1>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
       {/* Left Column - Templates */}
       <div className="w-[380px] border-r flex-shrink-0 overflow-hidden">
         <TemplateGallery 
@@ -143,6 +169,7 @@ export default function Analytics() {
           />
         </div>
       </div>
+    </div>
     </div>
   );
 }
