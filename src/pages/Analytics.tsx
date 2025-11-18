@@ -136,40 +136,42 @@ export default function Analytics() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-      {/* Left Column - Templates */}
-      <div className="w-[380px] border-r flex-shrink-0 overflow-hidden">
-        <TemplateGallery 
-          onRunTemplate={handleRunTemplate}
-          recentSessions={recentSessions}
-          onLoadSession={handleLoadSession}
-        />
-      </div>
+      {/* Main Content - Chat First, Templates Below */}
+      <div className="flex-1 overflow-hidden flex">
+        {/* Left Side: Chat + Templates */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Chat Section - Prominent at Top */}
+          <div className="border-b bg-background/50 py-6">
+            <AnalyticsChat
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              sessionId={currentResponse?.sessionId}
+            />
+          </div>
 
-      {/* Right Column - Analysis + Chat */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Analysis Results (scrollable) */}
-        <div className="flex-1 overflow-hidden">
-          <AnalysisPanel
-            response={currentResponse}
-            isLoading={isLoading}
-            platforms={selectedPlatforms}
-            timeRange={selectedTimeRange}
-          />
+          {/* Templates Section - Below Chat */}
+          <div className="flex-1 overflow-y-auto">
+            <TemplateGallery 
+              onRunTemplate={handleRunTemplate}
+              recentSessions={recentSessions}
+              onLoadSession={handleLoadSession}
+            />
+          </div>
         </div>
 
-        {/* Chat (fixed height at bottom) */}
-        <div className="h-[280px] border-t flex-shrink-0">
-          <AnalyticsChat
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-            sessionId={currentResponse?.sessionId}
-          />
-        </div>
+        {/* Right Side: Analysis Results Panel (Slide-in) */}
+        {currentResponse && (
+          <div className="w-[600px] border-l flex-shrink-0 overflow-hidden animate-fade-in">
+            <AnalysisPanel
+              response={currentResponse}
+              isLoading={isLoading}
+              platforms={selectedPlatforms}
+              timeRange={selectedTimeRange}
+            />
+          </div>
+        )}
       </div>
-    </div>
     </div>
   );
 }
