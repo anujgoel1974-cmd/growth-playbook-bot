@@ -92,7 +92,7 @@ export function TemplateGallery({ onRunTemplate, recentSessions = [], onLoadSess
       </div>
 
       {/* Templates Grid */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1">
         {filteredTemplates.map(template => (
           <TemplateCard
             key={template.id}
@@ -106,7 +106,7 @@ export function TemplateGallery({ onRunTemplate, recentSessions = [], onLoadSess
       {recentSessions.length > 0 && (
         <div className="pt-6 border-t">
           <h3 className="text-sm font-semibold mb-3">Recent Analyses</h3>
-          <div className="grid gap-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-2">
             {recentSessions.map(session => (
               <Card
                 key={session.sessionId}
@@ -114,12 +114,14 @@ export function TemplateGallery({ onRunTemplate, recentSessions = [], onLoadSess
                 onClick={() => onLoadSession?.(session)}
               >
                 <CardContent className="p-3">
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm truncate">{session.templateName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {session.timeRange} • {session.platforms.join(', ')}
-                    </p>
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{session.templateName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {session.timeRange} • {session.platforms.join(', ')}
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {format(session.timestamp, 'MMM d, h:mm a')}
                     </span>
                   </div>
