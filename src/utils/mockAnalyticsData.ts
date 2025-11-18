@@ -93,15 +93,15 @@ export function generateMockAnalyticsResponse(
           chartType: "line",
           config: {
             data: [
-              { date: "Day 1", Meta: 3.2, Google: 2.3, Bing: 2.6 },
-              { date: "Day 2", Meta: 3.5, Google: 2.0, Bing: 2.4 },
-              { date: "Day 3", Meta: 3.3, Google: 2.2, Bing: 2.5 },
-              { date: "Day 4", Meta: 3.6, Google: 1.9, Bing: 2.3 },
-              { date: "Day 5", Meta: 3.4, Google: 2.1, Bing: 2.6 },
-              { date: "Day 6", Meta: 3.3, Google: 2.0, Bing: 2.5 },
-              { date: "Day 7", Meta: 3.5, Google: 2.2, Bing: 2.4 }
+              { name: "Day 1", Meta: 3.2, Google: 2.3, Bing: 2.6 },
+              { name: "Day 2", Meta: 3.5, Google: 2.0, Bing: 2.4 },
+              { name: "Day 3", Meta: 3.3, Google: 2.2, Bing: 2.5 },
+              { name: "Day 4", Meta: 3.6, Google: 1.9, Bing: 2.3 },
+              { name: "Day 5", Meta: 3.4, Google: 2.1, Bing: 2.6 },
+              { name: "Day 6", Meta: 3.3, Google: 2.0, Bing: 2.5 },
+              { name: "Day 7", Meta: 3.5, Google: 2.2, Bing: 2.4 }
             ],
-            xAxis: "date",
+            xAxis: "name",
             metrics: ["Meta", "Google", "Bing"]
           }
         }
@@ -144,12 +144,12 @@ export function generateMockAnalyticsResponse(
           chartType: "bar",
           config: {
             data: [
-              { campaign: "Summer 2024", wasted: 342 },
-              { campaign: "Retargeting Cold", wasted: 198 },
-              { campaign: "Brand KW", wasted: 224 },
-              { campaign: "Display", wasted: 128 }
+              { name: "Summer 2024", wasted: 342 },
+              { name: "Retargeting Cold", wasted: 198 },
+              { name: "Brand KW", wasted: 224 },
+              { name: "Display", wasted: 128 }
             ],
-            xAxis: "campaign",
+            xAxis: "name",
             metrics: ["wasted"]
           }
         }
@@ -191,12 +191,14 @@ export function generateMockAnalyticsResponse(
           chartType: "scatter",
           config: {
             data: [
-              { campaign: "Prospecting LLA", spend: 1050, roas: 3.8, status: "scale" },
-              { campaign: "Shopping Best", spend: 1400, roas: 3.2, status: "scale" },
-              { campaign: "Interest Target", spend: 700, roas: 3.5, status: "scale" },
-              { campaign: "Other 1", spend: 800, roas: 2.1, status: "normal" },
-              { campaign: "Other 2", spend: 600, roas: 1.8, status: "normal" }
-            ]
+              { name: "Prospecting LLA", spend: 1050, roas: 3.8 },
+              { name: "Shopping Best", spend: 1400, roas: 3.2 },
+              { name: "Interest Target", spend: 700, roas: 3.5 },
+              { name: "Other 1", spend: 800, roas: 2.1 },
+              { name: "Other 2", spend: 600, roas: 1.8 }
+            ],
+            xAxis: "spend",
+            yAxis: "roas"
           }
         }
       ],
@@ -227,12 +229,14 @@ export function generateMockAnalyticsResponse(
           chartType: "funnel",
           config: {
             data: [
-              { stage: "Sessions", count: 12500, rate: 100 },
-              { stage: "Product View", count: 8200, rate: 65.6 },
-              { stage: "Add to Cart", count: 2624, rate: 32.0 },
-              { stage: "Checkout Started", count: 892, rate: 34.0 },
-              { stage: "Purchase", count: 315, rate: 35.3 }
-            ]
+              { stage: "Sessions", count: 12500 },
+              { stage: "Product View", count: 8200 },
+              { stage: "Add to Cart", count: 2624 },
+              { stage: "Checkout", count: 892 },
+              { stage: "Purchase", count: 315 }
+            ],
+            xAxis: "stage",
+            metrics: ["count"]
           }
         },
         {
@@ -335,13 +339,13 @@ export function generateMockAnalyticsResponse(
           chartType: "bar",
           config: {
             data: [
-              { sku: "SKU-1284", revenue: 4892 },
-              { sku: "SKU-2910", revenue: 3241 },
-              { sku: "SKU-4472", revenue: 2156 },
-              { sku: "SKU-8821", revenue: 98 },
-              { sku: "SKU-5512", revenue: 145 }
+              { name: "SKU-1284", revenue: 4892 },
+              { name: "SKU-2910", revenue: 3241 },
+              { name: "SKU-4472", revenue: 2156 },
+              { name: "SKU-8821", revenue: 98 },
+              { name: "SKU-5512", revenue: 145 }
             ],
-            xAxis: "sku",
+            xAxis: "name",
             metrics: ["revenue"]
           }
         }
@@ -443,13 +447,13 @@ export function generateMockAnalyticsResponse(
           chartType: "bar",
           config: {
             data: [
-              { geo: "CA", roas: 3.87 },
-              { geo: "IL", roas: 3.80 },
-              { geo: "PA", roas: 3.59 },
-              { geo: "NY", roas: 3.50 },
-              { geo: "TX", roas: 3.20 }
+              { name: "CA", roas: 3.87 },
+              { name: "IL", roas: 3.80 },
+              { name: "PA", roas: 3.59 },
+              { name: "NY", roas: 3.50 },
+              { name: "TX", roas: 3.20 }
             ],
-            xAxis: "geo",
+            xAxis: "name",
             metrics: ["roas"]
           }
         }
@@ -491,16 +495,16 @@ export function generateMockAnalyticsResponse(
           chartType: "line",
           config: {
             data: [
-              { date: "Day 1", roas: 2.8, spend: 580 },
-              { date: "Day 2", roas: 2.9, spend: 590 },
-              { date: "Day 3", roas: 3.0, spend: 610 },
-              { date: "Day 4", roas: 2.4, spend: 620 },
-              { date: "Day 5", roas: 2.6, spend: 820 },
-              { date: "Day 6", roas: 2.5, spend: 780 },
-              { date: "Day 7", roas: 2.7, spend: 650 }
+              { name: "Day 1", ROAS: 2.8, Spend: 580 },
+              { name: "Day 2", ROAS: 2.9, Spend: 590 },
+              { name: "Day 3", ROAS: 3.0, Spend: 610 },
+              { name: "Day 4", ROAS: 2.4, Spend: 620 },
+              { name: "Day 5", ROAS: 2.6, Spend: 820 },
+              { name: "Day 6", ROAS: 2.5, Spend: 780 },
+              { name: "Day 7", ROAS: 2.7, Spend: 650 }
             ],
-            xAxis: "date",
-            metrics: ["roas", "spend"]
+            xAxis: "name",
+            metrics: ["ROAS", "Spend"]
           }
         }
       ],
@@ -547,13 +551,13 @@ export function generateMockAnalyticsResponse(
           chartType: "line",
           config: {
             data: [
-              { date: "Week 1", roas: 3.2, google: 2.8, meta: 3.6 },
-              { date: "Week 2", roas: 3.0, google: 2.5, meta: 3.5 },
-              { date: "Week 3", roas: 2.7, google: 2.2, meta: 3.2 },
-              { date: "Week 4", roas: 2.4, google: 1.9, meta: 2.9 }
+              { name: "Week 1", Overall: 3.2, Google: 2.8, Meta: 3.6 },
+              { name: "Week 2", Overall: 3.0, Google: 2.5, Meta: 3.5 },
+              { name: "Week 3", Overall: 2.7, Google: 2.2, Meta: 3.2 },
+              { name: "Week 4", Overall: 2.4, Google: 1.9, Meta: 2.9 }
             ],
-            xAxis: "date",
-            metrics: ["roas", "google", "meta"]
+            xAxis: "name",
+            metrics: ["Overall", "Google", "Meta"]
           }
         },
         {
