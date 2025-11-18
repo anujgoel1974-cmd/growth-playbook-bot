@@ -46,6 +46,12 @@ const navigationGroups = [
     label: 'Analytics & Insights',
     items: [
       {
+        title: 'Analytics & Optimization',
+        icon: BarChart3,
+        url: '/analytics',
+        description: 'AI-powered insights',
+      },
+      {
         title: 'Dashboard',
         icon: BarChart3,
         url: '/dashboard',

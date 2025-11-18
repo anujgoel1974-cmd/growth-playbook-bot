@@ -14,6 +14,7 @@ import ConnectPlatforms from "./pages/ConnectPlatforms";
 import Dashboard from "./pages/Dashboard";
 import CampaignChat from "./pages/CampaignChat";
 import ChatHub from "./pages/ChatHub";
+import Analytics from "./pages/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/onboarding" replace />} />
           <Route path="/chat" element={<MainLayout><ChatHub /></MainLayout>} />
           <Route path="/new-campaign" element={<MainLayout><Index /></MainLayout>} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/campaign-chat" element={<Navigate to="/chat" replace />} />
           <Route path="/connect-platforms" element={<MainLayout><ConnectPlatforms /></MainLayout>} />
           <Route path="/dashboard" element={<Navigate to="/chat" replace />} />
